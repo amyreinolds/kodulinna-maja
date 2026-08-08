@@ -1,0 +1,26 @@
+# Majutuse seadistus Renderile (render.com).
+# Tasuta pakett sobib: leht magab, kui teda tund aega ei kasutata, ja
+# ärkab esimese avamisega ~30 sekundiga. Majale sobib.
+#
+# Kolm asja, mis tuleb Renderis endal sisestada (need on saladused ja
+# neid ei tohi siia faili panna):
+#   DATABASE_URL       .env failist
+#   SESSIOONI_SALADUS  .env failist
+#   ESIMENE_SISSELOGIJA  ainult siis, kui pead esimest kontot tegema
+
+services:
+  - type: web
+    name: kodulinna-maja
+    runtime: node
+    plan: free
+    region: frankfurt          # Euroopa — lähemal kui Ameerika
+    buildCommand: npm ci --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /tervis
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false            # sisesta Renderis käsitsi
+      - key: SESSIOONI_SALADUS
+        sync: false            # sisesta Renderis käsitsi

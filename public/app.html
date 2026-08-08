@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="et">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kodulinna Maja</title>
+<style>
+:root{
+  color-scheme:light;
+  --bg:#A9C9EC; --card:#FFFFFF; --soft:#ECEFF4;
+  --ink:#1D1D1F; --ink-2:#424245; --ink-3:#66666A;
+  --line:#D8D8DE; --line-2:#E8E8EE; --accent:#0071E3;
+  --mono:ui-monospace,"Cascadia Code","SF Mono",Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;padding:38px 38px 56px;
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color:var(--ink);
+  background:linear-gradient(160deg,#C3DBF6 0%,#A9C9EC 45%,#8FB4DD 100%);
+}
+.wrap{max-width:880px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+.pais{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+h1{font-size:27px;font-weight:800;letter-spacing:-.03em;margin:0}
+.kes{font-size:16px;color:var(--ink-2)}
+.sp{flex:1}
+button.valja{
+  min-height:44px;padding:0 18px;border-radius:12px;border:1px solid var(--line);
+  background:var(--card);font-family:inherit;font-size:16px;font-weight:600;cursor:pointer;
+}
+.card{
+  background:var(--card);border-radius:18px;padding:28px;
+  box-shadow:0 1px 2px rgba(20,24,28,.05),0 12px 28px -20px rgba(20,24,28,.28);
+}
+.h3{font-size:12.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 14px}
+.riba{display:flex;flex-wrap:wrap;gap:6px 22px;align-items:baseline;
+  padding:12px 16px;border-radius:14px;background:var(--soft)}
+.riba span{font-size:15px;color:var(--ink-3)}
+.riba b{font-size:22px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;margin-top:18px}
+th,td{padding:13px 12px;text-align:left;font-size:16px}
+th{font-size:13px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);border-bottom:1.5px solid var(--line)}
+td{border-bottom:1px solid var(--line-2)}
+tr:last-child td{border-bottom:none}
+.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tyhi{padding:26px 0;color:var(--ink-3);font-size:17px}
+.mark{display:inline-block;margin-left:10px;padding:3px 10px;border-radius:999px;
+  background:var(--soft);font-size:13px;font-weight:700;color:var(--ink-3)}
+.abi{font-size:16px;line-height:1.55;color:var(--ink-3);margin:0 0 18px}
+.liige{display:flex;align-items:center;gap:14px;padding:13px 0;
+  border-bottom:1px solid var(--line-2);flex-wrap:wrap}
+.liige:last-of-type{border-bottom:none}
+.liige input.nm,.liige input.rl{
+  padding:10px 12px;border-radius:10px;border:1.5px solid transparent;
+  background:transparent;font-family:inherit;outline:none;
+}
+.liige input.nm{font-size:17px;font-weight:650;min-width:170px;color:var(--ink)}
+.liige input.rl{font-size:15px;color:var(--ink-3);flex:1;min-width:120px}
+.liige input.nm:hover,.liige input.rl:hover{border-color:var(--line)}
+.liige input.nm:focus,.liige input.rl:focus{border-color:var(--accent);background:var(--card)}
+.liige .kast{display:flex;align-items:center;gap:7px;font-size:15px;color:var(--ink-3)}
+.liige button{min-height:40px;padding:0 16px;border-radius:10px;border:1px solid var(--line);
+  background:var(--card);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer}
+.liige button:hover{border-color:var(--accent);color:var(--accent)}
+.link{width:100%;display:flex;gap:10px;align-items:center;margin-top:10px;
+  padding:12px 14px;border-radius:12px;background:var(--soft)}
+.link input{flex:1;border:none;background:none;font-family:var(--mono);font-size:14px;
+  color:var(--ink);outline:none}
+.uus{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:20px;
+  padding-top:20px;border-top:1.5px solid var(--line)}
+.uus input[type=text]{flex:1;min-width:170px;padding:12px 14px;border-radius:10px;
+  border:1.5px solid var(--line);font-size:16px;font-family:inherit;outline:none}
+.uus input[type=text]:focus{border-color:var(--accent)}
+.uus .kast{display:flex;align-items:center;gap:8px;font-size:16px}
+.uus button{min-height:48px;padding:0 22px;border-radius:12px;border:none;
+  background:var(--accent);color:#fff;font-family:inherit;font-size:16px;
+  font-weight:600;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="pais">
+    <h1>Kodulinna Maja</h1>
+    <span class="kes" id="kes">…</span>
+    <span class="sp"></span>
+    <button class="valja" id="valja">Logi välja</button>
+  </div>
+
+  <article class="card">
+    <p class="h3" id="pealkiri">MÜÜK</p>
+    <div class="riba" id="riba"><span>Laen…</span></div>
+    <div id="tabel"></div>
+  </article>
+
+  <!-- Ainult administraatorile: liikmed ja sisselogimislingid. -->
+  <article class="card" id="liikmedKaart" hidden>
+    <p class="h3">LIIKMED JA SISSELOGIMINE</p>
+    <p class="abi">Tee liikmele link ja anna see talle ise kätte — telefonis,
+      sõnumiga või paberil. E-posti teenust ei ole vaja. Link kehtib 7 päeva
+      ja ühe korra; pärast sisenemist püsib inimene sees 60 päeva.</p>
+    <div id="liikmed"></div>
+    <form id="uusVorm" class="uus">
+      <input id="uusNimi" type="text" placeholder="Uue liikme nimi" required>
+      <input id="uusRoll" type="text" placeholder="Roll (ei ole kohustuslik)">
+      <label class="kast"><input id="uusAdmin" type="checkbox"> Administraator</label>
+      <button type="submit">Lisa liige</button>
+    </form>
+  </article>
+</div>
+
+<script>
+const raha = v => Number(v).toFixed(2).replace(".", ",") + " €";
+const kuup = iso => {
+  const d = new Date(iso), p = n => String(n).padStart(2, "0");
+  return p(d.getDate()) + "." + p(d.getMonth() + 1) + "." + d.getFullYear()
+    + " " + p(d.getHours()) + ":" + p(d.getMinutes());
+};
+const esc = t => String(t == null ? "" : t)
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+async function laadi() {
+  const mina = (await (await fetch("/api/mina")).json()).mina;
+  if (!mina) return location.href = "/";
+  document.getElementById("kes").textContent = "Sina oled: " + mina.nimi;
+
+  const d = await (await fetch("/api/myyk")).json();
+  document.getElementById("pealkiri").innerHTML =
+    (d.koikNahtav ? "KOGU MAJA MÜÜK" : "MINU MÜÜK")
+    + (d.koikNahtav ? '<span class="mark">administraator</span>' : "");
+
+  document.getElementById("riba").innerHTML =
+      "<b>" + d.kokku.kordi + "</b><span>"
+    + (d.kokku.kordi === 1 ? "müügikord" : "müügikorda") + "</span>"
+    + "<b>" + d.kokku.tk + "</b><span>"
+    + (d.kokku.tk === 1 ? "tükk" : "tükki") + "</span>"
+    + "<b>" + raha(d.kokku.eur) + "</b>";
+
+  document.getElementById("tabel").innerHTML = d.read.length
+    ? '<table><thead><tr><th>Millal</th><th>Osa</th><th>Nimetus</th>'
+      + '<th class="n">Kogus</th><th class="n">Hind</th><th class="n">Summa</th>'
+      + (d.koikNahtav ? "<th>Müüja</th>" : "") + "</tr></thead><tbody>"
+      + d.read.map(r => "<tr><td>" + kuup(r.aeg) + "</td><td>" + esc(r.osa || "—") + "</td>"
+        + "<td>" + esc(r.nimetus) + "</td>"
+        + '<td class="n">' + r.kogus + "</td>"
+        + '<td class="n">' + raha(r.hind) + "</td>"
+        + '<td class="n"><b>' + raha(r.summa) + "</b></td>"
+        + (d.koikNahtav ? "<td>" + esc(r.myyja || "—") + "</td>" : "")
+        + "</tr>").join("")
+      + "</tbody></table>"
+    : '<p class="tyhi">Müüke ei ole veel kirjas.</p>';
+
+  if (mina.administraator) {
+    document.getElementById("liikmedKaart").hidden = false;
+    laadiLiikmed();
+  }
+}
+
+/* ── liikmed ja kutsed (ainult administraatorile) ──────────────── */
+async function laadiLiikmed() {
+  const read = await (await fetch("/api/liikmed")).json();
+  /* Nimi ja roll on otse muudetavad — eraldi muutmisakent ei ole vaja.
+     Salvestatakse siis, kui väljalt ära liigud. */
+  document.getElementById("liikmed").innerHTML = read.map(m =>
+    '<div class="liige" data-id="' + m.id + '">'
+    + '<input class="nm muuda" data-val="nimi" value="' + esc(m.nimi) + '">'
+    + '<input class="rl muuda" data-val="roll" value="' + esc(m.roll || "") + '" placeholder="roll">'
+    + '<label class="kast"><input type="checkbox" class="muuda" data-val="admin"'
+    + (m.administraator ? " checked" : "") + "> administraator</label>"
+    + (m.onepost ? '<span class="mark">saab sisse</span>' : "")
+    + '<button data-kutse="' + m.id + '">Tee sisselogimise link</button>'
+    + "</div>").join("");
+}
+
+/* Muudatuse salvestamine. */
+async function salvestaLiige(rida) {
+  const r = await (await fetch("/api/liikmed", {
+    method: "PATCH", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id: rida.dataset.id,
+      nimi: rida.querySelector('[data-val="nimi"]').value,
+      roll: rida.querySelector('[data-val="roll"]').value,
+      administraator: rida.querySelector('[data-val="admin"]').checked
+    })
+  })).json();
+  if (r.viga) { alert(r.viga); laadiLiikmed(); return; }
+  /* Kui muutsid iseenda nime, uuendame ka ülemise rea. */
+  laadi();
+}
+
+document.getElementById("liikmed").addEventListener("change", e => {
+  if (e.target.classList.contains("muuda")) salvestaLiige(e.target.closest(".liige"));
+});
+
+document.getElementById("liikmed").addEventListener("click", async e => {
+  const n = e.target.closest("[data-kutse]");
+  if (!n) return;
+  n.disabled = true; n.textContent = "Teen…";
+  const r = await (await fetch("/api/kutse", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ liige_id: n.dataset.kutse })
+  })).json();
+  n.disabled = false; n.textContent = "Tee uus link";
+  if (r.viga) return alert(r.viga);
+
+  const rida = n.closest(".liige");
+  let ala = rida.querySelector(".link");
+  if (!ala) {
+    ala = document.createElement("div");
+    ala.className = "link";
+    rida.appendChild(ala);
+  }
+  ala.innerHTML = '<input readonly value="' + esc(r.link) + '">'
+    + "<button>Kopeeri</button>";
+  const val = ala.querySelector("input");
+  ala.querySelector("button").onclick = async () => {
+    try { await navigator.clipboard.writeText(r.link); }
+    catch { val.select(); }
+    ala.querySelector("button").textContent = "Kopeeritud";
+  };
+  val.select();
+});
+
+document.getElementById("uusVorm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const r = await (await fetch("/api/liikmed", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      nimi: document.getElementById("uusNimi").value,
+      roll: document.getElementById("uusRoll").value,
+      administraator: document.getElementById("uusAdmin").checked
+    })
+  })).json();
+  if (r.viga) return alert(r.viga);
+  document.getElementById("uusNimi").value = "";
+  document.getElementById("uusRoll").value = "";
+  document.getElementById("uusAdmin").checked = false;
+  laadiLiikmed();
+});
+
+document.getElementById("valja").addEventListener("click", async () => {
+  await fetch("/api/valja", { method: "POST" });
+  location.href = "/";
+});
+
+laadi();
+</script>
+</body>
+</html>

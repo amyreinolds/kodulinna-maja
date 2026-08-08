@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="et">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kodulinna Maja</title>
+<style>
+:root{
+  color-scheme:light;
+  --bg:#A9C9EC; --card:#FFFFFF; --ink:#1D1D1F; --ink-3:#66666A;
+  --line:#D8D8DE; --accent:#0071E3;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color:var(--ink);
+  background:linear-gradient(160deg,#C3DBF6 0%,#A9C9EC 45%,#8FB4DD 100%);
+}
+.kaart{
+  width:100%;max-width:440px;background:var(--card);border-radius:18px;
+  padding:36px 34px;box-shadow:0 1px 2px rgba(20,24,28,.05),0 12px 28px -20px rgba(20,24,28,.3);
+}
+h1{font-size:27px;font-weight:800;letter-spacing:-.03em;margin:0 0 6px}
+p.selgitus{font-size:17px;line-height:1.55;color:var(--ink-3);margin:0 0 22px}
+label{display:block;font-size:16px;font-weight:600;margin:0 0 7px}
+input{
+  width:100%;padding:13px 14px;border-radius:10px;border:1.5px solid var(--line);
+  font-size:17px;font-family:inherit;outline:none;
+}
+input:focus{border-color:var(--accent)}
+button{
+  width:100%;margin-top:16px;min-height:52px;border:none;border-radius:12px;
+  background:var(--accent);color:#fff;font-size:17px;font-weight:600;
+  font-family:inherit;cursor:pointer;
+}
+button:hover{filter:brightness(1.08)}
+button:disabled{opacity:.6;cursor:default}
+.teade{margin-top:18px;padding:14px 16px;border-radius:12px;background:#E7F1FD;
+  font-size:16px;line-height:1.5}
+.teade a{color:var(--accent);word-break:break-all}
+.viga{background:#FBE9E7;color:#C9261B}
+</style>
+</head>
+<body>
+  <main class="kaart">
+    <h1>Kodulinna Maja</h1>
+    <p class="selgitus">Kirjuta oma e-posti aadress. Saadame sulle lingi,
+      millega saad sisse — parooli ei ole vaja meeles pidada.</p>
+
+    <form id="vorm">
+      <label for="epost">E-posti aadress</label>
+      <input id="epost" type="email" autocomplete="email" required
+             placeholder="nimi@näide.ee">
+      <button id="nupp" type="submit">Saada mulle link</button>
+    </form>
+
+    <div id="teade" class="teade" hidden></div>
+  </main>
+
+<script>
+const vorm = document.getElementById("vorm");
+const nupp = document.getElementById("nupp");
+const teade = document.getElementById("teade");
+
+if (new URLSearchParams(location.search).get("viga") === "aegunud") {
+  teade.hidden = false;
+  teade.className = "teade viga";
+  teade.textContent = "See link on aegunud või juba kasutatud. Küsi uus.";
+}
+
+vorm.addEventListener("submit", async e => {
+  e.preventDefault();
+  nupp.disabled = true;
+  nupp.textContent = "Saadan…";
+  try {
+    const r = await fetch("/api/logi-sisse", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ epost: document.getElementById("epost").value })
+    });
+    const d = await r.json();
+    teade.hidden = false;
+    if (d.viga) {
+      teade.className = "teade viga";
+      teade.textContent = d.viga;
+    } else if (d.kiriSaadetud) {
+      teade.className = "teade";
+      teade.innerHTML = "<b>Kiri on teel.</b><br>Ava oma e-post ja vajuta seal olevat linki. "
+        + "Link kehtib 30 minutit.";
+    } else if (d.arenduseLink) {
+      /* Postiteenust ei ole ühendatud — link tuleb otse ekraanile,
+         muidu ei saaks keegi sisse. */
+      teade.className = "teade";
+      teade.innerHTML = "<b>Postiteenust ei ole veel ühendatud</b>, seega kirja ei tule. "
+        + "Sisene siit:<br><br>"
+        + '<a href="' + d.arenduseLink + '" style="font-weight:700;font-size:18px">'
+        + "Logi sisse &rarr;</a>";
+    }
+  } catch {
+    /* Kõige tavalisem põhjus ei ole viga, vaid see, et serverit ei ole
+       käivitatud — ütleme kohe, mida teha, mitte „proovi uuesti“. */
+    teade.hidden = false;
+    teade.className = "teade viga";
+    teade.innerHTML = "<b>Server ei vasta.</b><br><br>"
+      + "Ava kaust <b>kodulinna-maja</b> ja tee topeltklõps failil "
+      + "<b>Käivita.cmd</b>. Jäta see must aken lahti — see ongi server.<br><br>"
+      + "Seejärel ava <b>http://localhost:3000</b> ja proovi uuesti.";
+  }
+  nupp.disabled = false;
+  nupp.textContent = "Saada mulle link";
+});
+</script>
+</body>
+</html>
