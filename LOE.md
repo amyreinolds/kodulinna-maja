@@ -62,6 +62,36 @@ Isegi samas WiFis olev inimene ei pääse ligi.
 | näidata kolleegile kõrvallauas | `HOST=0.0.0.0`, anna talle oma IP ja port |
 | anda majale päriselt kasutada | vaja on majutust — vt allpool |
 
+## Majutus — kuidas rakendus internetti saada
+
+Rakendus on majutuseks valmis. Puudu on ainult konto teenusepakkuja juures,
+mida ma sinu eest teha ei saa.
+
+**Soovitus: Render** (render.com). Tasuta pakett sobib: leht magab, kui teda
+tund aega ei kasutata, ja ärkab esimese avamisega ~30 sekundiga.
+
+1. Pane kood GitHubi (tasuta konto). Repo on juba valmis — `git push` järele.
+2. Renderis: **New → Web Service** → vali see repo. `render.yaml` seab
+   ülejäänu ise paika.
+3. Sisesta kaks saladust (Renderis, mitte faili):
+   - `DATABASE_URL` — `.env` failist
+   - `SESSIOONI_SALADUS` — `.env` failist
+4. Saad aadressi kujul `https://kodulinna-maja.onrender.com`. Ava, logi sisse,
+   proovi. Kui töötab, jaga aadress liikmetele.
+
+`Dockerfile` on ka olemas, kui eelistad Fly.io-d, Railwayd või muud.
+
+### Mis majutuses automaatselt teistmoodi käib
+
+| | Oma arvutis | Majutuses (`NODE_ENV=production`) |
+|---|---|---|
+| Kes ligi pääseb | ainult see arvuti | kõik, kes aadressi teavad |
+| Esimene sisselogija saab administraatoriks | jah | **ei** |
+
+Teine rida on tähtis: avalikul aadressil võiks juhuslik möödakäija muidu end
+esimesena administraatoriks kirjutada. Kui pead majutuses siiski esimest kontot
+tegema, lisa ajutiselt `ESIMENE_SISSELOGIJA=lubatud` ja võta pärast ära.
+
 ## Enne kui rakendust kellegagi jagad
 
 1. **`SESSIOONI_SALADUS`** peab olema pikk ja juhuslik. On juba tehtud.
