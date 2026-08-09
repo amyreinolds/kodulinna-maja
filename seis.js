@@ -18,7 +18,7 @@ const { q, yks } = require("./db");
    sest iga päring on eraldi käik andmebaasi ja tagasi. */
 const sorm = x => crypto.createHash("sha1")
   .update(JSON.stringify(x === undefined ? null : x)).digest("hex").slice(0, 16);
-const { naebKassat, annabOigusi } = require("./ametid");
+const { naebKassat, annabOigusi, haldabGraafikut } = require("./ametid");
 
 const iso = d => d ? new Date(d).toISOString() : null;
 const kell = t => t ? String(t).slice(0, 5) : "";
@@ -91,6 +91,7 @@ async function loeSeis(mina) {
     me: mina.id,
     naebKassat: koik,
     annabOigusi: annabOigusi(mina),
+    haldabGraafikut: haldabGraafikut(mina),
     seen,
     group: {
       name: (grupp && grupp.nimi) || "Kodulinna Maja",
@@ -464,11 +465,16 @@ async function salvestaSeis(mina, s) {
   /* ── graafik, tööd, puhkused ─────────────────────────────────── */
   if (s.too && s.too.graafik && typeof s.too.graafik === "object"
       && muutus("graafik", s.too.graafik)) {
-    await q("DELETE FROM graafik");
+    /* Oma tööaja paneb igaüks ise. Teiste oma muudavad ülemus ja
+       administraator — tööaeg on kokkulepe, mitte üksi otsustamine. */
+    const koiki = haldabGraafikut(mina);
+    if (koiki) await q("DELETE FROM graafik");
+    else await q("DELETE FROM graafik WHERE liige_id = $1", [mina.id]);
     for (const [maja, liikmed] of Object.entries(s.too.graafik)) {
       if (maja !== "km" && maja !== "torn") continue;
       for (const [liige, read] of Object.entries(liikmed || {})) {
         if (!onUuid(liige) || !Array.isArray(read)) continue;
+        if (!koiki && liige !== mina.id) continue;
         for (let p = 0; p < 7 && p < read.length; p++) {
           const x = read[p] || {};
           for (const [a, l] of [[x.ha, x.hl], [x.oa, x.ol]]) {
@@ -525,10 +531,16 @@ async function salvestaSeis(mina, s) {
   }
 
   if (s.too && Array.isArray(s.too.puhkused) && muutus("puhkused", s.too.puhkused)) {
-    const olemas = await q("SELECT id FROM puudumised");
+    /* Sama reegel: oma puhkuse ja haiguslehe paneb igaüks ise kirja,
+       teiste omad on ülemuse ja administraatori teha. */
+    const koiki = haldabGraafikut(mina);
+    const olemas = await q(
+      "SELECT id, liige_id FROM puudumised" + (koiki ? "" : " WHERE liige_id = $1"),
+      koiki ? [] : [mina.id]);
     const alles = new Set();
     for (const p of s.too.puhkused) {
       if (!onUuid(p.kes) || !p.algus || !p.lopp) continue;
+      if (!koiki && p.kes !== mina.id) continue;
       const liik = ["puhkus", "haigus", "vaba"].includes(p.liik) ? p.liik : "vaba";
       if (onUuid(p.id) && olemas.some(x => x.id === p.id)) {
         alles.add(p.id);

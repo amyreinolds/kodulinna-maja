@@ -685,6 +685,12 @@ hr.hr{border:none;border-top:1px solid var(--line-2);margin:0}
 }
 .cell .n:hover{color:var(--s);text-decoration:underline}
 
+/* Lukus rida: sama välimus, aga ei ole nupp. Teise inimese tööaega
+   muudavad ülemus ja administraator. */
+.lukus{cursor:default}
+.lukus:hover{background:inherit}
+.grida .gnimi.lukus,.grida .lahter.lukus{opacity:.72}
+
 /* Nädalatabeli kuupäevapäis on nupp: klõps toob selle päeva info üles. */
 .paevpais{
   display:flex;width:100%;border:none;background:none;font:inherit;
@@ -695,7 +701,9 @@ hr.hr{border:none;border-top:1px solid var(--line-2);margin:0}
   letter-spacing:0;text-transform:none;color:var(--ink-3)}
 .paevpais:hover{background:var(--s-tint);color:var(--s)}
 .paevpais.tana,.paevpais.tana i{color:var(--s)}
-.paevpais.valitud,.paevpais.valitud i{background:var(--s);color:var(--card)}
+/* Valitud päev: sama vaikne pinnatoon mis kalendri valitud ruudul. */
+.paevpais.valitud{background:var(--s-tint);box-shadow:inset 0 -2px 0 var(--s)}
+.paevpais.valitud,.paevpais.valitud i{color:var(--s)}
 
 /* Kuupäevavali kalendri päevaploki päises: vali suvaline päev. */
 .pvalik{

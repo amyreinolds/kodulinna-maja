@@ -1579,6 +1579,10 @@ const vahetusYks=v=>{
 };
 const vahetusi=v=>{const x=vahetusYks(v);const t=aegTekst(x.a,x.l);return t?[t]:[];};
 const paevalTööl=(mid,i,koht)=>vahetusi((graafik(koht)[mid]||[])[i]).length>0;
+/* Oma tööaeg on igaühe enda teha. Teiste oma muudavad ülemus ja
+   administraator — tööaeg on kokkulepe, mitte üksi otsustamine.
+   Sama kehtib puhkuse ja haiguslehe kohta. */
+const tohinGraafikut=mid=>S.haldabGraafikut===true||mid===meId();
 const kuskiTööl=(mid,i)=>KOHAD.some(k=>paevalTööl(mid,i,k.id));
 const tood=()=>(S.too&&S.too.tood)||[];
 const puhkused=()=>(S.too&&S.too.puhkused)||[];
@@ -1686,26 +1690,41 @@ function vToo(w){
     +'</div>'
     + S.members.map(m=>{
         const r=g2[m.id]||[];
+        const tohin=tohinGraafikut(m.id);
         return '<div class="grida">'
-          +'<button class="gnimi" data-act="graafik" data-id="'+m.id+'" data-koht="'+graKoht+'"'
-          +' aria-label="'+esc(m.name+" — kogu nädal")+'">'
-          +'<span class="isik">'+avaHtml(m)+esc(m.name)+'</span></button>'
+          +(tohin
+            ? '<button class="gnimi" data-act="graafik" data-id="'+m.id+'" data-koht="'+graKoht+'"'
+              +' aria-label="'+esc(m.name+" — kogu nädal")+'">'
+              +'<span class="isik">'+avaHtml(m)+esc(m.name)+'</span></button>'
+            : '<span class="gnimi lukus" title="Teise inimese tööaega muudavad ülemus ja '
+              +'administraator">'
+              +'<span class="isik">'+avaHtml(m)+esc(m.name)+'</span></span>')
           + paevad.map((d,i)=>{
               const k=dkey(d), ara=araPaeval(m.id,k);
               const silt=esc(m.name+", "+DOW_P[i]+" "+d.getDate()+"."+(d.getMonth()+1)+" — ");
-              if(ara)return '<button class="lahter ara" data-act="puhkus-muuda" data-id="'+ara.id+'"'
-                +' aria-label="'+silt+esc(liigiNimi(ara.liik))+'">'+esc(liigiNimi(ara.liik))+'</button>';
+              if(ara){
+                const t=esc(liigiNimi(ara.liik));
+                return tohin
+                  ? '<button class="lahter ara" data-act="puhkus-muuda" data-id="'+ara.id+'"'
+                    +' aria-label="'+silt+t+'">'+t+'</button>'
+                  : '<span class="lahter ara lukus">'+t+'</span>';
+              }
               const v=vahetusi(r[i]);
-              return '<button class="lahter'+(v.length?"":" tyhi2")+'" data-act="graafik-paev"'
-                +' data-id="'+m.id+'" data-koht="'+graKoht+'" data-i="'+i+'" data-kuup="'+k+'"'
-                +' aria-label="'+silt+(v.length?esc(v.join(" ")):"tööaega ei ole")+'">'
-                +(v.length?v.map(x=>'<i>'+esc(x)+'</i>').join(""):"–")+'</button>';
+              const sisu=v.length?v.map(x=>'<i>'+esc(x)+'</i>').join(""):"–";
+              return tohin
+                ? '<button class="lahter'+(v.length?"":" tyhi2")+'" data-act="graafik-paev"'
+                  +' data-id="'+m.id+'" data-koht="'+graKoht+'" data-i="'+i+'" data-kuup="'+k+'"'
+                  +' aria-label="'+silt+(v.length?esc(v.join(" ")):"tööaega ei ole")+'">'
+                  +sisu+'</button>'
+                : '<span class="lahter lukus'+(v.length?"":" tyhi2")+'">'+sisu+'</span>';
             }).join("")
           +'</div>';
       }).join("")
     +'</div>'
     +'<p class="meta">Vajuta ühel lahtril, et selle päeva tööaega muuta — või nimel, '
-    +'et näha korraga tervet nädalat. Maja: „'+esc(kohaNimi(graKoht))+'“.</p></div>';
+    +'et näha korraga tervet nädalat. Maja: „'+esc(kohaNimi(graKoht))+'“.'
+    +(S.haldabGraafikut?'':' Muuta saad oma ridu; teiste tööaega muudavad '
+      +'ülemus ja administraator.')+'</p></div>';
 
   /* Puudumised. */
   const tulevad=puhkused().filter(p=>p.lopp>=tana).sort((a,b)=>a.algus.localeCompare(b.algus));
@@ -1714,13 +1733,15 @@ function vToo(w){
     +'<span class="sp"></span>'
     +'<button class="btn ghost small" data-act="puhkus-uus">+ Lisa</button></div>'
     +(tulevad.length?'<div class="tlist2">'
-      + tulevad.map(p=>'<button class="trida2 puh" data-act="puhkus-muuda" data-id="'+p.id+'">'
+      + tulevad.map(p=>(tohinGraafikut(p.kes)
+          ? '<button class="trida2 puh" data-act="puhkus-muuda" data-id="'+p.id+'">'
+          : '<span class="trida2 puh lukus">')
           +'<span class="nm3">'+esc(nameOf(p.kes))
           + (p.markus?'<span class="osa2">'+esc(p.markus)+'</span>':"")+'</span>'
           +'<span class="liik">'+esc(liigiNimi(p.liik))+'</span>'
           +'<span class="kell2">'+esc(p.algus===p.lopp?lyhiKey(p.algus)
               :lyhiKey(p.algus)+" – "+lyhiKey(p.lopp))+'</span>'
-          +'<span class="nool">›</span></button>').join("")
+          +(tohinGraafikut(p.kes)?'<span class="nool">›</span></button>':'</span>')).join("")
       +'</div>'
       :'<div class="empty"><b>Keegi ei ole ära.</b>Vajuta üleval paremal „Lisa“.</div>')
     +'</div>';
@@ -1844,9 +1865,13 @@ function dlgToo(t){
 function dlgPuhkus(p){
   const t=dkey(new Date());
   dlg(p?"Muuda puudumist":"Lisa puudumine",
+    /* Ilma graafikuõiguseta saad kirja panna ainult enda puudumise. */
     '<div class="field"><label for="f_pkes">Kes</label><select id="f_pkes">'
-    + S.members.map(m=>'<option value="'+m.id+'"'+((p?p.kes===m.id:m.id===meId())?" selected":"")+'>'+esc(m.name)+'</option>').join("")
+    + S.members.filter(m=>tohinGraafikut(m.id))
+        .map(m=>'<option value="'+m.id+'"'+((p?p.kes===m.id:m.id===meId())?" selected":"")+'>'+esc(m.name)+'</option>').join("")
     +'</select></div>'
+    +(S.haldabGraafikut?"":'<span class="hint">Teiste puudumisi lisavad ülemus ja '
+      +'administraator.</span>')
     +'<div class="field"><label>Mis liiki</label><div class="pvalik">'
     + LIIGID.map((l,i)=>'<button type="button" class="lnupp" data-act="liik-vali" data-v="'+l.id+'"'
         +' aria-pressed="'+((p?p.liik===l.id:i===0)?"true":"false")+'">'+esc(l.nimi)+'</button>').join("")
