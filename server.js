@@ -9,6 +9,7 @@ const path = require("path");
 const { q, yks } = require("./db");
 const auth = require("./auth");
 const { AMETID, kehtiv, naebKassat, annabOigusi, haldabLiikmeid } = require("./ametid");
+const seis = require("./seis");
 
 /* Ametid, mis ameteid jagavad. Võtame nimekirja ametid.js-ist, et
    SQL ja õigused ei läheks kunagi lahku. */
@@ -98,6 +99,19 @@ const server = http.createServer(async (req, res) => {
 
     /* Edasi ei lasta ilma sisselogimiseta. */
     if (tee.startsWith("/api/") && !mina) return json(res, 401, { viga: "Logi sisse." });
+
+    /* ── maja seis ühe tükina ─────────────────────────────────────
+       Ekraan on prototüübi oma ja töötab terve seisuga korraga.
+       seis.js tõlgib andmebaasi tema keelde ja tagasi. */
+    if (tee === "/api/seis" && req.method === "GET")
+      return json(res, 200, await seis.loeSeis(mina));
+
+    if (tee === "/api/seis" && req.method === "PUT") {
+      const b = await keha(req);
+      const r = await seis.salvestaSeis(mina, b);
+      if (r.viga) return json(res, 400, r);
+      return json(res, 200, await seis.loeSeis(mina));
+    }
 
     /* ── müük ─────────────────────────────────────────────────── */
     if (tee === "/api/myyk" && (req.method === "GET" || req.method === "HEAD")) {
