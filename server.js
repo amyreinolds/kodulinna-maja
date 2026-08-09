@@ -89,7 +89,7 @@ const server = http.createServer(async (req, res) => {
     if (tee.startsWith("/api/") && !mina) return json(res, 401, { viga: "Logi sisse." });
 
     /* ── müük ─────────────────────────────────────────────────── */
-    if (tee === "/api/myyk") {
+    if (tee === "/api/myyk" && (req.method === "GET" || req.method === "HEAD")) {
       /* Kogu maja müüki näeb administraator, teised näevad oma müüki.
          See kontroll on serveris, mitte ekraanil — nii ei saa sellest
          mööda minna, ükskõik mida brauseris teha. */
@@ -107,6 +107,55 @@ const server = http.createServer(async (req, res) => {
         kordi: a.kordi + 1, tk: a.tk + r.kogus, eur: a.eur + Number(r.summa)
       }), { kordi: 0, tk: 0, eur: 0 });
       return json(res, 200, { koikNahtav: koik, read, kokku });
+    }
+
+    /* Müügi sisestamine. Seda teeb igaüks ise ja alati enda nimele —
+       müüja tuleb küpsisest, mitte vormist, nii ei saa keegi kanda müüki
+       teise inimese arvele. */
+    if (tee === "/api/myyk" && req.method === "POST") {
+      const b = await keha(req);
+      const kogus = Number(b.kogus);
+      if (!Number.isInteger(kogus) || kogus < 1 || kogus > 9999)
+        return json(res, 400, { viga: "Kogus peab olema täisarv 1 kuni 9999." });
+
+      const toode = await yks(
+        "SELECT id, nimetus, hind FROM tooted WHERE id = $1", [b.toode_id]);
+      if (!toode) return json(res, 400, { viga: "Sellist toodet ei ole." });
+
+      /* Hind kirjutatakse müügireale kaasa. Kui hinnakirja hiljem
+         muudetakse, jääb vana müük ikka selle hinnaga, millega ta müüdi.
+         Summat me ise ei arvuta — see on andmebaasis tuletatud veerg
+         (kogus × hind), nii ei saa see kunagi ridadega lahku minna. */
+      const r = await yks(
+        `INSERT INTO myygid (toode_id, kogus, hind, myyja_id)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id, aeg, kogus, hind, summa`,
+        [toode.id, kogus, toode.hind, mina.id]);
+      return json(res, 200, { ok: true, myyk: Object.assign({ nimetus: toode.nimetus }, r) });
+    }
+
+    /* Eksimuse saab ise ära võtta. Teiste müüki kustutab ainult see,
+       kes kogu kassa eest vastutab. */
+    if (tee === "/api/myyk" && req.method === "DELETE") {
+      const b = await keha(req);
+      const oma = await yks("SELECT myyja_id FROM myygid WHERE id = $1", [b.id]);
+      if (!oma) return json(res, 404, { viga: "Sellist müüki ei ole." });
+      if (oma.myyja_id !== mina.id && !naebKassat(mina))
+        return json(res, 403, { viga: "Kustutada saad ainult oma müüki." });
+      await q("DELETE FROM myygid WHERE id = $1", [b.id]);
+      return json(res, 200, { ok: true });
+    }
+
+    /* Hinnakiri müügi sisestamiseks: osad ja nende tooted. */
+    if (tee === "/api/tooted" && req.method === "GET") {
+      const osad = await q("SELECT id, nimi FROM myyk_osad ORDER BY jrk, nimi");
+      const tooted = await q(
+        "SELECT id, osa_id, nimetus, hind FROM tooted ORDER BY nimetus");
+      return json(res, 200, osad.map(o => Object.assign({}, o, {
+        tooted: tooted.filter(t => t.osa_id === o.id)
+      })).concat(
+        tooted.some(t => !t.osa_id)
+          ? [{ id: null, nimi: "Muu", tooted: tooted.filter(t => !t.osa_id) }] : []));
     }
 
     if (tee === "/api/liikmed" && req.method === "GET") {

@@ -56,8 +56,10 @@ tr:last-child td{border-bottom:none}
   padding:10px 12px;border-radius:10px;border:1.5px solid transparent;
   background:transparent;font-family:inherit;outline:none;
 }
-.liige input.nm{font-size:17px;font-weight:650;min-width:170px;color:var(--ink)}
-.liige input.rl{font-size:15px;color:var(--ink-3);flex:1;min-width:120px}
+.liige input.nm{font-size:17px;font-weight:650;flex:1 1 150px;min-width:120px;color:var(--ink)}
+.liige input.rl{font-size:15px;color:var(--ink-3);flex:1 1 130px;min-width:100px}
+/* Nupp hoiab rea paremas servas, et read oleksid ühel joonel. */
+.liige button[data-kutse]{margin-left:auto}
 .liige input.nm:hover,.liige input.rl:hover{border-color:var(--line)}
 .liige input.nm:focus,.liige input.rl:focus{border-color:var(--accent);background:var(--card)}
 .liige select.am,.uus select{
@@ -89,6 +91,38 @@ tr:last-child td{border-bottom:none}
 .uus button{min-height:48px;padding:0 22px;border-radius:12px;border:none;
   background:var(--accent);color:#fff;font-family:inherit;font-size:16px;
   font-weight:600;cursor:pointer}
+
+/* ── uus müük ─────────────────────────────────────────────────── */
+.kogus{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.kogus label{font-size:16px;font-weight:650}
+.kogus input{width:88px;min-height:48px;padding:0 12px;border-radius:12px;
+  border:1.5px solid var(--line);background:var(--card);color:var(--ink);
+  font-family:var(--mono);font-size:19px;font-weight:700;text-align:center;outline:none}
+.kogus input:focus{border-color:var(--accent)}
+.kogus button{width:48px;height:48px;border-radius:12px;border:1.5px solid var(--line);
+  background:var(--card);color:var(--ink);font-size:24px;line-height:1;cursor:pointer}
+.kogus button:hover{border-color:var(--accent);color:var(--accent)}
+.kogus .vihje{font-size:15px;color:var(--ink-3);flex:1;min-width:200px}
+.osa{margin-bottom:18px}
+.osa:last-child{margin-bottom:0}
+.osa>p{font-size:13px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 9px}
+.nupud{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.toode{display:flex;flex-direction:column;align-items:flex-start;gap:3px;
+  min-height:66px;padding:12px 15px;border-radius:14px;border:1.5px solid var(--line);
+  background:var(--card);font-family:inherit;text-align:left;cursor:pointer}
+.toode:hover{border-color:var(--accent)}
+.toode:disabled{opacity:.6;cursor:default}
+.toode b{font-size:16.5px;font-weight:650;color:var(--ink)}
+.toode span{font-family:var(--mono);font-size:15px;color:var(--ink-3)}
+.toode .tasuta{font-family:inherit;font-weight:700;color:var(--ink-2)}
+.teade{margin:18px 0 0;padding:13px 16px;border-radius:12px;background:var(--soft);
+  font-size:16px;font-weight:600}
+.teade.viga{background:#FDECEC;color:#8E1F1F}
+td button.kustuta{min-height:32px;padding:0 10px;border-radius:8px;
+  border:1px solid var(--line);background:var(--card);color:var(--ink-3);
+  font-family:inherit;font-size:14px;cursor:pointer}
+td button.kustuta:hover{border-color:#C0392B;color:#C0392B}
 </style>
 </head>
 <body>
@@ -99,6 +133,20 @@ tr:last-child td{border-bottom:none}
     <span class="sp"></span>
     <button class="valja" id="valja">Logi välja</button>
   </div>
+
+  <!-- Müügi sisestamine: vali kogus, klõpsa tootel. -->
+  <article class="card" id="kassaKaart">
+    <p class="h3">UUS MÜÜK</p>
+    <div class="kogus">
+      <label for="kogus">Kogus</label>
+      <button type="button" id="vahem" aria-label="Vähem">−</button>
+      <input id="kogus" type="number" min="1" max="9999" step="1" value="1">
+      <button type="button" id="rohkem" aria-label="Rohkem">+</button>
+      <span class="vihje">Vali kogus ja klõpsa tootel — müük läheb sinu nimele.</span>
+    </div>
+    <div id="tooted"><p class="tyhi">Laen hinnakirja…</p></div>
+    <p class="teade" id="teade" hidden></p>
+  </article>
 
   <article class="card">
     <p class="h3" id="pealkiri">MÜÜK</p>
@@ -160,14 +208,18 @@ async function laadi() {
   document.getElementById("tabel").innerHTML = d.read.length
     ? '<table><thead><tr><th>Millal</th><th>Osa</th><th>Nimetus</th>'
       + '<th class="n">Kogus</th><th class="n">Hind</th><th class="n">Summa</th>'
-      + (d.koikNahtav ? "<th>Müüja</th>" : "") + "</tr></thead><tbody>"
+      + (d.koikNahtav ? "<th>Müüja</th>" : "") + "<th></th></tr></thead><tbody>"
       + d.read.map(r => "<tr><td>" + kuup(r.aeg) + "</td><td>" + esc(r.osa || "—") + "</td>"
         + "<td>" + esc(r.nimetus) + "</td>"
         + '<td class="n">' + r.kogus + "</td>"
         + '<td class="n">' + raha(r.hind) + "</td>"
         + '<td class="n"><b>' + raha(r.summa) + "</b></td>"
         + (d.koikNahtav ? "<td>" + esc(r.myyja || "—") + "</td>" : "")
-        + "</tr>").join("")
+        /* Oma eksimuse saab ise ära võtta; kassa eest vastutaja iga rea. */
+        + '<td class="n">'
+        + ((d.koikNahtav || r.myyja_id === mina.id)
+            ? '<button class="kustuta" data-kustuta="' + r.id + '">Kustuta</button>' : "")
+        + "</td></tr>").join("")
       + "</tbody></table>"
     : '<p class="tyhi">Müüke ei ole veel kirjas.</p>';
 
@@ -187,9 +239,82 @@ async function laadi() {
     .filter(a => mina.annabOigusi || !a.kassa)
     .map(a => '<option value="' + a.id + '">' + esc(a.nimi) + "</option>").join("");
   laadiLiikmed();
+  if (!TOOTED) laadiTooted();
 }
 
-/* ── liikmed ja kutsed (ainult administraatorile) ──────────────── */
+/* ── uus müük ───────────────────────────────────────────────────
+   Kogus ja siis klõps tootel. Nii käib see leti taga kõige kiiremini:
+   üks pilk, üks klõps, müük kirjas. */
+let TOOTED = null;
+
+async function laadiTooted() {
+  TOOTED = await (await fetch("/api/tooted")).json();
+  const osad = TOOTED.filter(o => o.tooted.length);
+  document.getElementById("tooted").innerHTML = osad.length
+    ? osad.map(o => '<div class="osa"><p>' + esc(o.nimi) + '</p><div class="nupud">'
+        + o.tooted.map(t => '<button class="toode" data-toode="' + t.id + '">'
+            + "<b>" + esc(t.nimetus) + "</b>"
+            + (Number(t.hind) === 0
+                ? '<span class="tasuta">tasuta</span>'
+                : "<span>" + raha(t.hind) + "</span>")
+            + "</button>").join("")
+        + "</div></div>").join("")
+    : '<p class="tyhi">Hinnakirjas ei ole veel ühtegi toodet.</p>';
+}
+
+function teade(t, viga) {
+  const n = document.getElementById("teade");
+  n.textContent = t;
+  n.className = viga ? "teade viga" : "teade";
+  n.hidden = false;
+  clearTimeout(teade.aeg);
+  teade.aeg = setTimeout(() => { n.hidden = true; }, 6000);
+}
+
+const kogusVali = () => document.getElementById("kogus");
+const nihuta = samm => {
+  const v = Math.max(1, Math.min(9999, (parseInt(kogusVali().value, 10) || 1) + samm));
+  kogusVali().value = v;
+};
+document.getElementById("vahem").addEventListener("click", () => nihuta(-1));
+document.getElementById("rohkem").addEventListener("click", () => nihuta(1));
+
+document.getElementById("tooted").addEventListener("click", async e => {
+  const n = e.target.closest("[data-toode]");
+  if (!n) return;
+  const kogus = parseInt(kogusVali().value, 10);
+  if (!Number.isInteger(kogus) || kogus < 1)
+    return teade("Kogus peab olema vähemalt 1.", true);
+
+  n.disabled = true;
+  const r = await (await fetch("/api/myyk", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ toode_id: n.dataset.toode, kogus: kogus })
+  })).json();
+  n.disabled = false;
+  if (r.viga) return teade(r.viga, true);
+
+  teade("Kirjas: " + r.myyk.kogus + " × " + r.myyk.nimetus
+    + " · " + raha(r.myyk.summa));
+  kogusVali().value = 1;
+  laadi();
+});
+
+document.getElementById("tabel").addEventListener("click", async e => {
+  const n = e.target.closest("[data-kustuta]");
+  if (!n) return;
+  if (!confirm("Kustutan selle müügi?")) return;
+  n.disabled = true;
+  const r = await (await fetch("/api/myyk", {
+    method: "DELETE", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id: n.dataset.kustuta })
+  })).json();
+  if (r.viga) { n.disabled = false; return teade(r.viga, true); }
+  teade("Müük kustutatud.");
+  laadi();
+});
+
+/* ── liikmed ja kutsed ─────────────────────────────────────────── */
 async function laadiLiikmed() {
   const read = await (await fetch("/api/liikmed")).json();
   /* Nimi ja roll on otse muudetavad — eraldi muutmisakent ei ole vaja.
