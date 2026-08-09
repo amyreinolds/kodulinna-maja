@@ -1122,8 +1122,10 @@ function vPeople(w){
 /* Osade nupud on alati ekraanil ja üks on alati avatud — nii ei pea
    midagi valima, et sisu näha, aga teisele vajutades vahetub tabel. */
 let myykOsa=null, myykKuu=null, hinnaOsa=null, nadalaNihe=0, kalKoht="koik", graKoht="km";
-/* Kalendris vaadatav päev. Tühi tähendab tänast. */
+/* Vaadatav päev. Üks ja seesama nii Kalendris kui Töö graafikus: kui
+   valid päeva ühes kohas, näitab teine sama päeva. Tühi tähendab tänast. */
 let kalPaev=null;
+const valitudPaevOn=()=>kalPaev||dkey(new Date());
 
 /* Kustutatud osa read ei tohi kaduda — nad koonduvad „Ilma osata“ alla. */
 function myygiSeis(){
@@ -1623,7 +1625,14 @@ const tooPaeval=d=>tood().filter(t=>tooSelPaeval(t,d))
   .sort((a,b)=>(tooAlgus(a)||"00:00").localeCompare(tooAlgus(b)||"00:00"));
 
 /* Nädala esmaspäev. */
+/* Nädal järgib valitud päeva: kui vaatad laupäeva, on laual selle
+   laupäeva nädal, mitte käesolev. */
 function nadalaAlgus(nihe){
+  if(kalPaev){
+    const v=new Date(kalPaev+"T12:00:00"); v.setHours(0,0,0,0);
+    v.setDate(v.getDate()-dowIdx(v)+(nihe||0)*7);
+    return v;
+  }
   const d=new Date(); d.setHours(0,0,0,0);
   d.setDate(d.getDate()-dowIdx(d)+(nihe||0)*7);
   return d;
@@ -1644,13 +1653,10 @@ function vToo(w){
   for(let i=0;i<7;i++){const d=new Date(alg);d.setDate(alg.getDate()+i);paevad.push(d);}
   const tIdx=dowIdx(new Date());
 
-  /* Kes ühel kindlal päeval majas on, seda vaadatakse Kalendrist —
-     seal on üks suur kalender, kus on korraga näha üritused, tööd ja
-     see, kes majas on. Siin on nädalatabel: kogu nädal korraga. */
-  let h='<div class="card"><p class="abi" style="margin:0">'
-    +'Kes ühel kindlal päeval majas on ja kes on ära — vaata '
-    +'<button class="linkbtn" data-act="view" data-view="kalender">Kalendrist</button>. '
-    +'Siin all saab graafikut muuta.</p></div>';
+  /* Kõige üleval on see päev, mida parasjagu vaadatakse: kes on majas,
+     kes on ära, mis sel päeval toimub. Sama plokk on ka Kalendris ja
+     mõlemad näitavad sama valitud päeva. */
+  let h=paevaPlokk(valitudPaevOn());
 
   /* Üks tabel korraga, maja valik peal — sama muster mis Kalendris. */
   const g2=graafik(graKoht);
@@ -1669,8 +1675,14 @@ function vToo(w){
     +'<button class="btn ghost small" data-act="nadal" data-v="0">Käesolev</button>'
     +'<button class="btn ghost small" data-act="nadal" data-v="1">›</button></div>'
     +'<div class="gtabel"><div class="grida gpais"><span>Inimene</span>'
-    + paevad.map((d,i)=>'<span'+(dkey(d)===tana?' class="tana"':'')+'>'+DOW_S[i]
-        +'<i>'+d.getDate()+'.'+(d.getMonth()+1)+'</i></span>').join("")
+    /* Kuupäev on nupp: klõps toob selle päeva info üles. */
+    + paevad.map((d,i)=>{
+        const k=dkey(d);
+        return '<button class="paevpais'+(k===tana?" tana":"")
+          +(k===valitudPaevOn()?" valitud":"")+'" data-act="kal-paev" data-k="'+k+'"'
+          +' aria-pressed="'+(k===valitudPaevOn())+'">'+DOW_S[i]
+          +'<i>'+d.getDate()+'.'+(d.getMonth()+1)+'</i></button>';
+      }).join("")
     +'</div>'
     + S.members.map(m=>{
         const r=g2[m.id]||[];
