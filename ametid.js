@@ -10,11 +10,11 @@
              KÕIK sisselogitud liikmed
 
      annab   muudab ameteid ehk otsustab, kes kassat näeb
-             ülemus, administraator
+             AINULT administraator
 
    Miks „annab“ eraldi: kui igaüks saab ameteid muuta, siis saab igaüks
-   endale ka kassaõiguse anda ja lukk ei loe midagi. Õiguste jagamine
-   peab jääma nende kätte, kes maja eest vastutavad. */
+   endale ka kassaõiguse anda ja lukk ei loe midagi. Ka ülemus seda ei
+   tee — õiguste jagamine on ühe inimese, administraatori asi. */
 "use strict";
 
 const AMETID = [
@@ -22,10 +22,10 @@ const AMETID = [
     selgitus: "Haldab kõike peale ühiskassa" },
   { id: "raamatupidaja",  nimi: "Raamatupidaja",  kassa: true,  annab: false,
     selgitus: "Näeb ka kogu kassat ja aruannet" },
-  { id: "ulemus",         nimi: "Ülemus",         kassa: true,  annab: true,
-    selgitus: "Näeb kassat, jagab ameteid" },
+  { id: "ulemus",         nimi: "Ülemus",         kassa: true,  annab: false,
+    selgitus: "Näeb ka kogu kassat ja aruannet" },
   { id: "administraator", nimi: "Administraator", kassa: true,  annab: true,
-    selgitus: "Näeb kassat, jagab ameteid" }
+    selgitus: "Näeb kassat ja jagab ameteid" }
 ];
 
 const leia = a => AMETID.find(x => x.id === a) || AMETID[0];

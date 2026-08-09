@@ -78,9 +78,11 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
        Ja: `epost <> 'x'` EI ole tõene, kui epost on NULL — seepärast
        IS DISTINCT FROM. Selle peale läks esimene katse metsa. */
     const [mina] = await q("SELECT id FROM liikmed WHERE epost='muutja@proov.invalid'");
+    /* Paneme meelde KÕIGI teiste ametid, mitte ainult administraatorite —
+       allolev UPDATE viib kõigilt ameti ära ja tagasi peab saama iga
+       inimene täpselt selle, mis tal oli. */
     const teised = await q(
-      `SELECT id, amet FROM liikmed
-       WHERE amet IN ('ulemus','administraator') AND id IS DISTINCT FROM $1`, [mina.id]);
+      "SELECT id, amet FROM liikmed WHERE id IS DISTINCT FROM $1", [mina.id]);
     try {
       await q(`UPDATE liikmed SET amet = 'liige', administraator = false
                WHERE id IS DISTINCT FROM $1`, [mina.id]);
@@ -91,11 +93,12 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
     } finally {
       for (const r of teised)
         await q(`UPDATE liikmed SET amet = $2,
-                   administraator = ($2 IN ('ulemus','administraator'))
+                   administraator = ($2 = 'administraator')
                  WHERE id = $1`, [r.id, r.amet]);
+      const olid = teised.filter(r => r.amet === "administraator").length + 1;
       const tagasi = await q(
-        "SELECT count(*)::int AS n FROM liikmed WHERE amet IN ('ulemus','administraator')");
-      console.log("         haldajad taastatud: " + tagasi[0].n + " (oli " + (teised.length + 1) + ")");
+        "SELECT count(*)::int AS n FROM liikmed WHERE amet = 'administraator'");
+      console.log("         administraatorid taastatud: " + tagasi[0].n + " (oli " + olid + ")");
     }
 
     /* Tavaline liige muudab nime, ametit mitte. */

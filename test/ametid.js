@@ -56,11 +56,11 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
     const [liige] = await q("SELECT id FROM liikmed WHERE epost='liige@proov.invalid'");
 
     /* Maja reegel: kõik haldavad kõike. Ainult kassa on lukus ja
-       ameteid — mis kassa lahti teevad — jagavad ülemus ja administraator. */
+       ameteid — mis kassa lahti teevad — jagab ainult administraator. */
     const ootus = {
       "liige@proov.invalid":  { kassa: false, annab: false },
       "raamat@proov.invalid": { kassa: true,  annab: false },
-      "ulemus@proov.invalid": { kassa: true,  annab: true },
+      "ulemus@proov.invalid": { kassa: true,  annab: false },
       "admin@proov.invalid":  { kassa: true,  annab: true }
     };
 
@@ -113,6 +113,14 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
       keha: { id: buhh.id, nimi: "Proov Raamat", amet: "administraator" } });
     kontrolli("raamatupidaja ei saa endale ametit anda", ametiVargus.kood === 403,
       "kood " + ametiVargus.kood);
+
+    /* Ka ülemus ei jaga ameteid — see on ainult administraatori asi. */
+    await sisse("ulemus@proov.invalid");
+    const ulemuseKatse = await paring("/api/liikmed", { meetod: "PATCH",
+      keha: { id: buhh.id, nimi: "Proov Raamat", amet: "liige" } });
+    kontrolli("ülemus ei saa ametit muuta", ulemuseKatse.kood === 403,
+      "kood " + ulemuseKatse.kood);
+    await sisse("raamat@proov.invalid");
 
     /* Sama amet kaasa saates ei ole muutmine — see peab läbi minema. */
     const sama = await paring("/api/liikmed", { meetod: "PATCH",

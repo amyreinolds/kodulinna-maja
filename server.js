@@ -10,6 +10,10 @@ const { q, yks } = require("./db");
 const auth = require("./auth");
 const { AMETID, kehtiv, naebKassat, annabOigusi, haldabLiikmeid } = require("./ametid");
 
+/* Ametid, mis ameteid jagavad. Võtame nimekirja ametid.js-ist, et
+   SQL ja õigused ei läheks kunagi lahku. */
+const ANDJAD = AMETID.filter(a => a.annab).map(a => a.id);
+
 const PORT = Number(process.env.PORT || 3000);
 const AVALIK = path.join(__dirname, "public");
 
@@ -141,7 +145,7 @@ const server = http.createServer(async (req, res) => {
       if (!olemas) return json(res, 404, { viga: "Sellist liiget ei ole." });
       if (b.amet !== undefined && b.amet !== olemas.amet && !annabOigusi(mina))
         return json(res, 403, {
-          viga: "Ameti muutmine on ülemuse ja administraatori asi — see otsustab, kes kassat näeb."
+          viga: "Ameteid muudab ainult administraator — see otsustab, kes kassat näeb."
         });
 
       /* Keegi peab ameteid jagada saama, muidu ei pääseks kassa juurde
@@ -149,9 +153,9 @@ const server = http.createServer(async (req, res) => {
       if (b.amet !== undefined && !annabOigusi({ amet: b.amet })) {
         const n = await yks(
           `SELECT count(*)::int AS n FROM liikmed
-           WHERE amet IN ('ulemus','administraator') AND id <> $1`, [b.id]);
+           WHERE amet = ANY($2) AND id <> $1`, [b.id, ANDJAD]);
         if (n.n === 0) return json(res, 400, {
-          viga: "Keegi peab ameteid jagama. Anna enne kellelegi teisele ülemuse või administraatori amet."
+          viga: "Keegi peab ameteid jagama. Anna enne kellelegi teisele administraatori amet."
         });
       }
 
@@ -159,9 +163,9 @@ const server = http.createServer(async (req, res) => {
       const r = await yks(
         `UPDATE liikmed SET nimi = $2, roll = $3,
             amet = coalesce($4, amet),
-            administraator = (coalesce($4, amet) IN ('ulemus','administraator'))
+            administraator = (coalesce($4, amet) = ANY($5))
          WHERE id = $1 RETURNING id, nimi, amet`,
-        [b.id, nimi, String(b.roll || "").trim() || null, uusAmet]);
+        [b.id, nimi, String(b.roll || "").trim() || null, uusAmet, ANDJAD]);
       if (!r) return json(res, 404, { viga: "Sellist liiget ei ole." });
       return json(res, 200, { ok: true, liige: r });
     }
