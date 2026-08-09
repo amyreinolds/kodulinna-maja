@@ -240,6 +240,41 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true, yritus: r });
     }
 
+    if (tee === "/api/yritused" && req.method === "PATCH") {
+      const b = await keha(req);
+      const pealkiri = String(b.pealkiri || "").trim();
+      if (!pealkiri) return json(res, 400, { viga: "Ürituse nimi on täitmata." });
+      if (!b.algus) return json(res, 400, { viga: "Algusaeg on valimata." });
+      if (!await onMaja(b.koht_id)) return json(res, 400, { viga: "Vali maja." });
+      const r = await yks(
+        `UPDATE yritused SET koht_id=$2, pealkiri=$3, algus=$4, lopp=$5,
+                asukoht=$6, kirjeldus=$7
+         WHERE id = $1 RETURNING id`,
+        [b.id, b.koht_id, pealkiri, b.algus, b.lopp || null,
+         String(b.asukoht || "").trim() || null, String(b.kirjeldus || "").trim() || null]);
+      if (!r) return json(res, 404, { viga: "Sellist üritust ei ole." });
+      return json(res, 200, { ok: true });
+    }
+
+    /* Kes tuleb. Vastus on alati enda oma — küpsisest, mitte vormist. */
+    if (tee === "/api/osalemine" && req.method === "POST") {
+      const b = await keha(req);
+      if (!["jah", "ei"].includes(b.vastus))
+        return json(res, 400, { viga: "Vastus saab olla „jah“ või „ei“." });
+      const y = await yks("SELECT id FROM yritused WHERE id = $1", [b.yritus_id]);
+      if (!y) return json(res, 404, { viga: "Sellist üritust ei ole." });
+      await q(
+        `INSERT INTO osalemine (yritus_id, liige_id, vastus) VALUES ($1,$2,$3)
+         ON CONFLICT (yritus_id, liige_id) DO UPDATE SET vastus = $3, aeg = now()`,
+        [b.yritus_id, mina.id, b.vastus]);
+      return json(res, 200, { ok: true });
+    }
+
+    if (tee === "/api/osalemine" && req.method === "GET")
+      return json(res, 200, await q(
+        `SELECT o.yritus_id, o.liige_id, o.vastus, l.nimi
+         FROM osalemine o JOIN liikmed l ON l.id = o.liige_id`));
+
     if (tee === "/api/yritused" && req.method === "DELETE") {
       const b = await keha(req);
       const r = await yks("DELETE FROM yritused WHERE id = $1 RETURNING id", [b.id]);
@@ -550,6 +585,25 @@ const server = http.createServer(async (req, res) => {
          b.pilt !== undefined, String(b.pilt || "").trim() || null]);
       if (!r) return json(res, 404, { viga: "Sellist liiget ei ole." });
       return json(res, 200, { ok: true, liige: r });
+    }
+
+    /* Liikme eemaldamine. Tema müügid jäävad alles ja müüja väli läheb
+       tühjaks — lahkunud inimese müüdud raha ei tohi kassast kaduda.
+       Seepärast ütleme ka ette, mitu rida jääb nimeta. */
+    if (tee === "/api/liikmed" && req.method === "DELETE") {
+      const b = await keha(req);
+      if (b.id === mina.id)
+        return json(res, 400, { viga: "Iseennast ei saa majast välja võtta." });
+      const kes = await yks("SELECT id, amet FROM liikmed WHERE id = $1", [b.id]);
+      if (!kes) return json(res, 404, { viga: "Sellist liiget ei ole." });
+      /* Administraatorit puutub ainult administraator. Maja ei jää seeläbi
+         kunagi ilma administraatorita: iseennast välja võtta ei saa, nii et
+         see, kes kustutab, jääb ise alles. */
+      if (annabOigusi(kes) && !annabOigusi(mina))
+        return json(res, 403, { viga: "Administraatori saab välja võtta ainult administraator." });
+      const m = await yks("SELECT count(*)::int AS n FROM myygid WHERE myyja_id = $1", [b.id]);
+      await q("DELETE FROM liikmed WHERE id = $1", [b.id]);
+      return json(res, 200, { ok: true, myyke: m.n });
     }
 
     if (tee === "/api/kutse" && req.method === "POST") {

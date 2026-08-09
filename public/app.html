@@ -172,7 +172,13 @@ dialog::backdrop{background:rgba(20,24,28,.42)}
 .liige:last-of-type{border-bottom:none}
 .pilt{width:40px;height:40px;border-radius:50%;background:var(--soft);display:flex;
   align-items:center;justify-content:center;font-size:15px;font-weight:750;color:var(--ink-2);
-  flex:0 0 auto}
+  flex:0 0 auto;overflow:hidden;position:relative}
+.pilt img{width:100%;height:100%;object-fit:cover}
+label.pildinupp{cursor:pointer}
+label.pildinupp input{display:none}
+.pilt.muudetav:hover::after{content:"vaheta";position:absolute;inset:0;display:flex;
+  align-items:center;justify-content:center;background:rgba(20,24,28,.62);color:#fff;
+  font-size:10.5px;font-weight:700}
 .liige input.nm,.liige input.rl,.liige input.tl{
   border:1.5px solid transparent;background:transparent;min-height:42px}
 .liige input.nm{font-size:16.5px;font-weight:650;flex:1 1 140px;min-width:110px}
@@ -404,10 +410,14 @@ async function müügiKustutus(e) {
 /* ══ KALENDER ═══════════════════════════════════════════════════
    Üks kalender, maja vahetatakse ülal. „Kõik“ on olemas selleks, et
    ükski kirje ei jääks kogemata nähtamatuks. */
-let YRITUSED = [], TOOD = { tood: [], tehtud: [], vahele: [] };
+let YRITUSED = [], TOOD = { tood: [], tehtud: [], vahele: [] }, OSALEMINE = [];
 
+async function laadiKalender() {
+  [YRITUSED, TOOD, OSALEMINE] = await Promise.all(
+    [päring("/api/yritused"), päring("/api/tood"), päring("/api/osalemine")]);
+}
 async function vaadeKalender() {
-  [YRITUSED, TOOD] = await Promise.all([päring("/api/yritused"), päring("/api/tood")]);
+  await laadiKalender();
   joonistaKalender();
 }
 
@@ -547,9 +557,26 @@ const kirjeReaks = x => '<div class="kirje' + (x.tehtud ? " tehtud" : "") + '">'
           : '<button class="pisi" data-tehtud="' + x.id + '">Tegin ära</button>')
         + '<button class="pisi punane" data-kustutaToo="' + x.id + '" data-kordub="'
           + (x.kordub ? "1" : "") + '">Kustuta</button>'
-      : '<button class="pisi punane" data-kustutaYritus="' + x.id + '">Kustuta</button>')
+      : (tulen(x.id) === "jah"
+            ? '<span class="mark">tulen</span>'
+            : '<button class="pisi" data-tulen="' + x.id + '">Tulen</button>')
+        + (tulen(x.id) === "ei"
+            ? '<span class="mark">ei tule</span>'
+            : '<button class="pisi" data-eitule="' + x.id + '">Ei tule</button>')
+        + '<button class="pisi" data-muudaYritus="' + x.id + '">Muuda</button>'
+        + '<button class="pisi punane" data-kustutaYritus="' + x.id + '">Kustuta</button>')
   + (x.tehtud && x.kes ? '<span class="lisa">Tehtud — ' + esc(x.kes) + "</span>" : "")
-  + (x.liik === "yritus" && x.y.asukoht ? '<span class="lisa">' + esc(x.y.asukoht) + "</span>" : "");
+  + (x.liik === "yritus" && x.y.asukoht ? '<span class="lisa">' + esc(x.y.asukoht) + "</span>" : "")
+  + (x.liik === "yritus" ? '<span class="lisa">' + tulijad(x.id) + "</span>" : "");
+
+const tulen = id => (OSALEMINE.find(o => o.yritus_id === id && o.liige_id === MINA.id) || {}).vastus;
+function tulijad(id) {
+  const jah = OSALEMINE.filter(o => o.yritus_id === id && o.vastus === "jah");
+  const ei = OSALEMINE.filter(o => o.yritus_id === id && o.vastus === "ei");
+  if (!jah.length && !ei.length) return "Keegi ei ole veel vastanud.";
+  return "Tuleb: " + (jah.length ? esc(jah.map(o => o.nimi).join(", ")) : "—")
+    + (ei.length ? " · ei tule: " + esc(ei.map(o => o.nimi).join(", ")) : "");
+}
 
 function seaPäevaNupud() {
   const s = document.getElementById("akenSisu");
@@ -565,6 +592,16 @@ function seaPäevaNupud() {
     if (!confirm("Kustutan selle ürituse?")) return;
     if (await päring("/api/yritused", "DELETE", { id: n.dataset.kustutayritus }))
       await uuendaKalender();
+  });
+  s.querySelectorAll("[data-muudaYritus]").forEach(n => n.onclick = () =>
+    vormYritus(AVATUD, YRITUSED.find(y => y.id === n.dataset.muudayritus)));
+  s.querySelectorAll("[data-tulen]").forEach(n => n.onclick = async () => {
+    if (await päring("/api/osalemine", "POST",
+      { yritus_id: n.dataset.tulen, vastus: "jah" })) await uuendaKalender();
+  });
+  s.querySelectorAll("[data-eitule]").forEach(n => n.onclick = async () => {
+    if (await päring("/api/osalemine", "POST",
+      { yritus_id: n.dataset.eitule, vastus: "ei" })) await uuendaKalender();
   });
   s.querySelectorAll("[data-kustutaToo]").forEach(n => n.onclick = async () => {
     const id = n.dataset.kustutatoo;
@@ -596,33 +633,40 @@ function küsiKustutus(id) {
 }
 
 async function uuendaKalender() {
-  [YRITUSED, TOOD] = await Promise.all([päring("/api/yritused"), päring("/api/tood")]);
+  await laadiKalender();
   joonistaKalender();
   avaPäev(AVATUD);
 }
 
 /* ── ürituse ja töö vormid ────────────────────────────────────── */
-function majaVäli(nimi) {
-  const vaikimisi = MAJA === "koik" ? (MAJAD[0] || {}).id : MAJA;
+function majaVäli(nimi, valitud) {
+  const vaikimisi = valitud || (MAJA === "koik" ? (MAJAD[0] || {}).id : MAJA);
   return '<label class="väli">Maja<select name="' + nimi + '">'
     + MAJAD.map(m => '<option value="' + m.id + '"'
         + (m.id === vaikimisi ? " selected" : "") + ">" + esc(m.nimi) + "</option>").join("")
     + "</select></label>";
 }
 
-function vormYritus(iso) {
+/* Sama vorm teeb uue ürituse ja muudab vana — väljad on samad ja kaks
+   peaaegu ühesugust vormi läheks kohe lahku. */
+function vormYritus(iso, vana) {
   const s = document.getElementById("akenSisu");
-  s.innerHTML = '<h2>Uus üritus</h2><p class="kuup">' + paevaks(iso) + "</p>"
+  s.innerHTML = "<h2>" + (vana ? "Muuda üritust" : "Uus üritus") + "</h2>"
+    + '<p class="kuup">' + paevaks(iso) + "</p>"
     + '<form id="vorm"><div class="vorm üleval">'
-    + '<label class="väli">Nimi<input type="text" name="pealkiri" required></label>'
-    + majaVäli("koht_id") + "</div>"
+    + '<label class="väli">Nimi<input type="text" name="pealkiri" required value="'
+    + esc(vana ? vana.pealkiri : "") + '"></label>'
+    + majaVäli("koht_id", vana && vana.koht_id) + "</div>"
     + '<div class="vorm üleval">'
-    + '<label class="väli">Algus' + kellavalik("algus", "", "vali") + "</label>"
-    + '<label class="väli">Lõpp' + kellavalik("lopp", "", "ei ole") + "</label>"
-    + '<label class="väli">Koht<input type="text" name="asukoht" placeholder="näiteks saal"></label>'
-    + "</div>"
-    + '<label class="väli">Kirjeldus<textarea name="kirjeldus" rows="3"></textarea></label>'
-    + '<div class="valikud"><button type="submit" class="esile">Lisa üritus</button>'
+    + '<label class="väli">Algus' + kellavalik("algus", vana && uusKell(vana.algus), "vali") + "</label>"
+    + '<label class="väli">Lõpp'
+    + kellavalik("lopp", vana && vana.lopp && uusKell(vana.lopp), "ei ole") + "</label>"
+    + '<label class="väli">Koht<input type="text" name="asukoht" placeholder="näiteks saal" '
+    + 'value="' + esc(vana ? vana.asukoht || "" : "") + '"></label></div>'
+    + '<label class="väli">Kirjeldus<textarea name="kirjeldus" rows="3">'
+    + esc(vana ? vana.kirjeldus || "" : "") + "</textarea></label>"
+    + '<div class="valikud"><button type="submit" class="esile">'
+    + (vana ? "Salvesta" : "Lisa üritus") + "</button>"
     + '<button type="button" class="pisi" id="loobu">Loobu</button></div></form>';
   document.getElementById("loobu").onclick = () => avaPäev(iso);
   document.getElementById("vorm").onsubmit = async e => {
@@ -630,14 +674,17 @@ function vormYritus(iso) {
     const f = new FormData(e.target);
     const algus = f.get("algus");
     if (!algus) return teade("Vali algusaeg.", true);
-    if (minevikus(iso, algus)) return teade("Mineviku kellaaega ei saa sisestada.", true);
-    const r = await päring("/api/yritused", "POST", {
+    /* Vana ürituse kellaaega tohib parandada ka siis, kui ta on möödas. */
+    if (!vana && minevikus(iso, algus))
+      return teade("Mineviku kellaaega ei saa sisestada.", true);
+    const keha = {
       koht_id: f.get("koht_id"), pealkiri: f.get("pealkiri"),
       algus: iso + "T" + algus + ":00",
       lopp: f.get("lopp") ? iso + "T" + f.get("lopp") + ":00" : null,
       asukoht: f.get("asukoht"), kirjeldus: f.get("kirjeldus")
-    });
-    if (r) await uuendaKalender();
+    };
+    if (vana) keha.id = vana.id;
+    if (await päring("/api/yritused", vana ? "PATCH" : "POST", keha)) await uuendaKalender();
   };
 }
 
@@ -785,16 +832,25 @@ async function vaadeKontakt() {
     + '<p class="abi">Klõpsa numbril „Kopeeri“, siis saad selle telefoni sisestada. '
     + "Numbrit ja tööd majas saab siin ka muuta — muudatus salvestub, kui väljalt ära liigud.</p>"
     + LIIKMED.map(l => '<div class="liige" data-id="' + l.id + '">'
-      + '<span class="pilt">' + esc(algustähed(l.nimi)) + "</span>"
+      + '<label class="pildinupp" title="Vali pilt">' + avatar(l, true)
+      + '<input type="file" accept="image/*" data-pilt="' + l.id + '"></label>'
       + '<input class="nm muuda" data-val="nimi" value="' + esc(l.nimi) + '">'
       + '<input class="rl muuda" data-val="roll" value="' + esc(l.roll || "")
       + '" placeholder="töö majas">'
       + '<input class="tl muuda" data-val="telefon" value="' + esc(l.telefon || "")
       + '" placeholder="telefon">'
       + (l.telefon ? '<button class="pisi" data-kopeeri="' + esc(l.telefon) + '">Kopeeri</button>' : "")
+      + (l.pilt ? '<button class="pisi" data-pildaira="' + l.id + '">Võta pilt ära</button>' : "")
       + "</div>").join("") + "</article>";
 
   document.querySelectorAll("#sisu .muuda").forEach(n => n.onchange = () => salvestaLiige(n.closest(".liige")));
+  document.querySelectorAll("[data-pilt]").forEach(n => n.onchange = () => votaPilt(n));
+  document.querySelectorAll("[data-pildaira]").forEach(n => n.onclick = async () => {
+    const rida = n.closest(".liige");
+    if (await päring("/api/liikmed", "PATCH", {
+      id: rida.dataset.id, nimi: rida.querySelector('[data-val="nimi"]').value,
+      roll: rida.querySelector('[data-val="roll"]').value, pilt: "" })) vaadeKontakt();
+  });
   document.querySelectorAll("[data-kopeeri]").forEach(n => n.onclick = async () => {
     try { await navigator.clipboard.writeText(n.dataset.kopeeri); n.textContent = "Kopeeritud"; }
     catch { teade("Kopeerimine ei õnnestunud. Number: " + n.dataset.kopeeri, true); }
@@ -802,6 +858,40 @@ async function vaadeKontakt() {
 }
 const algustähed = nimi => String(nimi || "?").trim().split(/\s+/)
   .slice(0, 2).map(o => o[0].toUpperCase()).join("");
+const avatar = (l, muudetav) => '<span class="pilt' + (muudetav ? " muudetav" : "") + '">'
+  + (l.pilt ? '<img src="' + esc(l.pilt) + '" alt="">' : esc(algustähed(l.nimi))) + "</span>";
+
+/* Pilt tehakse brauseris väikeseks ja pannakse teksti sisse. Nii ei ole
+   vaja failihoidlat ega kolmandat teenust — 96 pikslit on avatari jaoks
+   küllaga ja andmebaasi läheb paar kilobaiti. */
+function votaPilt(väli) {
+  const fail = väli.files && väli.files[0];
+  if (!fail) return;
+  if (!/^image\//.test(fail.type)) return teade("See ei ole pildifail.", true);
+  const lug = new FileReader();
+  lug.onload = () => {
+    const pilt = new Image();
+    pilt.onload = async () => {
+      const k = 96;
+      const c = document.createElement("canvas");
+      c.width = c.height = k;
+      const ct = c.getContext("2d");
+      const s = Math.min(pilt.width, pilt.height);
+      ct.drawImage(pilt, (pilt.width - s) / 2, (pilt.height - s) / 2, s, s, 0, 0, k, k);
+      const rida = väli.closest(".liige");
+      const r = await päring("/api/liikmed", "PATCH", {
+        id: rida.dataset.id,
+        nimi: rida.querySelector('[data-val="nimi"]').value,
+        roll: rida.querySelector('[data-val="roll"]').value,
+        pilt: c.toDataURL("image/jpeg", 0.8)
+      });
+      if (r) { await vaadeKontakt(); teade("Pilt salvestatud."); }
+    };
+    pilt.onerror = () => teade("Pilti ei õnnestunud avada.", true);
+    pilt.src = lug.result;
+  };
+  lug.readAsDataURL(fail);
+}
 
 async function salvestaLiige(rida) {
   const võta = v => { const n = rida.querySelector('[data-val="' + v + '"]'); return n ? n.value : undefined; };
@@ -910,7 +1000,7 @@ async function vaadeSeaded() {
     + '<div class="ametid">' + AMETID.map(a => '<div class="amet"><b>' + esc(a.nimi)
       + "</b><span>" + esc(a.selgitus) + "</span></div>").join("") + "</div>"
     + LIIKMED.map(l => '<div class="liige" data-id="' + l.id + '">'
-      + '<span class="pilt">' + esc(algustähed(l.nimi)) + "</span>"
+      + avatar(l)
       + '<input class="nm muuda" data-val="nimi" value="' + esc(l.nimi) + '">'
       + '<input class="rl muuda" data-val="roll" value="' + esc(l.roll || "")
       + '" placeholder="töö majas">'
@@ -919,6 +1009,9 @@ async function vaadeSeaded() {
           + ">" + esc(a.nimi) + "</option>").join("") + "</select>"
       + (l.onepost ? '<span class="mark">saab sisse</span>' : "")
       + '<button class="pisi" data-kutse="' + l.id + '">Tee sisselogimise link</button>'
+      + (l.id === MINA.id ? ""
+          : '<button class="pisi punane" data-valja="' + l.id + '" data-nimi="'
+            + esc(l.nimi) + '">Võta majast välja</button>')
       + "</div>").join("")
     + '<form class="vorm" id="uusLiige">'
     + '<label class="väli">Nimi<input type="text" name="nimi" required></label>'
@@ -975,6 +1068,16 @@ function seaSeaded() {
         id: rida.dataset.info, pealkiri: f.get("pealkiri"), sisu: f.get("sisu") });
       if (r) vaadeSeaded();
     };
+  });
+
+  s.querySelectorAll("[data-valja]").forEach(n => n.onclick = async () => {
+    if (!confirm("Võtan " + n.dataset.nimi + " majast välja?\n\n"
+      + "Tema müügid jäävad kassasse alles, aga müüja nime juures enam ei ole.")) return;
+    const r = await päring("/api/liikmed", "DELETE", { id: n.dataset.valja });
+    if (!r) return;
+    await vaadeSeaded();
+    teade(n.dataset.nimi + " on majast väljas."
+      + (r.myyke ? " Tema " + r.myyke + " müüki jäid kassasse nimeta." : ""));
   });
 
   s.querySelectorAll("[data-kutse]").forEach(n => n.onclick = async () => {

@@ -58,11 +58,15 @@ Kui võtit ei ole, ilmub link ekraanile — muidu ei saaks keegi sisse.
 | Vaade | Mida teeb |
 |---|---|
 | **Müük** | vali kogus, klõpsa tootel. Oma müük on kohe all näha |
-| **Kalender** | üritused ja tööd ühes kalendris, maja vahetatakse ülal („Kõik“ näitab mõlemat). Korduv töö (näiteks lillede kastmine kolmapäeval ja laupäeval), kellaajaga või ilma. Tehtud töö nimi läheb roheliseks |
+| **Kalender** | üritused ja tööd ühes kalendris, maja vahetatakse ülal („Kõik“ näitab mõlemat). Korduv töö (näiteks lillede kastmine kolmapäeval ja laupäeval), kellaajaga või ilma. Tehtud töö nimi läheb roheliseks. Ürituse saab järele muuta ja vastata „Tulen“ / „Ei tule“ |
 | **Töö graafik** | mõlema maja nädalagraafik üksteise all, ühel päeval võib olla mitu vahetust. Puhkused ja haiguslehed |
-| **Kontaktid** | nimed, töö majas ja telefoninumbrid. Number kopeeritakse, helistamislinki ei ole — see rakendus on arvutis |
+| **Kontaktid** | nimed, töö majas, telefoninumbrid ja pildid. Number kopeeritakse, helistamislinki ei ole — see rakendus on arvutis. Pilt tehakse brauseris 96 piksli peale väikeseks, failihoidlat ei ole vaja |
 | **Aruanne** | ainult kassaõigusega. Kokkuvõte müüjate, osade ja toodete kaupa ning väljavõte raamatupidajale (CSV, Eesti Exceli jaoks) |
-| **Seaded** | maja info, hinnakiri, liikmed ja sisselogimislingid |
+| **Seaded** | maja info, hinnakiri, liikmed ja sisselogimislingid, liikme majast välja võtmine |
+
+Kui liige majast välja võetakse, **jäävad tema müügid kassasse alles** ja
+müüja väli läheb tühjaks. Lahkunud inimese müüdud raha ei tohi arvestusest
+kaduda. Rakendus ütleb enne, mitu rida nimeta jääb.
 
 ## Õigused
 
