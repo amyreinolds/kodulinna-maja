@@ -18,7 +18,7 @@ const { q, yks } = require("./db");
    sest iga päring on eraldi käik andmebaasi ja tagasi. */
 const sorm = x => crypto.createHash("sha1")
   .update(JSON.stringify(x === undefined ? null : x)).digest("hex").slice(0, 16);
-const { naebKassat, annabOigusi, haldabGraafikut } = require("./ametid");
+const { naebKassat, annabOigusi, haldabTeisi } = require("./ametid");
 
 const iso = d => d ? new Date(d).toISOString() : null;
 const kell = t => t ? String(t).slice(0, 5) : "";
@@ -91,7 +91,7 @@ async function loeSeis(mina) {
     me: mina.id,
     naebKassat: koik,
     annabOigusi: annabOigusi(mina),
-    haldabGraafikut: haldabGraafikut(mina),
+    haldabTeisi: haldabTeisi(mina),
     seen,
     group: {
       name: (grupp && grupp.nimi) || "Kodulinna Maja",
@@ -219,6 +219,10 @@ async function salvestaSeis(mina, s) {
      kaasa, kirjutame igaks juhuks kõik — nii ei kao midagi ära. */
   const h = s.__h && typeof s.__h === "object" ? s.__h : null;
   const muutus = (nimi, väärtus) => !h || sorm(väärtus) !== h[nimi];
+  /* Teise inimese kohta käivat infot muudab ainult ülemus ja
+     administraator. Kõik muu on iga liikme enda kohta. */
+  const teised = haldabTeisi(mina);
+  const oma = id => teised || id === mina.id;
 
   /* ── grupp ──────────────────────────────────────────────────── */
   if (s.group && muutus("group", s.group)) {
@@ -244,7 +248,8 @@ async function salvestaSeis(mina, s) {
       if (!nimi) continue;
       if (onUuid(m.id) && olemas.some(x => x.id === m.id)) {
         alles.add(m.id);
-        await q(
+        /* Nime, telefoni ja pilti muudab igaüks enda kohta. */
+        if (oma(m.id)) await q(
           `UPDATE liikmed SET nimi=$2, roll=$3, telefon=$4, pilt=$5 WHERE id=$1`,
           [m.id, nimi, tyhjaks(m.role), tyhjaks(m.phone), tyhjaks(m.pilt)]);
       } else {
@@ -255,9 +260,10 @@ async function salvestaSeis(mina, s) {
         alles.add(r.id);
       }
     }
-    /* Iseennast ei kustuta ja ainsat administraatorit ei kustuta. */
+    /* Majast välja võtmine on teise inimese kohta käiv otsus — seda
+       teevad ülemus ja administraator. Iseennast välja ei võta. */
     for (const x of olemas) {
-      if (alles.has(x.id) || x.id === mina.id) continue;
+      if (alles.has(x.id) || x.id === mina.id || !teised) continue;
       const kes = await yks("SELECT amet FROM liikmed WHERE id=$1", [x.id]);
       if (kes && annabOigusi(kes) && !annabOigusi(mina)) continue;
       await q("DELETE FROM liikmed WHERE id=$1", [x.id]);
@@ -367,7 +373,7 @@ async function salvestaSeis(mina, s) {
         id = r.id;
       }
       alles.add(id);
-      await syncLapsed(id, e);
+      await syncLapsed(id, e, mina, oma);
     }
     for (const x of olemas) if (!alles.has(x.id))
       await q("DELETE FROM yritused WHERE id=$1", [x.id]);
@@ -392,7 +398,7 @@ async function salvestaSeis(mina, s) {
         id = r.id;
       }
       alles.add(id);
-      await syncKinnitused("info", id, i.acks);
+      await syncKinnitused("info", id, i.acks, oma);
     }
     for (const x of olemas) if (!alles.has(x.id))
       await q("DELETE FROM info WHERE id=$1", [x.id]);
@@ -467,7 +473,7 @@ async function salvestaSeis(mina, s) {
       && muutus("graafik", s.too.graafik)) {
     /* Oma tööaja paneb igaüks ise. Teiste oma muudavad ülemus ja
        administraator — tööaeg on kokkulepe, mitte üksi otsustamine. */
-    const koiki = haldabGraafikut(mina);
+    const koiki = teised;
     if (koiki) await q("DELETE FROM graafik");
     else await q("DELETE FROM graafik WHERE liige_id = $1", [mina.id]);
     for (const [maja, liikmed] of Object.entries(s.too.graafik)) {
@@ -522,8 +528,11 @@ async function salvestaSeis(mina, s) {
       await q("DELETE FROM too_tehtud WHERE too_id=$1", [id]);
       for (const [kuup, kes] of Object.entries(tehtud)) {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(kuup)) continue;
+        /* Töö tegija on see, kes vajutas. Teise inimese nime ei saa
+           tehtud-märkesse panna — muidu saaks kellegi eest kinnitada. */
+        const tegija = onUuid(kes) && oma(kes) ? kes : mina.id;
         await q(`INSERT INTO too_tehtud (too_id, kuup, kes_id) VALUES ($1,$2,$3)`,
-          [id, kuup, onUuid(kes) ? kes : null]);
+          [id, kuup, tegija]);
       }
     }
     for (const x of olemas) if (!alles.has(x.id))
@@ -533,7 +542,7 @@ async function salvestaSeis(mina, s) {
   if (s.too && Array.isArray(s.too.puhkused) && muutus("puhkused", s.too.puhkused)) {
     /* Sama reegel: oma puhkuse ja haiguslehe paneb igaüks ise kirja,
        teiste omad on ülemuse ja administraatori teha. */
-    const koiki = haldabGraafikut(mina);
+    const koiki = teised;
     const olemas = await q(
       "SELECT id, liige_id FROM puudumised" + (koiki ? "" : " WHERE liige_id = $1"),
       koiki ? [] : [mina.id]);
@@ -575,15 +584,24 @@ async function salvestaSeis(mina, s) {
 }
 
 /* Ürituse lapsed: vastused, kinnitused, küsimused, ülesanded. */
-async function syncLapsed(yId, e) {
+async function syncLapsed(yId, e, mina, oma) {
+  /* „Osalen“ ja „Olen tutvunud“ on isiklikud vastused. Teise eest ei
+     saa neid anda ega ära võtta — seepärast jäävad teiste read alles
+     ka siis, kui ekraan neid tagasi ei saatnud. */
   const rsvp = e.rsvp && typeof e.rsvp === "object" ? e.rsvp : {};
+  const vanaR = await q("SELECT liige_id, vastus FROM osalemine WHERE yritus_id=$1", [yId]);
   await q("DELETE FROM osalemine WHERE yritus_id=$1", [yId]);
+  const uusR = new Map();
+  for (const r of vanaR) if (!oma(r.liige_id)) uusR.set(r.liige_id, r.vastus);
   for (const [liige, v] of Object.entries(rsvp)) {
     if (!onUuid(liige) || (v !== "yes" && v !== "no")) continue;
-    await q(`INSERT INTO osalemine (yritus_id, liige_id, vastus) VALUES ($1,$2,$3)`,
-      [yId, liige, v === "yes" ? "jah" : "ei"]);
+    if (!oma(liige)) continue;
+    uusR.set(liige, v === "yes" ? "jah" : "ei");
   }
-  await syncKinnitused("yritus", yId, e.acks);
+  for (const [liige, vastus] of uusR)
+    await q(`INSERT INTO osalemine (yritus_id, liige_id, vastus) VALUES ($1,$2,$3)`,
+      [yId, liige, vastus]);
+  await syncKinnitused("yritus", yId, e.acks, oma);
 
   const kom = Array.isArray(e.comments) ? e.comments : [];
   const olemasK = await q("SELECT id FROM kommentaarid WHERE yritus_id=$1", [yId]);
@@ -602,36 +620,52 @@ async function syncLapsed(yId, e) {
     await q("DELETE FROM kommentaarid WHERE id=$1", [x.id]);
 
   const ules = Array.isArray(e.tasks) ? e.tasks : [];
-  const olemasU = await q("SELECT id FROM ulesanded WHERE yritus_id=$1", [yId]);
+  const olemasU = await q("SELECT id, votja_id FROM ulesanded WHERE yritus_id=$1", [yId]);
   const allesU = new Set();
   for (const u of ules) {
     const tekst = tyhjaks(u.t);
     if (!tekst) continue;
     if (onUuid(u.id) && olemasU.some(x => x.id === u.id)) {
       allesU.add(u.id);
+      /* Ülesande võtab endale see, kes vajutab. Teise inimese nime
+         ülesande juurde panna ega tema oma ära võtta ei saa. */
+      const vana = olemasU.find(x => x.id === u.id);
+      /* Teise võetud ülesanne jääb temale — seda ei saa käest ära
+         võtta. Vaba ülesande saab endale võtta ja oma tagasi anda. */
+      const votja = (vana.votja_id && !oma(vana.votja_id)) ? vana.votja_id
+        : (onUuid(u.who) && oma(u.who) ? u.who : null);
       await q("UPDATE ulesanded SET tekst=$2, votja_id=$3 WHERE id=$1",
-        [u.id, tekst, onUuid(u.who) ? u.who : null]);
+        [u.id, tekst, votja]);
       continue;
     }
     const r = await yks(
       `INSERT INTO ulesanded (yritus_id, tekst, votja_id) VALUES ($1,$2,$3) RETURNING id`,
-      [yId, tekst, onUuid(u.who) ? u.who : null]);
+      [yId, tekst, onUuid(u.who) && oma(u.who) ? u.who : null]);
     allesU.add(r.id);
   }
   for (const x of olemasU) if (!allesU.has(x.id))
     await q("DELETE FROM ulesanded WHERE id=$1", [x.id]);
 }
 
-async function syncKinnitused(tyyp, kirjeId, acks) {
+async function syncKinnitused(tyyp, kirjeId, acks, oma) {
   const a = acks && typeof acks === "object" ? acks : {};
+  const vana = await q(
+    "SELECT liige_id, aeg FROM kinnitused WHERE tyyp=$1 AND kirje_id=$2", [tyyp, kirjeId]);
   await q("DELETE FROM kinnitused WHERE tyyp=$1 AND kirje_id=$2", [tyyp, kirjeId]);
+  const uus = new Map();
+  /* Teise inimese kinnitus jääb alles ka siis, kui ekraan seda tagasi
+     ei saatnud — keegi ei saa teise nimel kinnitada ega kinnitust maha
+     võtta. */
+  for (const r of vana) if (!oma(r.liige_id)) uus.set(r.liige_id, iso(r.aeg));
   for (const [liige, aeg] of Object.entries(a)) {
-    if (!onUuid(liige)) continue;
+    if (!onUuid(liige) || !oma(liige)) continue;
+    uus.set(liige, typeof aeg === "string" ? aeg : null);
+  }
+  for (const [liige, aeg] of uus)
     await q(
       `INSERT INTO kinnitused (tyyp, kirje_id, liige_id, aeg)
        VALUES ($1,$2,$3, coalesce($4::timestamptz, now()))`,
-      [tyyp, kirjeId, liige, typeof aeg === "string" ? aeg : null]);
-  }
+      [tyyp, kirjeId, liige, aeg]);
 }
 
 /* Sõnumeid ei muudeta tagantjärele — ainult lisandub ja kaob. */

@@ -66,9 +66,9 @@ const dkey = d => d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getD
 
     /* ── õigus on seisus näha ───────────────────────────────────── */
     const sA = await seis(kA), sU = await seis(kU), sR = await seis(kR);
-    kontrolli("liige ei halda kogu graafikut", sA.json.haldabGraafikut === false);
-    kontrolli("ülemus haldab kogu graafikut", sU.json.haldabGraafikut === true);
-    kontrolli("raamatupidaja ei halda graafikut", sR.json.haldabGraafikut === false);
+    kontrolli("liige ei halda teiste infot", sA.json.haldabTeisi === false);
+    kontrolli("ülemus haldab teiste infot", sU.json.haldabTeisi === true);
+    kontrolli("raamatupidaja ei halda teiste infot", sR.json.haldabTeisi === false);
 
     /* ── oma rida saab igaüks ise ───────────────────────────────── */
     const s1 = (await seis(kA)).json;
