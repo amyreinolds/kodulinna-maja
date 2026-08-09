@@ -69,11 +69,13 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
       mina.json.mina && mina.json.mina.nimi);
     kontrolli("uus liige ei ole administraator", mina.json.mina.administraator === false);
 
-    /* tavaline liige ei tohi kutseid teha ega liikmeid lisada */
-    const keeld1 = await paring("/api/kutse", { meetod: "POST", keha: { liige_id: uus.json.liige.id } });
-    kontrolli("tavaline liige ei saa kutset teha", keeld1.kood === 403, "kood " + keeld1.kood);
-    const keeld2 = await paring("/api/liikmed", { meetod: "POST", keha: { nimi: "Salakaval" } });
-    kontrolli("tavaline liige ei saa liiget lisada", keeld2.kood === 403, "kood " + keeld2.kood);
+    /* Tavaline liige teeb sama tööd — maja on ühine. */
+    const lubatud1 = await paring("/api/kutse", { meetod: "POST", keha: { liige_id: uus.json.liige.id } });
+    kontrolli("tavaline liige saab kutset teha", lubatud1.kood === 200, "kood " + lubatud1.kood);
+    const lubatud2 = await paring("/api/liikmed", { meetod: "POST", keha: { nimi: "Salakaval" } });
+    kontrolli("tavaline liige saab liiget lisada", lubatud2.kood === 200, "kood " + lubatud2.kood);
+    kontrolli("tema lisatu ei saa kassaametit",
+      lubatud2.json.liige.amet === "liige", lubatud2.json.liige.amet);
 
     /* kutse kehtib ühe korra */
     kupsis = "";

@@ -71,6 +71,8 @@ tr:last-child td{border-bottom:none}
 .amet{padding:11px 13px;border-radius:12px;background:var(--soft);font-size:14.5px}
 .amet b{display:block;font-size:15.5px;margin-bottom:2px}
 .amet span{color:var(--ink-3)}
+.liige select.am:disabled{background:var(--soft);color:var(--ink-3);cursor:default;
+  border-color:transparent}
 .liige button{min-height:40px;padding:0 16px;border-radius:10px;border:1px solid var(--line);
   background:var(--card);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer}
 .liige button:hover{border-color:var(--accent);color:var(--accent)}
@@ -104,12 +106,13 @@ tr:last-child td{border-bottom:none}
     <div id="tabel"></div>
   </article>
 
-  <!-- Ainult administraatorile: liikmed ja sisselogimislingid. -->
+  <!-- Liikmed: kõigile. Ainult ametivalik on lukus. -->
   <article class="card" id="liikmedKaart" hidden>
     <p class="h3">LIIKMED JA SISSELOGIMINE</p>
     <p class="abi">Tee liikmele link ja anna see talle ise kätte — telefonis,
       sõnumiga või paberil. E-posti teenust ei ole vaja. Link kehtib 7 päeva
       ja ühe korra; pärast sisenemist püsib inimene sees 60 päeva.</p>
+    <p class="abi" id="ametiluku" hidden></p>
     <div class="ametid" id="ametiabi"></div>
     <div id="liikmed"></div>
     <form id="uusVorm" class="uus">
@@ -131,11 +134,12 @@ const kuup = iso => {
 const esc = t => String(t == null ? "" : t)
   .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-let AMETID = [];
+let AMETID = [], MINA = {};
 
 async function laadi() {
   const d0 = await (await fetch("/api/mina")).json();
   const mina = d0.mina;
+  MINA = mina || {};
   AMETID = d0.ametid || [];
   if (!mina) return location.href = "/";
   document.getElementById("kes").textContent =
@@ -167,14 +171,22 @@ async function laadi() {
       + "</tbody></table>"
     : '<p class="tyhi">Müüke ei ole veel kirjas.</p>';
 
-  if (mina.haldabLiikmeid) {
-    document.getElementById("liikmedKaart").hidden = false;
-    document.getElementById("ametiabi").innerHTML = AMETID.map(a =>
-      '<div class="amet"><b>' + esc(a.nimi) + "</b><span>" + esc(a.selgitus) + "</span></div>").join("");
-    document.getElementById("uusAmet").innerHTML = AMETID.map(a =>
-      '<option value="' + a.id + '">' + esc(a.nimi) + "</option>").join("");
-    laadiLiikmed();
+  /* Liikmete kaart on kõigile — maja on ühine. */
+  document.getElementById("liikmedKaart").hidden = false;
+  document.getElementById("ametiabi").innerHTML = AMETID.map(a =>
+    '<div class="amet"><b>' + esc(a.nimi) + "</b><span>" + esc(a.selgitus) + "</span></div>").join("");
+
+  const lukk = document.getElementById("ametiluku");
+  if (!mina.annabOigusi) {
+    lukk.hidden = false;
+    lukk.innerHTML = "Ameteid muudavad ülemus ja administraator — amet otsustab, "
+      + "kes ühiskassat näeb. Kõik muu on sinu teha.";
   }
+  /* Kassaõigusega ametit ei paku, kui sa neid jagada ei tohi. */
+  document.getElementById("uusAmet").innerHTML = AMETID
+    .filter(a => mina.annabOigusi || !a.kassa)
+    .map(a => '<option value="' + a.id + '">' + esc(a.nimi) + "</option>").join("");
+  laadiLiikmed();
 }
 
 /* ── liikmed ja kutsed (ainult administraatorile) ──────────────── */
@@ -186,7 +198,7 @@ async function laadiLiikmed() {
     '<div class="liige" data-id="' + m.id + '">'
     + '<input class="nm muuda" data-val="nimi" value="' + esc(m.nimi) + '">'
     + '<input class="rl muuda" data-val="roll" value="' + esc(m.roll || "") + '" placeholder="töö majas">'
-    + '<select class="am muuda" data-val="amet">'
+    + '<select class="am muuda" data-val="amet"' + (MINA.annabOigusi ? "" : " disabled") + ">"
     + AMETID.map(a => '<option value="' + a.id + '"'
         + (m.amet === a.id ? " selected" : "") + ">" + esc(a.nimi) + "</option>").join("")
     + "</select>"

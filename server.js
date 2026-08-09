@@ -8,7 +8,7 @@ const fs = require("fs");
 const path = require("path");
 const { q, yks } = require("./db");
 const auth = require("./auth");
-const { AMETID, kehtiv, naebKassat, haldabLiikmeid } = require("./ametid");
+const { AMETID, kehtiv, naebKassat, annabOigusi, haldabLiikmeid } = require("./ametid");
 
 const PORT = Number(process.env.PORT || 3000);
 const AVALIK = path.join(__dirname, "public");
@@ -75,7 +75,8 @@ const server = http.createServer(async (req, res) => {
     const mina = await auth.kesOn(req);
     if (tee === "/api/mina") return json(res, 200, {
       mina: mina && Object.assign({}, mina, {
-        naebKassat: naebKassat(mina), haldabLiikmeid: haldabLiikmeid(mina)
+        naebKassat: naebKassat(mina), annabOigusi: annabOigusi(mina),
+        haldabLiikmeid: haldabLiikmeid(mina)
       }),
       ametid: AMETID
     });
@@ -110,36 +111,47 @@ const server = http.createServer(async (req, res) => {
          FROM liikmed ORDER BY nimi`));
     }
 
-    /* Liikmete lisamine ja kutsed on administraatori asi. */
+    /* Liikmeid lisab ja kutseid teeb iga liige — maja on ühine.
+       Ainult ameti muutmine on lukus, sest amet avab kassa. */
     if (tee === "/api/liikmed" && req.method === "POST") {
-      if (!haldabLiikmeid(mina)) return json(res, 403, { viga: "Sinu amet ei luba liikmeid lisada." });
       const b = await keha(req);
       const nimi = String(b.nimi || "").trim();
       if (!nimi) return json(res, 400, { viga: "Nimi on täitmata." });
-      const amet = kehtiv(b.amet) ? b.amet : "liige";
+      /* Kassaõigusega liikme saab luua ainult see, kes ameteid jagab.
+         Muidu teeks igaüks endale kõrvale konto ja annaks sellele kassa. */
+      let amet = kehtiv(b.amet) ? b.amet : "liige";
+      if (!annabOigusi(mina) && amet !== "liige") amet = "liige";
       const r = await yks(
         `INSERT INTO liikmed (nimi, roll, amet, administraator)
          VALUES ($1, $2, $3, $4) RETURNING id, nimi, amet`,
-        [nimi, String(b.roll || "").trim() || null, amet, haldabLiikmeid({ amet })]);
+        [nimi, String(b.roll || "").trim() || null, amet, annabOigusi({ amet })]);
       return json(res, 200, { ok: true, liige: r });
     }
 
     if (tee === "/api/liikmed" && req.method === "PATCH") {
-      if (!haldabLiikmeid(mina)) return json(res, 403, { viga: "Sinu amet ei luba liikmeid muuta." });
       const b = await keha(req);
       const nimi = String(b.nimi || "").trim();
       if (!nimi) return json(res, 400, { viga: "Nimi on täitmata." });
       if (b.amet !== undefined && !kehtiv(b.amet))
         return json(res, 400, { viga: "Tundmatu amet." });
 
-      /* Maja ei tohi jääda ilma kellegita, kes liikmeid haldab — muidu ei
-         saa enam kedagi kutsuda ega ameteid muuta. */
-      if (b.amet !== undefined && !haldabLiikmeid({ amet: b.amet })) {
+      /* Nime ja tööd majas muudab igaüks. Ametit ainult see, kes ameteid
+         jagab — muidu annaks igaüks endale kassaõiguse. */
+      const olemas = await yks("SELECT amet FROM liikmed WHERE id = $1", [b.id]);
+      if (!olemas) return json(res, 404, { viga: "Sellist liiget ei ole." });
+      if (b.amet !== undefined && b.amet !== olemas.amet && !annabOigusi(mina))
+        return json(res, 403, {
+          viga: "Ameti muutmine on ülemuse ja administraatori asi — see otsustab, kes kassat näeb."
+        });
+
+      /* Keegi peab ameteid jagada saama, muidu ei pääseks kassa juurde
+         enam kunagi kedagi juurde panna. */
+      if (b.amet !== undefined && !annabOigusi({ amet: b.amet })) {
         const n = await yks(
           `SELECT count(*)::int AS n FROM liikmed
            WHERE amet IN ('ulemus','administraator') AND id <> $1`, [b.id]);
         if (n.n === 0) return json(res, 400, {
-          viga: "Keegi peab liikmeid haldama. Anna enne kellelegi teisele ülemuse või administraatori amet."
+          viga: "Keegi peab ameteid jagama. Anna enne kellelegi teisele ülemuse või administraatori amet."
         });
       }
 
@@ -155,7 +167,6 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (tee === "/api/kutse" && req.method === "POST") {
-      if (!haldabLiikmeid(mina)) return json(res, 403, { viga: "Sinu amet ei luba kutseid teha." });
       const b = await keha(req);
       const k = await auth.teeKutse(b.liige_id, alus);
       if (!k) return json(res, 404, { viga: "Sellist liiget ei ole." });

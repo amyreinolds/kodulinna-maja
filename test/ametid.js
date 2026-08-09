@@ -55,11 +55,13 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
       ('Proov Admin','admin@proov.invalid','administraator',true)`);
     const [liige] = await q("SELECT id FROM liikmed WHERE epost='liige@proov.invalid'");
 
+    /* Maja reegel: kõik haldavad kõike. Ainult kassa on lukus ja
+       ameteid — mis kassa lahti teevad — jagavad ülemus ja administraator. */
     const ootus = {
-      "liige@proov.invalid":  { kassa: false, haldab: false },
-      "raamat@proov.invalid": { kassa: true,  haldab: false },
-      "ulemus@proov.invalid": { kassa: true,  haldab: true },
-      "admin@proov.invalid":  { kassa: true,  haldab: true }
+      "liige@proov.invalid":  { kassa: false, annab: false },
+      "raamat@proov.invalid": { kassa: true,  annab: false },
+      "ulemus@proov.invalid": { kassa: true,  annab: true },
+      "admin@proov.invalid":  { kassa: true,  annab: true }
     };
 
     for (const [epost, o] of Object.entries(ootus)) {
@@ -70,30 +72,52 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
 
       const nimi = (m.amet + "        ").slice(0, 15);
       kontrolli(nimi + "näeb kogu kassat: " + (o.kassa ? "jah" : "ei"),
-        myyk.json.koikNahtav === o.kassa,
+        myyk.json.koikNahtav === o.kassa && m.naebKassat === o.kassa,
         "ridu: " + myyk.json.read.length);
-      kontrolli(nimi + "haldab liikmeid : " + (o.haldab ? "jah" : "ei"),
-        (kutse.kood === 200) === o.haldab && (lisa.kood === 200) === o.haldab,
+      kontrolli(nimi + "haldab liikmeid : jah",
+        kutse.kood === 200 && lisa.kood === 200,
         "kutse " + kutse.kood + ", lisa " + lisa.kood);
-      await q("DELETE FROM liikmed WHERE nimi = 'Ei tohi'");
+      kontrolli(nimi + "jagab ameteid   : " + (o.annab ? "jah" : "ei"),
+        m.annabOigusi === o.annab);
+
+      /* Ilma õiguseta lisatud liige ei saa kassaametit — muidu teeks
+         igaüks endale kõrvale konto ja annaks sellele kassa. */
+      const kass = await paring("/api/liikmed",
+        { meetod: "POST", keha: { nimi: "Ei tohi 2", amet: "raamatupidaja" } });
+      kontrolli(nimi + "uus liige kassaga: " + (o.annab ? "jah" : "ei"),
+        (kass.json.liige.amet === "raamatupidaja") === o.annab,
+        "sai ameti " + kass.json.liige.amet);
+      await q("DELETE FROM liikmed WHERE nimi IN ('Ei tohi','Ei tohi 2')");
     }
 
     /* ameti muutmine ja kaitse */
     await sisse("admin@proov.invalid");
     const m1 = await paring("/api/liikmed", { meetod: "PATCH",
       keha: { id: liige.id, nimi: "Proov Liige", amet: "raamatupidaja" } });
-    kontrolli("ameti saab muuta", m1.kood === 200 && m1.json.liige.amet === "raamatupidaja",
+    kontrolli("administraator saab ametit muuta",
+      m1.kood === 200 && m1.json.liige.amet === "raamatupidaja",
       m1.json && m1.json.liige && m1.json.liige.amet);
 
     const vale = await paring("/api/liikmed", { meetod: "PATCH",
       keha: { id: liige.id, nimi: "Proov Liige", amet: "kuningas" } });
     kontrolli("tundmatut ametit ei võeta", vale.kood === 400, vale.json && vale.json.viga);
 
-    /* raamatupidaja tõusmine ei tohi jätta maja haldajata */
+    /* Kassaõiguseta liige: nime muutmine käib, ameti muutmine mitte. */
     const [buhh] = await q("SELECT id FROM liikmed WHERE epost='raamat@proov.invalid'");
-    kontrolli("raamatupidaja ei näe muutmisõigust",
-      (await (async () => { await sisse("raamat@proov.invalid");
-        return await paring("/api/liikmed", { meetod: "PATCH", keha: { id: buhh.id, nimi: "X" } }); })()).kood === 403);
+    await sisse("raamat@proov.invalid");
+    const nimeMuutus = await paring("/api/liikmed", { meetod: "PATCH",
+      keha: { id: buhh.id, nimi: "Proov Raamat" } });
+    kontrolli("raamatupidaja saab nime muuta", nimeMuutus.kood === 200,
+      "kood " + nimeMuutus.kood);
+    const ametiVargus = await paring("/api/liikmed", { meetod: "PATCH",
+      keha: { id: buhh.id, nimi: "Proov Raamat", amet: "administraator" } });
+    kontrolli("raamatupidaja ei saa endale ametit anda", ametiVargus.kood === 403,
+      "kood " + ametiVargus.kood);
+
+    /* Sama amet kaasa saates ei ole muutmine — see peab läbi minema. */
+    const sama = await paring("/api/liikmed", { meetod: "PATCH",
+      keha: { id: buhh.id, nimi: "Proov Raamat", amet: "raamatupidaja" } });
+    kontrolli("sama ameti kaasa saatmine ei sega", sama.kood === 200, "kood " + sama.kood);
 
   } catch (e) { console.log("  VIGA  " + e.message); vigu++; }
 

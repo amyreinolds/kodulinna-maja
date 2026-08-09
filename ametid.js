@@ -1,31 +1,39 @@
-/* Ametid ja see, mida nad näevad ning tohivad.
+/* Ametid ja õigused.
 
-   Kaks eri asja, mida on kerge segamini ajada:
-     kassa  — näeb kogu maja müüki, mitte ainult enda oma
-     haldab — saab liikmeid lisada, ameteid muuta ja kutseid teha
+   Maja põhimõte: kõikidel on võrdsed õigused. Üks erand — ühiskassa.
 
-   Raamatupidaja näeb kõike, aga ei halda liikmeid — see ei ole tema töö.
-   Ülemus ja administraator teevad mõlemat. */
+     kassa   näeb kogu maja müüki ja aruannet
+             raamatupidaja, ülemus, administraator
+
+     haldab  lisab liikmeid, muudab nimesid, teeb sisselogimislinke,
+             haldab infot, üritusi, kalendrit, graafikut
+             KÕIK sisselogitud liikmed
+
+     annab   muudab ameteid ehk otsustab, kes kassat näeb
+             ülemus, administraator
+
+   Miks „annab“ eraldi: kui igaüks saab ameteid muuta, siis saab igaüks
+   endale ka kassaõiguse anda ja lukk ei loe midagi. Õiguste jagamine
+   peab jääma nende kätte, kes maja eest vastutavad. */
 "use strict";
 
 const AMETID = [
-  { id: "liige",          nimi: "Liige",          kassa: false, haldab: false,
-    selgitus: "Näeb ainult oma müüki" },
-  { id: "raamatupidaja",  nimi: "Raamatupidaja",  kassa: true,  haldab: false,
-    selgitus: "Näeb kogu maja kassat ja aruannet" },
-  { id: "ulemus",         nimi: "Ülemus",         kassa: true,  haldab: true,
-    selgitus: "Näeb kogu kassat, haldab liikmeid" },
-  { id: "administraator", nimi: "Administraator", kassa: true,  haldab: true,
-    selgitus: "Näeb kogu kassat, haldab liikmeid ja rakendust" }
+  { id: "liige",          nimi: "Liige",          kassa: false, annab: false,
+    selgitus: "Haldab kõike peale ühiskassa" },
+  { id: "raamatupidaja",  nimi: "Raamatupidaja",  kassa: true,  annab: false,
+    selgitus: "Näeb ka kogu kassat ja aruannet" },
+  { id: "ulemus",         nimi: "Ülemus",         kassa: true,  annab: true,
+    selgitus: "Näeb kassat, jagab ameteid" },
+  { id: "administraator", nimi: "Administraator", kassa: true,  annab: true,
+    selgitus: "Näeb kassat, jagab ameteid" }
 ];
 
 const leia = a => AMETID.find(x => x.id === a) || AMETID[0];
 const kehtiv = a => AMETID.some(x => x.id === a);
 
-/* Neid kahte küsitakse kogu rakenduses — kunagi ei kontrollita ametit
-   nime järgi, alati nende kaudu. Nii ei jää uue ameti lisamisel
-   kuhugi vana kontrolli. */
 const naebKassat = liige => !!liige && leia(liige.amet).kassa;
-const haldabLiikmeid = liige => !!liige && leia(liige.amet).haldab;
+const annabOigusi = liige => !!liige && leia(liige.amet).annab;
+/* Kõik muu on kõigi oma — sisselogimisest piisab. */
+const haldabLiikmeid = liige => !!liige;
 
-module.exports = { AMETID, leia, kehtiv, naebKassat, haldabLiikmeid };
+module.exports = { AMETID, leia, kehtiv, naebKassat, annabOigusi, haldabLiikmeid };

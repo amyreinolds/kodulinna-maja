@@ -98,15 +98,18 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
       console.log("         haldajad taastatud: " + tagasi[0].n + " (oli " + (teised.length + 1) + ")");
     }
 
-    /* tavaline liige ei tohi muuta */
+    /* Tavaline liige muudab nime, ametit mitte. */
     const admKupsis = kupsis; kupsis = "";
     await q(`UPDATE liikmed SET amet = 'liige', administraator = false
              WHERE epost='muudetav@proov.invalid'`);
     const k3 = await paring("/api/logi-sisse", { meetod: "POST", keha: { epost: "muudetav@proov.invalid" } });
     await paring("/sisene?mark=" + new URL(k3.json.arenduseLink).searchParams.get("mark"));
+    const lubatud = await paring("/api/liikmed", { meetod: "PATCH",
+      keha: { id: mina.id, nimi: "Muutja" } });
+    kontrolli("tavaline liige saab nime muuta", lubatud.kood === 200, "kood " + lubatud.kood);
     const keeld = await paring("/api/liikmed", { meetod: "PATCH",
-      keha: { id: mina.id, nimi: "Kaaperdatud" } });
-    kontrolli("tavaline liige ei saa muuta", keeld.kood === 403, "kood " + keeld.kood);
+      keha: { id: mina.id, nimi: "Muutja", amet: "liige" } });
+    kontrolli("tavaline liige ei saa ametit muuta", keeld.kood === 403, "kood " + keeld.kood);
     kupsis = admKupsis;
 
   } catch (e) { console.log("  VIGA  " + e.message); vigu++; }
