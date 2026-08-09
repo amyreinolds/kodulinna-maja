@@ -676,7 +676,16 @@ hr.hr{border:none;border-top:1px solid var(--line-2);margin:0}
 
 
 /* ── töötajad ─────────────────────────────────────── */
-/* Kuupäevavali töö graafiku päevaploki päises: vali suvaline päev. */
+/* Valitud päev kalendris: sama piir mis tänasel, aga täidetud pind,
+   et oleks kohe näha, millise päeva kohta all olev plokk käib. */
+.cell.valitud{background:var(--s-tint);border-color:var(--s)}
+.cell .n{
+  border:none;background:none;font:inherit;color:inherit;cursor:pointer;
+  padding:0;border-radius:8px;
+}
+.cell .n:hover{color:var(--s);text-decoration:underline}
+
+/* Kuupäevavali kalendri päevaploki päises: vali suvaline päev. */
 .pvalik{
   min-height:38px;padding:0 10px;border-radius:12px;
   border:1px solid var(--line);background:var(--kaart);color:var(--ink);

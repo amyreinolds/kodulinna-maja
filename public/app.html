@@ -865,6 +865,7 @@ function vCal(w){
   const y=calMonth.getFullYear(),m=calMonth.getMonth();
   const start=new Date(y,m,1-dowIdx(new Date(y,m,1)));
   const tk=dkey(new Date()),map={};
+  const valitudPaev=kalPaev||tk;
   for(const e of S.events){
     if(!sobibKoht(e,kalKoht))continue;
     const k=dkey(new Date(e.start));(map[k]=map[k]||[]).push(e);
@@ -875,7 +876,10 @@ function vCal(w){
     const k=dkey(d),out=d.getMonth()!==m;
     const list=(map[k]||[]).sort((a,b)=>new Date(a.start)-new Date(b.start));
     const tl=out?[]:tooPaeval(d).filter(t=>sobibKoht(t,kalKoht));
-    cells+='<div class="cell'+(out?" out":"")+(k===tk?" today":"")+'"><span class="n">'+d.getDate()+'</span>'
+    cells+='<div class="cell'+(out?" out":"")+(k===tk?" today":"")
+      +(k===valitudPaev?" valitud":"")+'">'
+      +'<button class="n" data-act="kal-paev" data-k="'+k+'" '
+      +'aria-label="Vaata seda päeva">'+d.getDate()+'</button>'
       +list.map(e=>'<button class="pill" data-act="goto-ev" data-id="'+e.id+'">'+fmtTime(e.start)+' '+esc(e.title)+'</button>').join("")
       /* Mullis on see, mida päevaplaanist vaadatakse: kes ja mis kell.
          Töö nimi on ühe klõpsu kaugusel ja jääb kohtspikrisse. */
@@ -906,7 +910,65 @@ function vCal(w){
     +'<button class="btn ghost small" data-act="cal" data-v="1">Järgmine kuu</button>'
     +'<span class="sp"></span>'
     +'<button class="btn ghost small" data-act="too-uus">+ Lisa töö</button></div>'
-    +'<div class="cal"><div class="dow">'+DOW_S.map(d=>'<span>'+d+'</span>').join("")+'</div><div class="g">'+cells+'</div></div>';
+    +'<div class="cal"><div class="dow">'+DOW_S.map(d=>'<span>'+d+'</span>').join("")+'</div><div class="g">'+cells+'</div></div>'
+    +paevaPlokk(valitudPaev);
+}
+
+/* Ühe päeva plokk kalendri all: mis sel päeval toimub ja kes on majas.
+   Varem oli see eraldi Töö graafiku all ja näitas ainult tänast. Nüüd on
+   kõik ühe kalendri all: vajuta kuupäeval ja näed selle päeva kohta kõike. */
+function paevaPlokk(k){
+  const d=new Date(k+"T12:00:00");
+  const i=dowIdx(d);
+  const onTana=k===dkey(new Date());
+  const millal=onTana?"täna":"sel päeval";
+
+  const yritused=S.events.filter(e=>sobibKoht(e,kalKoht)&&dkey(new Date(e.start))===k)
+    .sort((a,b)=>new Date(a.start)-new Date(b.start));
+  const tl=tooPaeval(d).filter(t=>sobibKoht(t,kalKoht));
+
+  const majasHtml=KOHAD.filter(x=>kalKoht==="koik"||x.id===kalKoht).map(x=>{
+    const read=S.members.filter(m=>paevalTööl(m.id,i,x.id)&&!araPaeval(m.id,k));
+    if(!read.length)return "";
+    return '<div class="majarida"><span class="kohasilt">'+esc(x.nimi)+'</span>'
+      + read.map(m=>'<span class="isik">'+avaHtml(m)+esc(m.name)
+          +'<span class="kell2">'+esc(vahetusi((graafik(x.id)[m.id]||[])[i]).join(" · "))
+          +'</span></span>').join("")
+      +'</div>';
+  }).join("");
+  const ara=puhkused().filter(x=>x.algus<=k&&x.lopp>=k);
+
+  return '<div class="card"><div class="kalpais">'
+    +'<p class="h3">'+(onTana?"TÄNA":"PÄEV")+' — '+esc(DOW_P[i])+'</p>'
+    +'<span class="kuunimi">'+d.getDate()+'. '+MON[d.getMonth()]+' '+d.getFullYear()+'</span>'
+    +'<button class="btn ghost small" data-act="kal-nihe" data-v="-1">‹</button>'
+    +'<button class="btn ghost small" data-act="kal-nihe" data-v="0">Täna</button>'
+    +'<button class="btn ghost small" data-act="kal-nihe" data-v="1">›</button>'
+    +'<input type="date" id="kal-kuup" class="pvalik" value="'+k+'" aria-label="Vali päev">'
+    +'</div>'
+    +'<div class="tanariba">'
+    +  '<div><span class="sild">Majas</span>'
+    +   (majasHtml||'<span class="tyhi">Graafikus ei ole '+millal+' kedagi.</span>')+'</div>'
+    +  '<div><span class="sild">Ära</span>'
+    +   (ara.length?ara.map(x=>'<span class="isik">'+avaHtml(byId(x.kes)||{name:"?"})
+          +esc(nameOf(x.kes))+'<span class="kes3">'+esc(liigiNimi(x.liik))+'</span></span>').join("")
+        :'<span class="tyhi">Keegi ei ole '+millal+' ära.</span>')+'</div>'
+    +'</div>'
+    +'<div class="tanariba" style="margin-top:16px">'
+    +  '<div><span class="sild">Üritused</span>'
+    +   (yritused.length?yritused.map(e=>'<button class="pill" data-act="goto-ev" data-id="'
+          +e.id+'">'+fmtTime(e.start)+' '+esc(e.title)+'</button>').join("")
+        :'<span class="tyhi">Üritusi ei ole.</span>')+'</div>'
+    +  '<div><span class="sild">Tööd</span>'
+    +   (tl.length?tl.map(t=>{
+          const teht=tehtud(t,k), ootab=vajabKinnitust(t,k), aeg=tooAeg(t);
+          return '<button class="pill too2'+(teht?" tehtud":(ootab?" ootab":""))+'"'
+            +' data-act="too-paev" data-id="'+t.id+'" data-k="'+k+'">'
+            +'<b>'+(t.kinnita?'<i class="mark">'+(teht?"✓":"○")+'</i>':"")+esc(t.nimi)+'</b>'
+            +(aeg?'<span>'+esc(aeg)+'</span>':"")+'</button>';
+        }).join("")
+        :'<span class="tyhi">Töid ei ole.</span>')+'</div>'
+    +'</div></div>';
 }
 
 /* ═══ Vestlus ═══ */
@@ -1060,8 +1122,8 @@ function vPeople(w){
 /* Osade nupud on alati ekraanil ja üks on alati avatud — nii ei pea
    midagi valima, et sisu näha, aga teisele vajutades vahetub tabel. */
 let myykOsa=null, myykKuu=null, hinnaOsa=null, nadalaNihe=0, kalKoht="koik", graKoht="km";
-/* Töö graafikus vaadatav päev. Tühi tähendab tänast. */
-let graPaev=null;
+/* Kalendris vaadatav päev. Tühi tähendab tänast. */
+let kalPaev=null;
 
 /* Kustutatud osa read ei tohi kaduda — nad koonduvad „Ilma osata“ alla. */
 function myygiSeis(){
@@ -1582,41 +1644,13 @@ function vToo(w){
   for(let i=0;i<7;i++){const d=new Date(alg);d.setDate(alg.getDate()+i);paevad.push(d);}
   const tIdx=dowIdx(new Date());
 
-  /* Valitud päev: kes on majas, kummas majas, ja kes on ära.
-     Vaikimisi täna, aga kuupäeva saab vahetada — muidu ei saaks kunagi
-     ette vaadata, kes näiteks laupäeval tööl on. */
-  const vPaev=graPaev||tana;
-  const vIdx=dowIdx(new Date(vPaev+"T12:00:00"));
-  const onTana=vPaev===tana;
-  const paevaAra=puhkused().filter(p=>p.algus<=vPaev&&p.lopp>=vPaev);
-  const majasHtml=KOHAD.map(k=>{
-    const read=S.members.filter(m=>paevalTööl(m.id,vIdx,k.id)&&!araPaeval(m.id,vPaev));
-    if(!read.length)return "";
-    return '<div class="majarida"><span class="kohasilt">'+esc(k.nimi)+'</span>'
-      + read.map(m=>'<span class="isik">'+avaHtml(m)+esc(m.name)
-          +'<span class="kell2">'+esc(vahetusi((graafik(k.id)[m.id]||[])[vIdx]).join(" · "))
-          +'</span></span>').join("")
-      +'</div>';
-  }).join("");
-  const millal=onTana?"täna":"sel päeval";
-
-  let h='<div class="card"><div class="kalpais">'
-    +'<p class="h3">'+(onTana?"TÄNA":"PÄEV")+' — '+esc(DOW_P[vIdx])+'</p>'
-    +'<span class="kuunimi">'+esc(fmtPaev(vPaev+"T12:00:00").replace(/^[^,]+, /,""))+'</span>'
-    +'<button class="btn ghost small" data-act="gra-paev" data-v="-1">‹</button>'
-    +'<button class="btn ghost small" data-act="gra-paev" data-v="0">Täna</button>'
-    +'<button class="btn ghost small" data-act="gra-paev" data-v="1">›</button>'
-    +'<input type="date" id="gra-kuup" class="pvalik" value="'+vPaev+'" '
-    +'aria-label="Vali päev">'
-    +'</div>'
-    +'<div class="tanariba">'
-    +  '<div><span class="sild">Majas</span>'
-    +   (majasHtml||'<span class="tyhi">Graafikus ei ole '+millal+' kedagi.</span>')+'</div>'
-    +  '<div><span class="sild">Ära</span>'
-    +   (paevaAra.length?paevaAra.map(p=>'<span class="isik">'+avaHtml(byId(p.kes)||{name:"?"})
-          +esc(nameOf(p.kes))+'<span class="kes3">'+esc(liigiNimi(p.liik))+'</span></span>').join("")
-        :'<span class="tyhi">Keegi ei ole '+millal+' ära.</span>')+'</div>'
-    +'</div></div>';
+  /* Kes ühel kindlal päeval majas on, seda vaadatakse Kalendrist —
+     seal on üks suur kalender, kus on korraga näha üritused, tööd ja
+     see, kes majas on. Siin on nädalatabel: kogu nädal korraga. */
+  let h='<div class="card"><p class="abi" style="margin:0">'
+    +'Kes ühel kindlal päeval majas on ja kes on ära — vaata '
+    +'<button class="linkbtn" data-act="view" data-view="kalender">Kalendrist</button>. '
+    +'Siin all saab graafikut muuta.</p></div>';
 
   /* Üks tabel korraga, maja valik peal — sama muster mis Kalendris. */
   const g2=graafik(graKoht);
@@ -2677,13 +2711,16 @@ document.addEventListener("click",ev=>{
       break;}
     case "kal-koht": kalKoht=el.dataset.v;render();break;
     case "gra-koht": graKoht=el.dataset.v;render();break;
-    case "gra-paev":{
-      if(el.dataset.v==="0"){graPaev=null;render();break;}
-      const d=new Date((graPaev||dkey(new Date()))+"T12:00:00");
+    case "kal-paev": kalPaev=el.dataset.k;render();break;
+    case "kal-nihe":{
+      if(el.dataset.v==="0"){kalPaev=null;render();break;}
+      const d=new Date((kalPaev||dkey(new Date()))+"T12:00:00");
       d.setDate(d.getDate()+Number(el.dataset.v));
-      graPaev=dkey(d);
-      /* Tänasele tagasi jõudes hoiame olekut lihtsana. */
-      if(graPaev===dkey(new Date()))graPaev=null;
+      kalPaev=dkey(d);
+      /* Kui valitud päev jääb teise kuusse, liigub ka kuu kaasa. */
+      if(calMonth&&(d.getMonth()!==calMonth.getMonth()||d.getFullYear()!==calMonth.getFullYear()))
+        calMonth=new Date(d.getFullYear(),d.getMonth(),1);
+      if(kalPaev===dkey(new Date()))kalPaev=null;
       render();break;}
     case "liik-vali": {
       document.querySelectorAll('[data-act="liik-vali"]').forEach(x=>
@@ -2822,12 +2859,14 @@ document.addEventListener("pointerdown",e=>{
 },true);
 
 /* Osa vahetus vahetab ka selle, mida seal müüakse. */
-/* Kuupäevaväli töö graafikus: vali suvaline päev. */
+/* Kuupäevaväli kalendris: vali suvaline päev. */
 document.addEventListener("change",e=>{
-  if(e.target.id!=="gra-kuup")return;
+  if(e.target.id!=="kal-kuup")return;
   const v=e.target.value;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(v))return;
-  graPaev=(v===dkey(new Date()))?null:v;
+  const d=new Date(v+"T12:00:00");
+  kalPaev=(v===dkey(new Date()))?null:v;
+  calMonth=new Date(d.getFullYear(),d.getMonth(),1);
   render();
 });
 
