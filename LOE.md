@@ -81,12 +81,26 @@ tund aega ei kasutata, ja ärkab esimese avamisega ~30 sekundiga.
 
 `Dockerfile` on ka olemas, kui eelistad Fly.io-d, Railwayd või muud.
 
+### Esimene sisselogimine majutatud lehele
+
+Majutuses ei näidata sisselogimislinki ekraanil ja postiteenust ei pruugi
+olla. Esimese lingi teed oma arvutist — sama andmebaas, seega link kehtib
+ka majutatud lehel:
+
+```
+node tools/link.js sinu@epost.ee https://kodulinna-maja.onrender.com
+```
+
+Ilma e-postita näitab tööriist liikmete nimekirja. Edasi saad kõik teised
+lingid teha juba rakenduse enda seest, kaardil „Liikmed ja sisselogimine".
+
 ### Mis majutuses automaatselt teistmoodi käib
 
 | | Oma arvutis | Majutuses (`NODE_ENV=production`) |
 |---|---|---|
 | Kes ligi pääseb | ainult see arvuti | kõik, kes aadressi teavad |
 | Esimene sisselogija saab administraatoriks | jah | **ei** |
+| Sisselogimislink ekraanil | jah | **ei** — muidu piisaks sisenemiseks e-posti teadmisest |
 
 Teine rida on tähtis: avalikul aadressil võiks juhuslik möödakäija muidu end
 esimesena administraatoriks kirjutada. Kui pead majutuses siiski esimest kontot

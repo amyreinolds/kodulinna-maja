@@ -59,6 +59,19 @@ const paring = (tee, v = {}) => new Promise(res => {
     const jaanud = await q("SELECT count(*)::int AS n FROM liikmed WHERE epost IS NOT NULL");
     kontrolli("ükski konto ei saanud võõrast aadressi", jaanud[0].n === 0, "aadresse: " + jaanud[0].n);
 
+    /* Kõige tähtsam kontroll siin: teadaoleva aadressiga ei tohi majutuses
+       linki ekraanile saada. Muidu piisaks sisenemiseks e-posti teadmisest. */
+    await q(`INSERT INTO liikmed (nimi, epost, administraator)
+             VALUES ('Majutuse proov','majutus@proov.invalid',false)`);
+    const tuntud = await paring("/api/logi-sisse",
+      { meetod: "POST", keha: { epost: "majutus@proov.invalid" } });
+    kontrolli("majutuses EI anta linki ekraanile",
+      tuntud.kood === 200 && !tuntud.json.arenduseLink,
+      tuntud.json && tuntud.json.arenduseLink ? "LINK LEKKIS!" : "link ei tulnud");
+    kontrolli("kasutajale öeldakse, mida teha",
+      tuntud.json && tuntud.json.postitaTa === true);
+    await q("DELETE FROM liikmed WHERE epost = 'majutus@proov.invalid'");
+
     kontrolli("majutuses kuulab väljastpoolt", /0\.0\.0\.0|ligi pääsevad kõik/.test(logi) === false,
       "(seadsime testis käsitsi 127.0.0.1)");
     s.kill();

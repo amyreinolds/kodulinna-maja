@@ -50,7 +50,8 @@ const server = http.createServer(async (req, res) => {
          igaüks teise inimese lingi kätte. Kui postiteenust ei ole,
          tuleb link ekraanile, sest muidu ei saaks keegi sisse. */
       return json(res, 200, {
-        ok: true, kiriSaadetud: !!r.kiriSaadetud, arenduseLink: r.link || null
+        ok: true, kiriSaadetud: !!r.kiriSaadetud,
+        arenduseLink: r.link || null, postitaTa: !!r.postitaTa
       });
     }
 

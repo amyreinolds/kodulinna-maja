@@ -94,9 +94,19 @@ async function kysiLink(epost, alus) {
   console.log("\n  SISSELOGIMISE LINK (" + liige.nimi + " <" + e + ">)\n  " + link + "\n");
 
   const saatmine = await post.saadaLink(e, liige.nimi, link);
-  /* Kui kirja ei saadetud, anname lingi ekraanile — muidu ei saaks
-     keegi sisse enne, kui postiteenus on paigas. */
-  return { ok: true, kiriSaadetud: saatmine.saadetud, link: saatmine.saadetud ? null : link };
+
+  /* Lingi ekraanile andmine on arenduse mugavus ja MITTE avalikus
+     internetis. Seal tähendaks see, et igaüks, kes teab mõne liikme
+     e-posti, saab tema nimel sisse — parooli asemel piisaks aadressist.
+     Majutuses käib sisenemine kas e-kirjaga või administraatori
+     tehtud kutselingiga. */
+  const tohibNaidata = process.env.NODE_ENV !== "production";
+  return {
+    ok: true,
+    kiriSaadetud: saatmine.saadetud,
+    link: (!saatmine.saadetud && tohibNaidata) ? link : null,
+    postitaTa: !saatmine.saadetud && !tohibNaidata
+  };
 }
 
 /* Kutse: administraator teeb liikmele sisselogimislingi ja annab selle ise
