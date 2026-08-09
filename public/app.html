@@ -38,6 +38,9 @@ nav button{display:flex;align-items:center;gap:11px;width:100%;min-height:46px;
 nav button:hover{background:var(--soft-2)}
 nav button[aria-current="page"]{background:var(--soft);color:var(--ink)}
 nav button .ik{font-size:18px;width:22px;text-align:center}
+.uusi{margin-left:auto;padding:2px 8px;border-radius:999px;background:var(--accent);
+  color:#fff;font-size:12.5px;font-weight:800;letter-spacing:0}
+.kirje .uusi{margin-left:0}
 
 .card{background:var(--card);border-radius:18px;padding:26px;margin-bottom:22px;
   box-shadow:0 1px 2px rgba(20,24,28,.05),0 12px 28px -20px rgba(20,24,28,.28)}
@@ -337,14 +340,28 @@ async function algus() {
   LIIKMED = await päring("/api/liikmed") || [];
   joonistaNav();
   if (VAADE === alguseVaade) näita(VAADE);
+  loeUudised();
 }
+
+let UUSI = 0;
 
 function joonistaNav() {
   document.getElementById("nav").innerHTML = VAATED
     .filter(v => !v.kassa || MINA.naebKassat)
     .map(v => '<button data-vaade="' + v.id + '"'
       + (v.id === VAADE ? ' aria-current="page"' : "") + '>'
-      + '<span class="ik">' + v.ik + "</span>" + esc(v.nimi) + "</button>").join("");
+      + '<span class="ik">' + v.ik + "</span>" + esc(v.nimi)
+      + (v.id === "teated" && UUSI ? '<span class="uusi">' + UUSI + "</span>" : "")
+      + "</button>").join("");
+}
+
+/* Mitu lugemata sõnumit on. Käib ka siis, kui Teated ei ole avatud —
+   muidu ei saaks keegi teada, et talle kirjutati. */
+async function loeUudised() {
+  const read = await päring("/api/vestlused");
+  if (!read) return;
+  UUSI = read.reduce((a, v) => a + (v.uusi || 0), 0);
+  joonistaNav();
 }
 
 document.getElementById("nav").addEventListener("click", e => {
@@ -376,8 +393,27 @@ async function näita(v) {
 }
 
 /* ══ MÜÜK ═══════════════════════════════════════════════════════ */
+/* Millist ajavahemikku kassas näidata. Leti taga tahad näha tänast;
+   kuu lõpus kogu kuud. */
+let MYYK_AEG = "koik";
+const AJAD = { tana: "täna", nadal: "see nädal", kuu: "see kuu", koik: "kogu aeg" };
+function ajavahemik() {
+  const n = new Date(), t = isoks(n);
+  if (MYYK_AEG === "tana") return { algus: t, lopp: t };
+  if (MYYK_AEG === "nadal") {
+    const e = new Date(n); e.setDate(n.getDate() - nadalapaev(n));
+    return { algus: isoks(e), lopp: t };
+  }
+  if (MYYK_AEG === "kuu")
+    return { algus: isoks(new Date(n.getFullYear(), n.getMonth(), 1)), lopp: t };
+  return { algus: "2000-01-01", lopp: "2999-12-31" };
+}
+
 async function vaadeMyyk() {
-  const [hind, d] = await Promise.all([päring("/api/tooted"), päring("/api/myyk")]);
+  const a = ajavahemik();
+  const [hind, d] = await Promise.all([
+    päring("/api/tooted"),
+    päring("/api/myyk?algus=" + a.algus + "&lopp=" + a.lopp)]);
   const osad = (hind || []).filter(o => o.tooted.length);
 
   if (!kirjuta("myyk",
@@ -400,12 +436,19 @@ async function vaadeMyyk() {
 
     + '<article class="card"><p class="h3">' + (d.koikNahtav ? "KOGU MAJA KASSA" : "MINU KASSA")
     + (d.koikNahtav ? "" : '<span class="mark">ainult sinu oma</span>') + "</p>"
+    + '<div class="majavalik" id="ajavalik" style="margin-bottom:14px;width:fit-content">'
+    + Object.keys(AJAD).map(k => '<button data-aeg="' + k + '" aria-pressed="'
+        + (MYYK_AEG === k) + '">' + AJAD[k] + "</button>").join("") + "</div>"
     + '<div class="riba"><b>' + d.kokku.kordi + "</b><span>"
     + (d.kokku.kordi === 1 ? "müügikord" : "müügikorda") + "</span><b>"
     + d.kokku.tk + "</b><span>" + (d.kokku.tk === 1 ? "tükk" : "tükki")
     + "</span><b>" + raha(d.kokku.eur) + "</b></div>"
     + '<div id="tabel">' + myygiTabel(d) + "</div></article>")) return;
 
+  document.getElementById("ajavalik").onclick = e => {
+    const n = e.target.closest("[data-aeg]");
+    if (n) { MYYK_AEG = n.dataset.aeg; vaadeMyyk(); }
+  };
   document.getElementById("vahem").onclick = () => nihutaKogus(-1);
   document.getElementById("rohkem").onclick = () => nihutaKogus(1);
   document.getElementById("tooted").onclick = müügiKlõps;
@@ -943,6 +986,8 @@ let VESTLUS = null;
 async function vaadeTeated() {
   const read = await päring("/api/vestlused") || [];
   if (VESTLUS && !read.some(v => v.id === VESTLUS)) VESTLUS = null;
+  UUSI = read.reduce((a, v) => a + (v.uusi || 0), 0);
+  joonistaNav();
 
   const nimi = v => v.liik === "teema" ? v.pealkiri
     : "Kiri: " + (v.a_id === MINA.id ? v.b_nimi : v.a_nimi);
@@ -954,6 +999,7 @@ async function vaadeTeated() {
     + (read.length
       ? read.map(v => '<div class="kirje' + (v.id === VESTLUS ? " valitud" : "") + '">'
           + '<button class="nimilink" data-vestlus="' + v.id + '">' + esc(nimi(v)) + "</button>"
+          + (v.uusi ? '<span class="uusi">' + v.uusi + " uus</span>" : "")
           + '<span class="mark">' + (v.sonumeid === 1 ? "1 sõnum"
               : v.sonumeid + " sõnumit") + "</span>"
           + '<button class="pisi punane" data-vkustuta="' + v.id + '">Kustuta</button>'
@@ -999,6 +1045,13 @@ async function vaadeTeated() {
 async function naitaJuttu(v) {
   const read = await päring("/api/sonumid?vestlus=" + VESTLUS) || [];
   if (VAADE !== "teated" || !document.getElementById("jutt")) return;
+  /* Avatud vestlus on loetud. Pärast märkimist joonistame nimekirja
+     uuesti — nii kaob „uus“ märk sealt, kust vaja, ja ainult sealt.
+     Teist ringi ei tule: siis on server juba lugenud selle loetuks. */
+  if (v.uusi) {
+    await päring("/api/loetud", "POST", { votme: "vestlus:" + VESTLUS });
+    return vaadeTeated();
+  }
   const nimi = v.liik === "teema" ? v.pealkiri
     : "Kiri: " + (v.a_id === MINA.id ? v.b_nimi : v.a_nimi);
   document.getElementById("jutt").innerHTML =

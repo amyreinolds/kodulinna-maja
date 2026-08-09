@@ -102,6 +102,13 @@ const server = http.createServer(async (req, res) => {
          See kontroll on serveris, mitte ekraanil — nii ei saa sellest
          mööda minna, ükskõik mida brauseris teha. */
       const koik = naebKassat(mina);
+      /* Ajavahemik on vabatahtlik. Ilma selleta tuleb kogu müük — nii
+         käitus vaade enne ja nii on ta ka lihtsam üle vaadata. */
+      const algus = u.searchParams.get("algus") || "2000-01-01";
+      const lopp = u.searchParams.get("lopp") || "2999-12-31";
+      const tingimused = ["m.aeg::date BETWEEN $1 AND $2"];
+      const väärtused = [algus, lopp];
+      if (!koik) { väärtused.push(mina.id); tingimused.push("m.myyja_id = $3"); }
       const read = await q(
         `SELECT m.id, m.aeg, m.kogus, m.hind, m.summa,
                 t.nimetus, o.nimi AS osa, l.nimi AS myyja, m.myyja_id
@@ -109,8 +116,8 @@ const server = http.createServer(async (req, res) => {
          JOIN tooted t ON t.id = m.toode_id
          LEFT JOIN myyk_osad o ON o.id = t.osa_id
          LEFT JOIN liikmed l ON l.id = m.myyja_id
-         ${koik ? "" : "WHERE m.myyja_id = $1"}
-         ORDER BY m.aeg DESC`, koik ? [] : [mina.id]);
+         WHERE ${tingimused.join(" AND ")}
+         ORDER BY m.aeg DESC`, väärtused);
       const kokku = read.reduce((a, r) => ({
         kordi: a.kordi + 1, tk: a.tk + r.kogus, eur: a.eur + Number(r.summa)
       }), { kordi: 0, tk: 0, eur: 0 });
@@ -518,7 +525,14 @@ const server = http.createServer(async (req, res) => {
         `SELECT v.id, v.liik, v.pealkiri, v.a_id, v.b_id, v.loodud,
                 a.nimi AS a_nimi, b.nimi AS b_nimi,
                 (SELECT count(*)::int FROM sonumid s WHERE s.vestlus_id = v.id) AS sonumeid,
-                (SELECT max(s.aeg) FROM sonumid s WHERE s.vestlus_id = v.id) AS viimane
+                (SELECT max(s.aeg) FROM sonumid s WHERE s.vestlus_id = v.id) AS viimane,
+                /* Uus = viimane sõnum on hilisem kui see, mil sina viimati
+                   selle vestluse avasid. Enda kirjutatu ei ole uus. */
+                (SELECT count(*)::int FROM sonumid s
+                 WHERE s.vestlus_id = v.id AND s.autor IS DISTINCT FROM $1
+                   AND s.aeg > coalesce((SELECT lo.aeg FROM loetud lo
+                        WHERE lo.liige_id = $1 AND lo.votme = 'vestlus:' || v.id),
+                        '2000-01-01'::timestamptz)) AS uusi
          FROM vestlused v
          LEFT JOIN liikmed a ON a.id = v.a_id
          LEFT JOIN liikmed b ON b.id = v.b_id
@@ -552,6 +566,17 @@ const server = http.createServer(async (req, res) => {
         `INSERT INTO vestlused (liik, pealkiri, autor) VALUES ('teema',$1,$2) RETURNING id`,
         [pealkiri, mina.id]);
       return json(res, 200, { ok: true, id: r.id });
+    }
+
+    /* Vestlus loetuks: paneme kirja hetke, mil ta viimati avati. */
+    if (tee === "/api/loetud" && req.method === "POST") {
+      const b = await keha(req);
+      const votme = String(b.votme || "").trim();
+      if (!votme) return json(res, 400, { viga: "Võti on puudu." });
+      await q(
+        `INSERT INTO loetud (liige_id, votme) VALUES ($1,$2)
+         ON CONFLICT (liige_id, votme) DO UPDATE SET aeg = now()`, [mina.id, votme]);
+      return json(res, 200, { ok: true });
     }
 
     /* Kas ma tohin seda vestlust näha. */

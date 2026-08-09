@@ -105,6 +105,40 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
       !nimekiri.json.some(v => v.id === k1.json.id)
       && nimekiri.json.some(v => v.id === t.json.id));
 
+    /* ── lugemata sõnumid ──────────────────────────────────────── */
+    const enne = await paring("/api/vestlused", { kupsis: kP });
+    const teemaP = enne.json.find(v => v.id === t.json.id);
+    kontrolli("teise kirjutatu on Peetrile uus", teemaP.uusi === 1, "uusi " + teemaP.uusi);
+    const kiriP = enne.json.find(v => v.id === k1.json.id);
+    kontrolli("saadetud kiri on saajale uus", kiriP.uusi === 1, "uusi " + kiriP.uusi);
+    const annaOma = (await paring("/api/vestlused", { kupsis: kA })).json
+      .find(v => v.id === t.json.id);
+    kontrolli("enda kirjutatu ei ole uus", annaOma.uusi === 0, "uusi " + annaOma.uusi);
+
+    await paring("/api/loetud", { meetod: "POST", kupsis: kP,
+      keha: { votme: "vestlus:" + t.json.id } });
+    const parast = await paring("/api/vestlused", { kupsis: kP });
+    kontrolli("pärast avamist ei ole enam uus",
+      parast.json.find(v => v.id === t.json.id).uusi === 0);
+    const tyhiVotme = await paring("/api/loetud", { meetod: "POST", kupsis: kP,
+      keha: { votme: " " } });
+    kontrolli("tühja võtit ei võeta", tyhiVotme.kood === 400, tyhiVotme.json.viga);
+
+    /* ── müügi ajavahemik ──────────────────────────────────────── */
+    const [toode] = await q("SELECT id FROM tooted LIMIT 1");
+    await paring("/api/myyk", { meetod: "POST", kupsis: kM,
+      keha: { toode_id: toode.id, kogus: 1 } });
+    const tana = new Date().toISOString().slice(0, 10);
+    const kogu = await paring("/api/myyk", { kupsis: kM });
+    const tanane = await paring("/api/myyk?algus=" + tana + "&lopp=" + tana, { kupsis: kM });
+    const ammu = await paring("/api/myyk?algus=2001-01-01&lopp=2001-12-31", { kupsis: kM });
+    kontrolli("tänane müük on kogu müügist väiksem või sama",
+      tanane.json.kokku.kordi >= 1 && tanane.json.kokku.kordi <= kogu.json.kokku.kordi,
+      tanane.json.kokku.kordi + " / " + kogu.json.kokku.kordi);
+    kontrolli("tühi ajavahemik annab tühja kassa", ammu.json.kokku.kordi === 0);
+    await q(`DELETE FROM myygid WHERE myyja_id IN
+               (SELECT id FROM liikmed WHERE epost LIKE 'teade.%@proov.invalid')`);
+
     /* ── sõnumi kustutamine ────────────────────────────────────── */
     const voorKustutab = await paring("/api/sonumid", { meetod: "DELETE", kupsis: kM,
       keha: { id: s1.json.sonum.id } });
