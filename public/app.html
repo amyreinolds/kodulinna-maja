@@ -1060,6 +1060,8 @@ function vPeople(w){
 /* Osade nupud on alati ekraanil ja üks on alati avatud — nii ei pea
    midagi valima, et sisu näha, aga teisele vajutades vahetub tabel. */
 let myykOsa=null, myykKuu=null, hinnaOsa=null, nadalaNihe=0, kalKoht="koik", graKoht="km";
+/* Töö graafikus vaadatav päev. Tühi tähendab tänast. */
+let graPaev=null;
 
 /* Kustutatud osa read ei tohi kaduda — nad koonduvad „Ilma osata“ alla. */
 function myygiSeis(){
@@ -1580,26 +1582,40 @@ function vToo(w){
   for(let i=0;i<7;i++){const d=new Date(alg);d.setDate(alg.getDate()+i);paevad.push(d);}
   const tIdx=dowIdx(new Date());
 
-  /* Täna: kes on majas, kummas majas, ja kes on ära. */
-  const tanaAra=puhkused().filter(p=>p.algus<=tana&&p.lopp>=tana);
+  /* Valitud päev: kes on majas, kummas majas, ja kes on ära.
+     Vaikimisi täna, aga kuupäeva saab vahetada — muidu ei saaks kunagi
+     ette vaadata, kes näiteks laupäeval tööl on. */
+  const vPaev=graPaev||tana;
+  const vIdx=dowIdx(new Date(vPaev+"T12:00:00"));
+  const onTana=vPaev===tana;
+  const paevaAra=puhkused().filter(p=>p.algus<=vPaev&&p.lopp>=vPaev);
   const majasHtml=KOHAD.map(k=>{
-    const read=S.members.filter(m=>paevalTööl(m.id,tIdx,k.id)&&!araPaeval(m.id,tana));
+    const read=S.members.filter(m=>paevalTööl(m.id,vIdx,k.id)&&!araPaeval(m.id,vPaev));
     if(!read.length)return "";
     return '<div class="majarida"><span class="kohasilt">'+esc(k.nimi)+'</span>'
       + read.map(m=>'<span class="isik">'+avaHtml(m)+esc(m.name)
-          +'<span class="kell2">'+esc(vahetusi((graafik(k.id)[m.id]||[])[tIdx]).join(" · "))
+          +'<span class="kell2">'+esc(vahetusi((graafik(k.id)[m.id]||[])[vIdx]).join(" · "))
           +'</span></span>').join("")
       +'</div>';
   }).join("");
+  const millal=onTana?"täna":"sel päeval";
 
-  let h='<div class="card"><p class="h3">TÄNA — '+esc(DOW_P[tIdx])+'</p>'
+  let h='<div class="card"><div class="kalpais">'
+    +'<p class="h3">'+(onTana?"TÄNA":"PÄEV")+' — '+esc(DOW_P[vIdx])+'</p>'
+    +'<span class="kuunimi">'+esc(fmtPaev(vPaev+"T12:00:00").replace(/^[^,]+, /,""))+'</span>'
+    +'<button class="btn ghost small" data-act="gra-paev" data-v="-1">‹</button>'
+    +'<button class="btn ghost small" data-act="gra-paev" data-v="0">Täna</button>'
+    +'<button class="btn ghost small" data-act="gra-paev" data-v="1">›</button>'
+    +'<input type="date" id="gra-kuup" class="pvalik" value="'+vPaev+'" '
+    +'aria-label="Vali päev">'
+    +'</div>'
     +'<div class="tanariba">'
     +  '<div><span class="sild">Majas</span>'
-    +   (majasHtml||'<span class="tyhi">Graafikus ei ole täna kedagi.</span>')+'</div>'
+    +   (majasHtml||'<span class="tyhi">Graafikus ei ole '+millal+' kedagi.</span>')+'</div>'
     +  '<div><span class="sild">Ära</span>'
-    +   (tanaAra.length?tanaAra.map(p=>'<span class="isik">'+avaHtml(byId(p.kes)||{name:"?"})
+    +   (paevaAra.length?paevaAra.map(p=>'<span class="isik">'+avaHtml(byId(p.kes)||{name:"?"})
           +esc(nameOf(p.kes))+'<span class="kes3">'+esc(liigiNimi(p.liik))+'</span></span>').join("")
-        :'<span class="tyhi">Keegi ei ole täna ära.</span>')+'</div>'
+        :'<span class="tyhi">Keegi ei ole '+millal+' ära.</span>')+'</div>'
     +'</div></div>';
 
   /* Üks tabel korraga, maja valik peal — sama muster mis Kalendris. */
@@ -2661,6 +2677,14 @@ document.addEventListener("click",ev=>{
       break;}
     case "kal-koht": kalKoht=el.dataset.v;render();break;
     case "gra-koht": graKoht=el.dataset.v;render();break;
+    case "gra-paev":{
+      if(el.dataset.v==="0"){graPaev=null;render();break;}
+      const d=new Date((graPaev||dkey(new Date()))+"T12:00:00");
+      d.setDate(d.getDate()+Number(el.dataset.v));
+      graPaev=dkey(d);
+      /* Tänasele tagasi jõudes hoiame olekut lihtsana. */
+      if(graPaev===dkey(new Date()))graPaev=null;
+      render();break;}
     case "liik-vali": {
       document.querySelectorAll('[data-act="liik-vali"]').forEach(x=>
         x.setAttribute("aria-pressed",(x.dataset.v===el.dataset.v)?"true":"false"));
@@ -2798,6 +2822,15 @@ document.addEventListener("pointerdown",e=>{
 },true);
 
 /* Osa vahetus vahetab ka selle, mida seal müüakse. */
+/* Kuupäevaväli töö graafikus: vali suvaline päev. */
+document.addEventListener("change",e=>{
+  if(e.target.id!=="gra-kuup")return;
+  const v=e.target.value;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(v))return;
+  graPaev=(v===dkey(new Date()))?null:v;
+  render();
+});
+
 document.addEventListener("change",e=>{
   if(e.target.id!=="f_osa")return;
   const k=document.getElementById("kiirvalik");

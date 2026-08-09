@@ -676,6 +676,14 @@ hr.hr{border:none;border-top:1px solid var(--line-2);margin:0}
 
 
 /* ── töötajad ─────────────────────────────────────── */
+/* Kuupäevavali töö graafiku päevaploki päises: vali suvaline päev. */
+.pvalik{
+  min-height:38px;padding:0 10px;border-radius:12px;
+  border:1px solid var(--line);background:var(--kaart);color:var(--ink);
+  font-family:inherit;font-size:15px;
+}
+.pvalik:focus{border-color:var(--s);outline:none}
+
 .tanariba{display:grid;grid-template-columns:1fr 1fr;gap:18px}
 @media (max-width:820px){.tanariba{grid-template-columns:1fr}}
 .tanariba .sild{
