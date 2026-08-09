@@ -7,122 +7,191 @@
 <style>
 :root{
   color-scheme:light;
-  --bg:#A9C9EC; --card:#FFFFFF; --soft:#ECEFF4;
+  --bg:#A9C9EC; --card:#FFFFFF; --soft:#ECEFF4; --soft-2:#F5F7FA;
   --ink:#1D1D1F; --ink-2:#424245; --ink-3:#66666A;
   --line:#D8D8DE; --line-2:#E8E8EE; --accent:#0071E3;
+  --tehtud:#1E7A45; --tehtud-taust:#E4F3EA;
+  --hoiatus:#8E1F1F; --hoiatus-taust:#FDECEC;
   --mono:ui-monospace,"Cascadia Code","SF Mono",Consolas,monospace;
 }
 *{box-sizing:border-box}
 body{
-  margin:0;min-height:100vh;padding:38px 38px 56px;
+  margin:0;min-height:100vh;padding:28px 28px 56px;
   font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   color:var(--ink);
   background:linear-gradient(160deg,#C3DBF6 0%,#A9C9EC 45%,#8FB4DD 100%);
 }
-.wrap{max-width:880px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
-.pais{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-h1{font-size:27px;font-weight:800;letter-spacing:-.03em;margin:0}
+.wrap{max-width:1180px;margin:0 auto}
+.pais{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+h1{font-size:26px;font-weight:800;letter-spacing:-.03em;margin:0}
 .kes{font-size:16px;color:var(--ink-2)}
 .sp{flex:1}
-button.valja{
-  min-height:44px;padding:0 18px;border-radius:12px;border:1px solid var(--line);
-  background:var(--card);font-family:inherit;font-size:16px;font-weight:600;cursor:pointer;
-}
-.card{
-  background:var(--card);border-radius:18px;padding:28px;
-  box-shadow:0 1px 2px rgba(20,24,28,.05),0 12px 28px -20px rgba(20,24,28,.28);
-}
+.paigutus{display:grid;grid-template-columns:216px 1fr;gap:22px;align-items:start}
+@media (max-width:820px){.paigutus{grid-template-columns:1fr}}
+
+/* ── vasak paneel ─────────────────────────────────────────────── */
+nav{background:var(--card);border-radius:18px;padding:10px;position:sticky;top:20px;
+  box-shadow:0 1px 2px rgba(20,24,28,.05),0 12px 28px -20px rgba(20,24,28,.28)}
+nav button{display:flex;align-items:center;gap:11px;width:100%;min-height:46px;
+  padding:0 14px;border:none;border-radius:12px;background:none;color:var(--ink-2);
+  font-family:inherit;font-size:16px;font-weight:600;text-align:left;cursor:pointer}
+nav button:hover{background:var(--soft-2)}
+nav button[aria-current="page"]{background:var(--soft);color:var(--ink)}
+nav button .ik{font-size:18px;width:22px;text-align:center}
+
+.card{background:var(--card);border-radius:18px;padding:26px;margin-bottom:22px;
+  box-shadow:0 1px 2px rgba(20,24,28,.05),0 12px 28px -20px rgba(20,24,28,.28)}
+.card:last-child{margin-bottom:0}
 .h3{font-size:12.5px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;
   color:var(--ink-3);margin:0 0 14px}
+.h3 .mark{margin-left:10px}
 .riba{display:flex;flex-wrap:wrap;gap:6px 22px;align-items:baseline;
   padding:12px 16px;border-radius:14px;background:var(--soft)}
 .riba span{font-size:15px;color:var(--ink-3)}
-.riba b{font-size:22px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}
-table{width:100%;border-collapse:collapse;margin-top:18px}
-th,td{padding:13px 12px;text-align:left;font-size:16px}
-th{font-size:13px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+.riba b{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;margin-top:16px}
+th,td{padding:11px 10px;text-align:left;font-size:15.5px;vertical-align:top}
+th{font-size:12.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
   color:var(--ink-3);border-bottom:1.5px solid var(--line)}
 td{border-bottom:1px solid var(--line-2)}
 tr:last-child td{border-bottom:none}
 .n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
-.tyhi{padding:26px 0;color:var(--ink-3);font-size:17px}
-.mark{display:inline-block;margin-left:10px;padding:3px 10px;border-radius:999px;
-  background:var(--soft);font-size:13px;font-weight:700;color:var(--ink-3)}
-.abi{font-size:16px;line-height:1.55;color:var(--ink-3);margin:0 0 18px}
-.liige{display:flex;align-items:center;gap:14px;padding:13px 0;
-  border-bottom:1px solid var(--line-2);flex-wrap:wrap}
-.liige:last-of-type{border-bottom:none}
-.liige input.nm,.liige input.rl{
-  padding:10px 12px;border-radius:10px;border:1.5px solid transparent;
-  background:transparent;font-family:inherit;outline:none;
-}
-.liige input.nm{font-size:17px;font-weight:650;flex:1 1 150px;min-width:120px;color:var(--ink)}
-.liige input.rl{font-size:15px;color:var(--ink-3);flex:1 1 130px;min-width:100px}
-/* Nupp hoiab rea paremas servas, et read oleksid ühel joonel. */
-.liige button[data-kutse]{margin-left:auto}
-.liige input.nm:hover,.liige input.rl:hover{border-color:var(--line)}
-.liige input.nm:focus,.liige input.rl:focus{border-color:var(--accent);background:var(--card)}
-.liige select.am,.uus select{
-  padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);
-  background:var(--card);color:var(--ink);font-family:inherit;font-size:15px;
-  min-height:44px;cursor:pointer;outline:none;
-}
-.liige select.am:focus,.uus select:focus{border-color:var(--accent)}
-.ametid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-  gap:10px;margin:0 0 20px}
-.amet{padding:11px 13px;border-radius:12px;background:var(--soft);font-size:14.5px}
-.amet b{display:block;font-size:15.5px;margin-bottom:2px}
-.amet span{color:var(--ink-3)}
-.liige select.am:disabled{background:var(--soft);color:var(--ink-3);cursor:default;
-  border-color:transparent}
-.liige button{min-height:40px;padding:0 16px;border-radius:10px;border:1px solid var(--line);
-  background:var(--card);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer}
-.liige button:hover{border-color:var(--accent);color:var(--accent)}
-.link{width:100%;display:flex;gap:10px;align-items:center;margin-top:10px;
-  padding:12px 14px;border-radius:12px;background:var(--soft)}
-.link input{flex:1;border:none;background:none;font-family:var(--mono);font-size:14px;
-  color:var(--ink);outline:none}
-.uus{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:20px;
-  padding-top:20px;border-top:1.5px solid var(--line)}
-.uus input[type=text]{flex:1;min-width:170px;padding:12px 14px;border-radius:10px;
-  border:1.5px solid var(--line);font-size:16px;font-family:inherit;outline:none}
-.uus input[type=text]:focus{border-color:var(--accent)}
-.uus .kast{display:flex;align-items:center;gap:8px;font-size:16px}
-.uus button{min-height:48px;padding:0 22px;border-radius:12px;border:none;
+.tyhi{padding:22px 0;color:var(--ink-3);font-size:16.5px}
+.mark{display:inline-block;padding:3px 10px;border-radius:999px;background:var(--soft);
+  font-size:13px;font-weight:700;color:var(--ink-3);letter-spacing:0;text-transform:none}
+.abi{font-size:15.5px;line-height:1.55;color:var(--ink-3);margin:0 0 16px}
+
+/* ── nupud ja väljad ──────────────────────────────────────────── */
+button.n2,.valja{min-height:44px;padding:0 18px;border-radius:12px;
+  border:1px solid var(--line);background:var(--card);color:var(--ink);
+  font-family:inherit;font-size:16px;font-weight:600;cursor:pointer}
+button.n2:hover,.valja:hover{border-color:var(--accent);color:var(--accent)}
+button.esile{min-height:46px;padding:0 22px;border-radius:12px;border:none;
   background:var(--accent);color:#fff;font-family:inherit;font-size:16px;
   font-weight:600;cursor:pointer}
+button.pisi{min-height:34px;padding:0 11px;border-radius:9px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink-3);font-family:inherit;font-size:14px;cursor:pointer}
+button.pisi:hover{border-color:var(--accent);color:var(--accent)}
+button.pisi.punane:hover{border-color:var(--hoiatus);color:var(--hoiatus)}
+input[type=text],input[type=number],input[type=date],input[type=search],select,textarea{
+  min-height:46px;padding:10px 13px;border-radius:11px;border:1.5px solid var(--line);
+  background:var(--card);color:var(--ink);font-family:inherit;font-size:16px;outline:none}
+textarea{min-height:110px;line-height:1.5;resize:vertical}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+label.väli{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:650;
+  color:var(--ink-2)}
+.vorm{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;
+  margin-top:18px;padding-top:18px;border-top:1.5px solid var(--line)}
+.vorm.üleval{margin-top:0;padding-top:0;border-top:none;margin-bottom:18px}
+.vorm label.väli{flex:1;min-width:150px}
+.teade{margin:16px 0 0;padding:12px 15px;border-radius:12px;background:var(--soft);
+  font-size:15.5px;font-weight:600}
+.teade.viga{background:var(--hoiatus-taust);color:var(--hoiatus)}
 
-/* ── uus müük ─────────────────────────────────────────────────── */
-.kogus{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+/* ── kassa ────────────────────────────────────────────────────── */
+.kogus{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
 .kogus label{font-size:16px;font-weight:650}
-.kogus input{width:88px;min-height:48px;padding:0 12px;border-radius:12px;
-  border:1.5px solid var(--line);background:var(--card);color:var(--ink);
-  font-family:var(--mono);font-size:19px;font-weight:700;text-align:center;outline:none}
-.kogus input:focus{border-color:var(--accent)}
-.kogus button{width:48px;height:48px;border-radius:12px;border:1.5px solid var(--line);
+.kogus input{width:86px;font-family:var(--mono);font-size:19px;font-weight:700;text-align:center}
+.kogus button{width:46px;height:46px;border-radius:12px;border:1.5px solid var(--line);
   background:var(--card);color:var(--ink);font-size:24px;line-height:1;cursor:pointer}
 .kogus button:hover{border-color:var(--accent);color:var(--accent)}
-.kogus .vihje{font-size:15px;color:var(--ink-3);flex:1;min-width:200px}
-.osa{margin-bottom:18px}
-.osa:last-child{margin-bottom:0}
-.osa>p{font-size:13px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
-  color:var(--ink-3);margin:0 0 9px}
-.nupud{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
-.toode{display:flex;flex-direction:column;align-items:flex-start;gap:3px;
-  min-height:66px;padding:12px 15px;border-radius:14px;border:1.5px solid var(--line);
-  background:var(--card);font-family:inherit;text-align:left;cursor:pointer}
+.kogus .vihje{font-size:15px;color:var(--ink-3);flex:1;min-width:190px}
+.osa{margin-bottom:16px}
+.osa>p{font-size:12.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-3);margin:0 0 8px}
+.nupud{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:9px}
+.toode{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-height:64px;
+  padding:11px 14px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);
+  font-family:inherit;text-align:left;cursor:pointer}
 .toode:hover{border-color:var(--accent)}
-.toode:disabled{opacity:.6;cursor:default}
-.toode b{font-size:16.5px;font-weight:650;color:var(--ink)}
-.toode span{font-family:var(--mono);font-size:15px;color:var(--ink-3)}
+.toode b{font-size:16px;font-weight:650}
+.toode span{font-family:var(--mono);font-size:14.5px;color:var(--ink-3)}
 .toode .tasuta{font-family:inherit;font-weight:700;color:var(--ink-2)}
-.teade{margin:18px 0 0;padding:13px 16px;border-radius:12px;background:var(--soft);
-  font-size:16px;font-weight:600}
-.teade.viga{background:#FDECEC;color:#8E1F1F}
-td button.kustuta{min-height:32px;padding:0 10px;border-radius:8px;
-  border:1px solid var(--line);background:var(--card);color:var(--ink-3);
-  font-family:inherit;font-size:14px;cursor:pointer}
-td button.kustuta:hover{border-color:#C0392B;color:#C0392B}
+
+/* ── kalender ─────────────────────────────────────────────────── */
+.kuu{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.kuu b{font-size:20px;font-weight:750;min-width:180px}
+.majavalik{display:flex;gap:6px;background:var(--soft);padding:5px;border-radius:12px}
+.majavalik button{min-height:36px;padding:0 14px;border:none;border-radius:9px;
+  background:none;color:var(--ink-3);font-family:inherit;font-size:15px;font-weight:650;cursor:pointer}
+.majavalik button[aria-pressed="true"]{background:var(--card);color:var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.grid .nimi{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-3);text-align:center;padding:4px 0}
+.paev{min-height:104px;padding:7px;border-radius:12px;border:1.5px solid var(--line-2);
+  background:var(--card);font-family:inherit;text-align:left;cursor:pointer;overflow:hidden}
+.paev:hover{border-color:var(--accent)}
+.paev.väljas{background:var(--soft-2);color:var(--ink-3);opacity:.65}
+.paev.täna{border-color:var(--accent)}
+.paev .nr{font-size:14px;font-weight:750;font-variant-numeric:tabular-nums}
+.paev .nr .täht{margin-left:6px;font-size:11.5px;font-weight:700;color:var(--accent)}
+.pill{display:block;margin-top:4px;padding:3px 7px;border-radius:7px;background:var(--soft);
+  font-size:12.5px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill.yritus{background:#E3EEFB;color:#14477F}
+.pill.too{background:var(--soft)}
+.pill.too.tehtud{background:var(--tehtud-taust);color:var(--tehtud);font-weight:700}
+.veel{display:block;margin-top:4px;font-size:12px;color:var(--ink-3)}
+
+/* ── päeva aken ───────────────────────────────────────────────── */
+dialog{border:none;border-radius:20px;padding:0;max-width:640px;width:calc(100% - 40px);
+  box-shadow:0 30px 80px -30px rgba(20,24,28,.6)}
+dialog::backdrop{background:rgba(20,24,28,.42)}
+.aken{padding:26px}
+.aken h2{font-size:21px;font-weight:750;margin:0 0 4px}
+.aken .kuup{font-size:15px;color:var(--ink-3);margin:0 0 18px}
+.kirje{display:flex;align-items:center;gap:10px;padding:11px 0;
+  border-bottom:1px solid var(--line-2);flex-wrap:wrap}
+.kirje:last-of-type{border-bottom:none}
+.kirje .aeg{font-family:var(--mono);font-size:14px;color:var(--ink-3);min-width:88px}
+.kirje .nim{flex:1;min-width:150px;font-size:16.5px;font-weight:600}
+.kirje.tehtud .nim{color:var(--tehtud)}
+.kirje .lisa{width:100%;font-size:14.5px;color:var(--ink-3)}
+.sulge{position:absolute;top:18px;right:18px}
+.aken{position:relative}
+.valikud{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.paevanupud{display:flex;gap:6px;flex-wrap:wrap}
+.paevanupud button{min-height:40px;min-width:46px;border-radius:10px;
+  border:1.5px solid var(--line);background:var(--card);color:var(--ink-2);
+  font-family:inherit;font-size:15px;font-weight:650;cursor:pointer}
+.paevanupud button[aria-pressed="true"]{border-color:var(--accent);background:#EAF3FE;
+  color:var(--accent)}
+
+/* ── graafik ──────────────────────────────────────────────────── */
+.gpaev{display:flex;gap:12px;align-items:flex-start;padding:10px 0;
+  border-bottom:1px solid var(--line-2);flex-wrap:wrap}
+.gpaev:last-of-type{border-bottom:none}
+.gpaev>b{min-width:110px;font-size:15.5px;font-weight:700}
+.gpaev .read{flex:1;min-width:200px;display:flex;flex-direction:column;gap:6px}
+.gtook{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.gtook .aeg{font-family:var(--mono);font-size:14.5px;color:var(--ink-3)}
+.gpaev .puudub{color:var(--ink-3);font-size:15px}
+
+/* ── liikmed ja kontaktid ─────────────────────────────────────── */
+.liige{display:flex;align-items:center;gap:12px;padding:12px 0;
+  border-bottom:1px solid var(--line-2);flex-wrap:wrap}
+.liige:last-of-type{border-bottom:none}
+.pilt{width:40px;height:40px;border-radius:50%;background:var(--soft);display:flex;
+  align-items:center;justify-content:center;font-size:15px;font-weight:750;color:var(--ink-2);
+  flex:0 0 auto}
+.liige input.nm,.liige input.rl,.liige input.tl{
+  border:1.5px solid transparent;background:transparent;min-height:42px}
+.liige input.nm{font-size:16.5px;font-weight:650;flex:1 1 140px;min-width:110px}
+.liige input.rl{font-size:15px;color:var(--ink-3);flex:1 1 120px;min-width:100px}
+.liige input.tl{font-family:var(--mono);font-size:15px;flex:0 1 150px;min-width:120px}
+.liige input:hover{border-color:var(--line)}
+.liige input:focus{border-color:var(--accent);background:var(--card)}
+.liige select.am{min-height:42px;font-size:15px}
+.liige select.am:disabled{background:var(--soft);color:var(--ink-3);border-color:transparent}
+.liige button[data-kutse]{margin-left:auto}
+.link{width:100%;display:flex;gap:10px;align-items:center;margin-top:10px;
+  padding:11px 13px;border-radius:12px;background:var(--soft)}
+.link input{flex:1;border:none;background:none;font-family:var(--mono);font-size:14px;min-height:0}
+.ametid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:9px;margin:0 0 18px}
+.amet{padding:10px 12px;border-radius:12px;background:var(--soft);font-size:14.5px}
+.amet b{display:block;font-size:15.5px;margin-bottom:2px}
+.amet span{color:var(--ink-3)}
+.infotekst{white-space:pre-wrap;line-height:1.6;font-size:16px;margin:0}
+[hidden]{display:none!important}
 </style>
 </head>
 <body>
@@ -134,276 +203,826 @@ td button.kustuta:hover{border-color:#C0392B;color:#C0392B}
     <button class="valja" id="valja">Logi välja</button>
   </div>
 
-  <!-- Müügi sisestamine: vali kogus, klõpsa tootel. -->
-  <article class="card" id="kassaKaart">
-    <p class="h3">UUS MÜÜK</p>
-    <div class="kogus">
-      <label for="kogus">Kogus</label>
-      <button type="button" id="vahem" aria-label="Vähem">−</button>
-      <input id="kogus" type="number" min="1" max="9999" step="1" value="1">
-      <button type="button" id="rohkem" aria-label="Rohkem">+</button>
-      <span class="vihje">Vali kogus ja klõpsa tootel — müük läheb sinu nimele.</span>
-    </div>
-    <div id="tooted"><p class="tyhi">Laen hinnakirja…</p></div>
-    <p class="teade" id="teade" hidden></p>
-  </article>
-
-  <article class="card">
-    <p class="h3" id="pealkiri">MÜÜK</p>
-    <div class="riba" id="riba"><span>Laen…</span></div>
-    <div id="tabel"></div>
-  </article>
-
-  <!-- Liikmed: kõigile. Ainult ametivalik on lukus. -->
-  <article class="card" id="liikmedKaart" hidden>
-    <p class="h3">LIIKMED JA SISSELOGIMINE</p>
-    <p class="abi">Tee liikmele link ja anna see talle ise kätte — telefonis,
-      sõnumiga või paberil. E-posti teenust ei ole vaja. Link kehtib 7 päeva
-      ja ühe korra; pärast sisenemist püsib inimene sees 60 päeva.</p>
-    <p class="abi" id="ametiluku" hidden></p>
-    <div class="ametid" id="ametiabi"></div>
-    <div id="liikmed"></div>
-    <form id="uusVorm" class="uus">
-      <input id="uusNimi" type="text" placeholder="Uue liikme nimi" required>
-      <input id="uusRoll" type="text" placeholder="Töö majas (ei ole kohustuslik)">
-      <select id="uusAmet"></select>
-      <button type="submit">Lisa liige</button>
-    </form>
-  </article>
+  <div class="paigutus">
+    <nav id="nav"></nav>
+    <main id="sisu"></main>
+  </div>
 </div>
 
+<dialog id="aken"><div class="aken" id="akenSisu"></div></dialog>
+
 <script>
+/* ── väikesed abilised ─────────────────────────────────────────── */
 const raha = v => Number(v).toFixed(2).replace(".", ",") + " €";
-const kuup = iso => {
-  const d = new Date(iso), p = n => String(n).padStart(2, "0");
-  return p(d.getDate()) + "." + p(d.getMonth() + 1) + "." + d.getFullYear()
-    + " " + p(d.getHours()) + ":" + p(d.getMinutes());
-};
 const esc = t => String(t == null ? "" : t)
-  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-let AMETID = [], MINA = {};
-
-async function laadi() {
-  const d0 = await (await fetch("/api/mina")).json();
-  const mina = d0.mina;
-  MINA = mina || {};
-  AMETID = d0.ametid || [];
-  if (!mina) return location.href = "/";
-  document.getElementById("kes").textContent =
-    "Sina oled: " + mina.nimi + " · " + (AMETID.find(a => a.id === mina.amet) || {}).nimi;
-
-  const d = await (await fetch("/api/myyk")).json();
-  document.getElementById("pealkiri").innerHTML =
-    (d.koikNahtav ? "KOGU MAJA KASSA" : "MINU KASSA")
-    + (d.koikNahtav ? "" : '<span class="mark">ainult sinu oma</span>');
-
-  document.getElementById("riba").innerHTML =
-      "<b>" + d.kokku.kordi + "</b><span>"
-    + (d.kokku.kordi === 1 ? "müügikord" : "müügikorda") + "</span>"
-    + "<b>" + d.kokku.tk + "</b><span>"
-    + (d.kokku.tk === 1 ? "tükk" : "tükki") + "</span>"
-    + "<b>" + raha(d.kokku.eur) + "</b>";
-
-  document.getElementById("tabel").innerHTML = d.read.length
-    ? '<table><thead><tr><th>Millal</th><th>Osa</th><th>Nimetus</th>'
-      + '<th class="n">Kogus</th><th class="n">Hind</th><th class="n">Summa</th>'
-      + (d.koikNahtav ? "<th>Müüja</th>" : "") + "<th></th></tr></thead><tbody>"
-      + d.read.map(r => "<tr><td>" + kuup(r.aeg) + "</td><td>" + esc(r.osa || "—") + "</td>"
-        + "<td>" + esc(r.nimetus) + "</td>"
-        + '<td class="n">' + r.kogus + "</td>"
-        + '<td class="n">' + raha(r.hind) + "</td>"
-        + '<td class="n"><b>' + raha(r.summa) + "</b></td>"
-        + (d.koikNahtav ? "<td>" + esc(r.myyja || "—") + "</td>" : "")
-        /* Oma eksimuse saab ise ära võtta; kassa eest vastutaja iga rea. */
-        + '<td class="n">'
-        + ((d.koikNahtav || r.myyja_id === mina.id)
-            ? '<button class="kustuta" data-kustuta="' + r.id + '">Kustuta</button>' : "")
-        + "</td></tr>").join("")
-      + "</tbody></table>"
-    : '<p class="tyhi">Müüke ei ole veel kirjas.</p>';
-
-  /* Liikmete kaart on kõigile — maja on ühine. */
-  document.getElementById("liikmedKaart").hidden = false;
-  document.getElementById("ametiabi").innerHTML = AMETID.map(a =>
-    '<div class="amet"><b>' + esc(a.nimi) + "</b><span>" + esc(a.selgitus) + "</span></div>").join("");
-
-  const lukk = document.getElementById("ametiluku");
-  if (!mina.annabOigusi) {
-    lukk.hidden = false;
-    lukk.innerHTML = "Ameteid muudab ainult administraator — amet otsustab, "
-      + "kes ühiskassat näeb. Kõik muu on sinu teha.";
-  }
-  /* Kassaõigusega ametit ei paku, kui sa neid jagada ei tohi. */
-  document.getElementById("uusAmet").innerHTML = AMETID
-    .filter(a => mina.annabOigusi || !a.kassa)
-    .map(a => '<option value="' + a.id + '">' + esc(a.nimi) + "</option>").join("");
-  laadiLiikmed();
-  if (!TOOTED) laadiTooted();
-}
-
-/* ── uus müük ───────────────────────────────────────────────────
-   Kogus ja siis klõps tootel. Nii käib see leti taga kõige kiiremini:
-   üks pilk, üks klõps, müük kirjas. */
-let TOOTED = null;
-
-async function laadiTooted() {
-  TOOTED = await (await fetch("/api/tooted")).json();
-  const osad = TOOTED.filter(o => o.tooted.length);
-  document.getElementById("tooted").innerHTML = osad.length
-    ? osad.map(o => '<div class="osa"><p>' + esc(o.nimi) + '</p><div class="nupud">'
-        + o.tooted.map(t => '<button class="toode" data-toode="' + t.id + '">'
-            + "<b>" + esc(t.nimetus) + "</b>"
-            + (Number(t.hind) === 0
-                ? '<span class="tasuta">tasuta</span>'
-                : "<span>" + raha(t.hind) + "</span>")
-            + "</button>").join("")
-        + "</div></div>").join("")
-    : '<p class="tyhi">Hinnakirjas ei ole veel ühtegi toodet.</p>';
-}
-
-function teade(t, viga) {
-  const n = document.getElementById("teade");
-  n.textContent = t;
-  n.className = viga ? "teade viga" : "teade";
-  n.hidden = false;
-  clearTimeout(teade.aeg);
-  teade.aeg = setTimeout(() => { n.hidden = true; }, 6000);
-}
-
-const kogusVali = () => document.getElementById("kogus");
-const nihuta = samm => {
-  const v = Math.max(1, Math.min(9999, (parseInt(kogusVali().value, 10) || 1) + samm));
-  kogusVali().value = v;
+  .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const p2 = n => String(n).padStart(2, "0");
+const isoks = d => d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getDate());
+const kuup = iso => {
+  const d = new Date(iso);
+  return p2(d.getDate()) + "." + p2(d.getMonth() + 1) + "." + d.getFullYear()
+    + " " + p2(d.getHours()) + ":" + p2(d.getMinutes());
 };
-document.getElementById("vahem").addEventListener("click", () => nihuta(-1));
-document.getElementById("rohkem").addEventListener("click", () => nihuta(1));
+const paevaks = iso => {
+  const [a, k, p] = iso.split("-");
+  return Number(p) + ". " + KUUD[Number(k) - 1] + " " + a;
+};
+const kell = t => t ? String(t).slice(0, 5) : "";
+const KUUD = ["jaanuar","veebruar","märts","aprill","mai","juuni",
+  "juuli","august","september","oktoober","november","detsember"];
+const PAEVAD = ["esmaspäev","teisipäev","kolmapäev","neljapäev","reede","laupäev","pühapäev"];
+const LYHI = ["E","T","K","N","R","L","P"];
+/* Andmebaasis on kolm liiki; „haigus“ on inimese jaoks haigusleht. */
+const PUUDUMISED = { puhkus: "puhkus", haigus: "haigusleht", vaba: "vaba päev" };
+/* JS-i nädalapäev algab pühapäevast; meie nädal algab esmaspäevast. */
+const nadalapaev = d => (d.getDay() + 6) % 7;
 
-document.getElementById("tooted").addEventListener("click", async e => {
+const päring = async (tee, meetod, keha) => {
+  const v = { method: meetod || "GET" };
+  if (keha) { v.headers = { "Content-Type": "application/json" }; v.body = JSON.stringify(keha); }
+  const r = await fetch(tee, v);
+  const j = await r.json().catch(() => ({}));
+  if (j && j.viga) { teade(j.viga, true); return null; }
+  return j;
+};
+
+let teateAeg = null;
+function teade(t, viga) {
+  document.querySelectorAll(".teade").forEach(n => n.remove());
+  const n = document.createElement("p");
+  n.className = viga ? "teade viga" : "teade";
+  n.textContent = t;
+  const koht = document.querySelector("#sisu .card") || document.getElementById("sisu");
+  koht.appendChild(n);
+  clearTimeout(teateAeg);
+  teateAeg = setTimeout(() => n.remove(), 7000);
+}
+
+/* Kellaajad 06:00–24:00, veerandtunni kaupa. Native ajaväli ei anna
+   sammu usaldusväärselt ette, seepärast on siin valik. */
+const KELLAD = (() => {
+  const k = [];
+  for (let m = 6 * 60; m <= 24 * 60; m += 15) k.push(p2(Math.floor(m / 60) % 24) + ":" + p2(m % 60));
+  k[k.length - 1] = "24:00";
+  return k;
+})();
+const kellavalik = (nimi, vaartus, tyhiTekst) =>
+  '<select name="' + nimi + '"><option value="">' + esc(tyhiTekst) + "</option>"
+  + KELLAD.map(k => '<option value="' + k + '"' + (kell(vaartus) === k ? " selected" : "") + ">"
+      + k + "</option>").join("") + "</select>";
+
+/* ── olek ─────────────────────────────────────────────────────── */
+let MINA = {}, AMETID = [], MAJAD = [], LIIKMED = [];
+let VAADE = "myyk", MAJA = "koik";
+let KUU = new Date(); KUU.setDate(1);
+
+const VAATED = [
+  { id: "myyk",     nimi: "Müük",         ik: "€" },
+  { id: "kalender", nimi: "Kalender",     ik: "▦" },
+  { id: "graafik",  nimi: "Töö graafik",  ik: "▤" },
+  { id: "kontakt",  nimi: "Kontaktid",    ik: "☏" },
+  { id: "aruanne",  nimi: "Aruanne",      ik: "▣", kassa: true },
+  { id: "seaded",   nimi: "Seaded",       ik: "⚙" }
+];
+
+/* ── käivitus ─────────────────────────────────────────────────── */
+async function algus() {
+  const d0 = await (await fetch("/api/mina")).json();
+  if (!d0.mina) return location.href = "/";
+  MINA = d0.mina; AMETID = d0.ametid || [];
+  document.getElementById("kes").textContent =
+    "Sina oled: " + MINA.nimi + " · " + (AMETID.find(a => a.id === MINA.amet) || {}).nimi;
+  MAJAD = await päring("/api/majad") || [];
+  LIIKMED = await päring("/api/liikmed") || [];
+  joonistaNav();
+  näita(VAADE);
+}
+
+function joonistaNav() {
+  document.getElementById("nav").innerHTML = VAATED
+    .filter(v => !v.kassa || MINA.naebKassat)
+    .map(v => '<button data-vaade="' + v.id + '"'
+      + (v.id === VAADE ? ' aria-current="page"' : "") + '>'
+      + '<span class="ik">' + v.ik + "</span>" + esc(v.nimi) + "</button>").join("");
+}
+
+document.getElementById("nav").addEventListener("click", e => {
+  const n = e.target.closest("[data-vaade]");
+  if (n) näita(n.dataset.vaade);
+});
+
+async function näita(v) {
+  VAADE = v;
+  joonistaNav();
+  document.getElementById("sisu").innerHTML = '<div class="card"><p class="tyhi">Laen…</p></div>';
+  if (v === "myyk") await vaadeMyyk();
+  else if (v === "kalender") await vaadeKalender();
+  else if (v === "graafik") await vaadeGraafik();
+  else if (v === "kontakt") await vaadeKontakt();
+  else if (v === "aruanne") await vaadeAruanne();
+  else if (v === "seaded") await vaadeSeaded();
+}
+
+/* ══ MÜÜK ═══════════════════════════════════════════════════════ */
+async function vaadeMyyk() {
+  const [hind, d] = await Promise.all([päring("/api/tooted"), päring("/api/myyk")]);
+  const osad = (hind || []).filter(o => o.tooted.length);
+
+  document.getElementById("sisu").innerHTML =
+    '<article class="card"><p class="h3">UUS MÜÜK</p>'
+    + '<div class="kogus"><label for="kogus">Kogus</label>'
+    + '<button type="button" id="vahem" aria-label="Vähem">−</button>'
+    + '<input id="kogus" type="number" min="1" max="9999" step="1" value="1">'
+    + '<button type="button" id="rohkem" aria-label="Rohkem">+</button>'
+    + '<span class="vihje">Vali kogus ja klõpsa tootel — müük läheb sinu nimele.</span></div>'
+    + '<div id="tooted">' + (osad.length
+        ? osad.map(o => '<div class="osa"><p>' + esc(o.nimi) + '</p><div class="nupud">'
+            + o.tooted.map(t => '<button class="toode" data-toode="' + t.id + '"><b>'
+                + esc(t.nimetus) + "</b>"
+                + (Number(t.hind) === 0 ? '<span class="tasuta">tasuta</span>'
+                                        : "<span>" + raha(t.hind) + "</span>")
+                + "</button>").join("")
+            + "</div></div>").join("")
+        : '<p class="tyhi">Hinnakirjas ei ole veel ühtegi toodet. Lisa need Seadete alt.</p>')
+    + "</div></article>"
+
+    + '<article class="card"><p class="h3">' + (d.koikNahtav ? "KOGU MAJA KASSA" : "MINU KASSA")
+    + (d.koikNahtav ? "" : '<span class="mark">ainult sinu oma</span>') + "</p>"
+    + '<div class="riba"><b>' + d.kokku.kordi + "</b><span>"
+    + (d.kokku.kordi === 1 ? "müügikord" : "müügikorda") + "</span><b>"
+    + d.kokku.tk + "</b><span>" + (d.kokku.tk === 1 ? "tükk" : "tükki")
+    + "</span><b>" + raha(d.kokku.eur) + "</b></div>"
+    + '<div id="tabel">' + myygiTabel(d) + "</div></article>";
+
+  document.getElementById("vahem").onclick = () => nihutaKogus(-1);
+  document.getElementById("rohkem").onclick = () => nihutaKogus(1);
+  document.getElementById("tooted").onclick = müügiKlõps;
+  document.getElementById("tabel").onclick = müügiKustutus;
+}
+
+const myygiTabel = d => d.read.length
+  ? '<table><thead><tr><th>Millal</th><th>Osa</th><th>Nimetus</th>'
+    + '<th class="n">Kogus</th><th class="n">Hind</th><th class="n">Summa</th>'
+    + (d.koikNahtav ? "<th>Müüja</th>" : "") + "<th></th></tr></thead><tbody>"
+    + d.read.map(r => "<tr><td>" + kuup(r.aeg) + "</td><td>" + esc(r.osa || "—") + "</td><td>"
+      + esc(r.nimetus) + '</td><td class="n">' + r.kogus + '</td><td class="n">' + raha(r.hind)
+      + '</td><td class="n"><b>' + raha(r.summa) + "</b></td>"
+      + (d.koikNahtav ? "<td>" + esc(r.myyja || "—") + "</td>" : "")
+      + '<td class="n">' + ((d.koikNahtav || r.myyja_id === MINA.id)
+          ? '<button class="pisi punane" data-kustuta="' + r.id + '">Kustuta</button>' : "")
+      + "</td></tr>").join("") + "</tbody></table>"
+  : '<p class="tyhi">Müüke ei ole veel kirjas.</p>';
+
+const kogusVäli = () => document.getElementById("kogus");
+function nihutaKogus(samm) {
+  kogusVäli().value = Math.max(1, Math.min(9999,
+    (parseInt(kogusVäli().value, 10) || 1) + samm));
+}
+
+async function müügiKlõps(e) {
   const n = e.target.closest("[data-toode]");
   if (!n) return;
-  const kogus = parseInt(kogusVali().value, 10);
-  if (!Number.isInteger(kogus) || kogus < 1)
-    return teade("Kogus peab olema vähemalt 1.", true);
-
+  const kogus = parseInt(kogusVäli().value, 10);
+  if (!Number.isInteger(kogus) || kogus < 1) return teade("Kogus peab olema vähemalt 1.", true);
   n.disabled = true;
-  const r = await (await fetch("/api/myyk", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ toode_id: n.dataset.toode, kogus: kogus })
-  })).json();
+  const r = await päring("/api/myyk", "POST", { toode_id: n.dataset.toode, kogus });
   n.disabled = false;
-  if (r.viga) return teade(r.viga, true);
+  if (!r) return;
+  await vaadeMyyk();
+  teade("Kirjas: " + r.myyk.kogus + " × " + r.myyk.nimetus + " · " + raha(r.myyk.summa));
+}
 
-  teade("Kirjas: " + r.myyk.kogus + " × " + r.myyk.nimetus
-    + " · " + raha(r.myyk.summa));
-  kogusVali().value = 1;
-  laadi();
-});
-
-document.getElementById("tabel").addEventListener("click", async e => {
+async function müügiKustutus(e) {
   const n = e.target.closest("[data-kustuta]");
-  if (!n) return;
-  if (!confirm("Kustutan selle müügi?")) return;
-  n.disabled = true;
-  const r = await (await fetch("/api/myyk", {
-    method: "DELETE", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id: n.dataset.kustuta })
-  })).json();
-  if (r.viga) { n.disabled = false; return teade(r.viga, true); }
-  teade("Müük kustutatud.");
-  laadi();
-});
-
-/* ── liikmed ja kutsed ─────────────────────────────────────────── */
-async function laadiLiikmed() {
-  const read = await (await fetch("/api/liikmed")).json();
-  /* Nimi ja roll on otse muudetavad — eraldi muutmisakent ei ole vaja.
-     Salvestatakse siis, kui väljalt ära liigud. */
-  document.getElementById("liikmed").innerHTML = read.map(m =>
-    '<div class="liige" data-id="' + m.id + '">'
-    + '<input class="nm muuda" data-val="nimi" value="' + esc(m.nimi) + '">'
-    + '<input class="rl muuda" data-val="roll" value="' + esc(m.roll || "") + '" placeholder="töö majas">'
-    + '<select class="am muuda" data-val="amet"' + (MINA.annabOigusi ? "" : " disabled") + ">"
-    + AMETID.map(a => '<option value="' + a.id + '"'
-        + (m.amet === a.id ? " selected" : "") + ">" + esc(a.nimi) + "</option>").join("")
-    + "</select>"
-    + (m.onepost ? '<span class="mark">saab sisse</span>' : "")
-    + '<button data-kutse="' + m.id + '">Tee sisselogimise link</button>'
-    + "</div>").join("");
-}
-
-/* Muudatuse salvestamine. */
-async function salvestaLiige(rida) {
-  const r = await (await fetch("/api/liikmed", {
-    method: "PATCH", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      id: rida.dataset.id,
-      nimi: rida.querySelector('[data-val="nimi"]').value,
-      roll: rida.querySelector('[data-val="roll"]').value,
-      amet: rida.querySelector('[data-val="amet"]').value
-    })
-  })).json();
-  if (r.viga) { alert(r.viga); laadiLiikmed(); return; }
-  /* Kui muutsid iseenda nime, uuendame ka ülemise rea. */
-  laadi();
-}
-
-document.getElementById("liikmed").addEventListener("change", e => {
-  if (e.target.classList.contains("muuda")) salvestaLiige(e.target.closest(".liige"));
-});
-
-document.getElementById("liikmed").addEventListener("click", async e => {
-  const n = e.target.closest("[data-kutse]");
-  if (!n) return;
-  n.disabled = true; n.textContent = "Teen…";
-  const r = await (await fetch("/api/kutse", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ liige_id: n.dataset.kutse })
-  })).json();
-  n.disabled = false; n.textContent = "Tee uus link";
-  if (r.viga) return alert(r.viga);
-
-  const rida = n.closest(".liige");
-  let ala = rida.querySelector(".link");
-  if (!ala) {
-    ala = document.createElement("div");
-    ala.className = "link";
-    rida.appendChild(ala);
+  if (!n || !confirm("Kustutan selle müügi?")) return;
+  if (await päring("/api/myyk", "DELETE", { id: n.dataset.kustuta })) {
+    await vaadeMyyk();
+    teade("Müük kustutatud.");
   }
-  ala.innerHTML = '<input readonly value="' + esc(r.link) + '">'
-    + "<button>Kopeeri</button>";
-  const val = ala.querySelector("input");
-  ala.querySelector("button").onclick = async () => {
-    try { await navigator.clipboard.writeText(r.link); }
-    catch { val.select(); }
-    ala.querySelector("button").textContent = "Kopeeritud";
+}
+
+/* ══ KALENDER ═══════════════════════════════════════════════════
+   Üks kalender, maja vahetatakse ülal. „Kõik“ on olemas selleks, et
+   ükski kirje ei jääks kogemata nähtamatuks. */
+let YRITUSED = [], TOOD = { tood: [], tehtud: [], vahele: [] };
+
+async function vaadeKalender() {
+  [YRITUSED, TOOD] = await Promise.all([päring("/api/yritused"), päring("/api/tood")]);
+  joonistaKalender();
+}
+
+function joonistaKalender() {
+  const esimene = new Date(KUU.getFullYear(), KUU.getMonth(), 1);
+  const nihe = nadalapaev(esimene);
+  const algus = new Date(esimene); algus.setDate(1 - nihe);
+  const täna = isoks(new Date());
+
+  let ruudud = "";
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(algus); d.setDate(algus.getDate() + i);
+    const iso = isoks(d);
+    const oma = d.getMonth() === KUU.getMonth();
+    const k = päevaKirjed(iso);
+    ruudud += '<button class="paev' + (oma ? "" : " väljas")
+      + (iso === täna ? " täna" : "") + '" data-paev="' + iso + '">'
+      + '<span class="nr">' + d.getDate()
+      + (iso === täna ? '<span class="täht">täna</span>' : "") + "</span>"
+      + k.slice(0, 3).map(x => '<span class="pill ' + x.liik
+          + (x.tehtud ? " tehtud" : "") + '">' + esc(x.silt) + "</span>").join("")
+      + (k.length > 3 ? '<span class="veel">+' + (k.length - 3) + " veel</span>" : "")
+      + "</button>";
+  }
+
+  document.getElementById("sisu").innerHTML =
+    '<article class="card"><div class="kuu">'
+    + '<button class="pisi" id="eelmine">‹</button>'
+    + "<b>" + KUUD[KUU.getMonth()] + " " + KUU.getFullYear() + "</b>"
+    + '<button class="pisi" id="jargmine">›</button>'
+    + '<button class="pisi" id="tana">Täna</button>'
+    + '<span class="sp"></span>' + majaValik() + "</div>"
+    + '<div class="grid">' + LYHI.map(t => '<span class="nimi">' + t + "</span>").join("")
+    + ruudud + "</div>"
+    + '<p class="abi" style="margin:18px 0 0">Klõpsa päeval, et näha selle päeva '
+    + "üritusi ja töid või lisada uusi. Tehtud töö nimi on roheline.</p></article>"
+    + tulemasKaart();
+
+  document.getElementById("eelmine").onclick = () => { KUU.setMonth(KUU.getMonth() - 1); joonistaKalender(); };
+  document.getElementById("jargmine").onclick = () => { KUU.setMonth(KUU.getMonth() + 1); joonistaKalender(); };
+  document.getElementById("tana").onclick = () => { KUU = new Date(); KUU.setDate(1); joonistaKalender(); };
+  seaMajaValik(joonistaKalender);
+  document.querySelectorAll("[data-paev]").forEach(n =>
+    n.onclick = () => avaPäev(n.dataset.paev));
+}
+
+/* Tulemas: kõik üritused ühes nimekirjas, et kalendri lehitsemine ei
+   oleks ainus viis neid leida. */
+function tulemasKaart() {
+  const nyyd = new Date();
+  const read = YRITUSED
+    .filter(y => majaSobib(y.koht_id) && new Date(y.algus) >= new Date(isoks(nyyd) + "T00:00:00"))
+    .slice(0, 20);
+  return '<article class="card"><p class="h3">TULEMAS</p>'
+    + (read.length
+      ? read.map(y => '<div class="kirje">'
+          + '<span class="aeg">' + kuup(y.algus) + "</span>"
+          + '<span class="nim">' + esc(y.pealkiri) + "</span>"
+          + '<span class="mark">' + esc(y.maja || "—") + "</span>"
+          + (y.asukoht ? '<span class="lisa">' + esc(y.asukoht) + "</span>" : "")
+          + "</div>").join("")
+      : '<p class="tyhi">Ühtegi tulevast üritust ei ole kirjas.</p>') + "</article>";
+}
+
+const majaSobib = koht => MAJA === "koik" || koht === MAJA;
+const majaValik = () =>
+  '<div class="majavalik" id="majavalik">'
+  + '<button data-maja="koik" aria-pressed="' + (MAJA === "koik") + '">Kõik</button>'
+  + MAJAD.map(m => '<button data-maja="' + m.id + '" aria-pressed="'
+      + (MAJA === m.id) + '">' + esc(m.nimi) + "</button>").join("") + "</div>";
+
+function seaMajaValik(uuenda) {
+  const v = document.getElementById("majavalik");
+  if (v) v.onclick = e => {
+    const n = e.target.closest("[data-maja]");
+    if (!n) return;
+    MAJA = n.dataset.maja;
+    uuenda();
   };
-  val.select();
-});
+}
 
-document.getElementById("uusVorm").addEventListener("submit", async e => {
-  e.preventDefault();
-  const r = await (await fetch("/api/liikmed", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      nimi: document.getElementById("uusNimi").value,
-      roll: document.getElementById("uusRoll").value,
-      amet: document.getElementById("uusAmet").value
-    })
-  })).json();
-  if (r.viga) return alert(r.viga);
-  document.getElementById("uusNimi").value = "";
-  document.getElementById("uusRoll").value = "";
-  document.getElementById("uusAmet").value = "liige";
-  laadiLiikmed();
-});
+/* Ühe päeva kirjed: üritused ja tööd, korduvad kaasa arvatud. */
+function päevaKirjed(iso) {
+  const d = new Date(iso + "T00:00:00");
+  const välja = [];
+  for (const y of YRITUSED) {
+    if (!majaSobib(y.koht_id)) continue;
+    if (isoks(new Date(y.algus)) !== iso) continue;
+    välja.push({ liik: "yritus", id: y.id, silt: kell(uusKell(y.algus)) + " " + y.pealkiri,
+      nimi: y.pealkiri, aeg: uusKell(y.algus), y });
+  }
+  for (const t of TOOD.tood) {
+    if (!majaSobib(t.koht_id)) continue;
+    const kordub = t.paevad.length > 0;
+    /* Korduv töö ei ulatu tagasi aega, kus teda veel ei olnud. */
+    if (t.algab && iso < isoks(new Date(t.algab))) continue;
+    if (kordub ? !t.paevad.includes(nadalapaev(d)) : isoks(new Date(t.kuup)) !== iso) continue;
+    if (TOOD.vahele.some(v => v.too_id === t.id && isoks(new Date(v.kuup)) === iso)) continue;
+    const tehtud = TOOD.tehtud.find(h => h.too_id === t.id && isoks(new Date(h.kuup)) === iso);
+    välja.push({ liik: "too", id: t.id, silt: (t.algus ? kell(t.algus) + " " : "") + t.nimi,
+      nimi: t.nimi, aeg: kell(t.algus), tehtud: !!tehtud, kes: tehtud && tehtud.kes,
+      kordub, t });
+  }
+  return välja.sort((a, b) => (a.aeg || "99").localeCompare(b.aeg || "99"));
+}
+const uusKell = iso => { const d = new Date(iso); return p2(d.getHours()) + ":" + p2(d.getMinutes()); };
 
-document.getElementById("valja").addEventListener("click", async () => {
+/* ── päeva aken ───────────────────────────────────────────────── */
+let AVATUD = null;
+function avaPäev(iso) {
+  AVATUD = iso;
+  const d = new Date(iso + "T00:00:00");
+  const k = päevaKirjed(iso);
+  document.getElementById("akenSisu").innerHTML =
+    '<button class="pisi sulge" id="sulge">Sulge</button>'
+    + "<h2>" + paevaks(iso) + "</h2>"
+    + '<p class="kuup">' + PAEVAD[nadalapaev(d)]
+    + (MAJA === "koik" ? "" : " · " + esc((MAJAD.find(m => m.id === MAJA) || {}).nimi)) + "</p>"
+    + (k.length ? k.map(kirjeReaks).join("")
+                : '<p class="tyhi">Sellel päeval ei ole midagi kirjas.</p>')
+    + '<div class="valikud"><button class="n2" id="lisaYritus">Lisa üritus</button>'
+    + '<button class="n2" id="lisaToo">Lisa töö</button></div>';
+  document.getElementById("sulge").onclick = () => document.getElementById("aken").close();
+  document.getElementById("lisaYritus").onclick = () => vormYritus(iso);
+  document.getElementById("lisaToo").onclick = () => vormToo(iso);
+  seaPäevaNupud();
+  const a = document.getElementById("aken");
+  if (!a.open) a.showModal();
+}
+
+const kirjeReaks = x => '<div class="kirje' + (x.tehtud ? " tehtud" : "") + '">'
+  + '<span class="aeg">' + (x.aeg || (x.liik === "too" ? "kellaajata" : "")) + "</span>"
+  + '<span class="nim">' + esc(x.nimi) + "</span>"
+  + (x.liik === "too"
+      ? (x.tehtud
+          ? '<button class="pisi" data-tagasi="' + x.id + '">Võta tagasi</button>'
+          : '<button class="pisi" data-tehtud="' + x.id + '">Tegin ära</button>')
+        + '<button class="pisi punane" data-kustutaToo="' + x.id + '" data-kordub="'
+          + (x.kordub ? "1" : "") + '">Kustuta</button>'
+      : '<button class="pisi punane" data-kustutaYritus="' + x.id + '">Kustuta</button>')
+  + (x.tehtud && x.kes ? '<span class="lisa">Tehtud — ' + esc(x.kes) + "</span>" : "")
+  + (x.liik === "yritus" && x.y.asukoht ? '<span class="lisa">' + esc(x.y.asukoht) + "</span>" : "");
+
+function seaPäevaNupud() {
+  const s = document.getElementById("akenSisu");
+  s.querySelectorAll("[data-tehtud]").forEach(n => n.onclick = async () => {
+    if (await päring("/api/tood/tehtud", "POST", { id: n.dataset.tehtud, kuup: AVATUD }))
+      await uuendaKalender();
+  });
+  s.querySelectorAll("[data-tagasi]").forEach(n => n.onclick = async () => {
+    if (await päring("/api/tood/tehtud", "DELETE", { id: n.dataset.tagasi, kuup: AVATUD }))
+      await uuendaKalender();
+  });
+  s.querySelectorAll("[data-kustutaYritus]").forEach(n => n.onclick = async () => {
+    if (!confirm("Kustutan selle ürituse?")) return;
+    if (await päring("/api/yritused", "DELETE", { id: n.dataset.kustutayritus }))
+      await uuendaKalender();
+  });
+  s.querySelectorAll("[data-kustutaToo]").forEach(n => n.onclick = async () => {
+    const id = n.dataset.kustutatoo;
+    if (!n.dataset.kordub) {
+      if (!confirm("Kustutan selle töö?")) return;
+      if (await päring("/api/tood", "DELETE", { id })) await uuendaKalender();
+      return;
+    }
+    /* Korduva töö puhul küsime, kas ainult see kord või kõik. */
+    küsiKustutus(id);
+  });
+}
+
+function küsiKustutus(id) {
+  const s = document.getElementById("akenSisu");
+  const vana = s.innerHTML;
+  s.innerHTML = '<h2>Korduv töö</h2><p class="kuup">See töö kordub iga nädal. '
+    + "Mida kustutame?</p>"
+    + '<div class="valikud"><button class="n2" id="ykskord">Ainult see päev</button>'
+    + '<button class="n2" id="koik">Kõik korrad</button>'
+    + '<button class="pisi" id="loobu">Loobu</button></div>';
+  document.getElementById("loobu").onclick = () => { s.innerHTML = vana; seaPäevaNupud(); avaPäev(AVATUD); };
+  document.getElementById("ykskord").onclick = async () => {
+    if (await päring("/api/tood", "DELETE", { id, kuup: AVATUD })) await uuendaKalender();
+  };
+  document.getElementById("koik").onclick = async () => {
+    if (await päring("/api/tood", "DELETE", { id })) await uuendaKalender();
+  };
+}
+
+async function uuendaKalender() {
+  [YRITUSED, TOOD] = await Promise.all([päring("/api/yritused"), päring("/api/tood")]);
+  joonistaKalender();
+  avaPäev(AVATUD);
+}
+
+/* ── ürituse ja töö vormid ────────────────────────────────────── */
+function majaVäli(nimi) {
+  const vaikimisi = MAJA === "koik" ? (MAJAD[0] || {}).id : MAJA;
+  return '<label class="väli">Maja<select name="' + nimi + '">'
+    + MAJAD.map(m => '<option value="' + m.id + '"'
+        + (m.id === vaikimisi ? " selected" : "") + ">" + esc(m.nimi) + "</option>").join("")
+    + "</select></label>";
+}
+
+function vormYritus(iso) {
+  const s = document.getElementById("akenSisu");
+  s.innerHTML = '<h2>Uus üritus</h2><p class="kuup">' + paevaks(iso) + "</p>"
+    + '<form id="vorm"><div class="vorm üleval">'
+    + '<label class="väli">Nimi<input type="text" name="pealkiri" required></label>'
+    + majaVäli("koht_id") + "</div>"
+    + '<div class="vorm üleval">'
+    + '<label class="väli">Algus' + kellavalik("algus", "", "vali") + "</label>"
+    + '<label class="väli">Lõpp' + kellavalik("lopp", "", "ei ole") + "</label>"
+    + '<label class="väli">Koht<input type="text" name="asukoht" placeholder="näiteks saal"></label>'
+    + "</div>"
+    + '<label class="väli">Kirjeldus<textarea name="kirjeldus" rows="3"></textarea></label>'
+    + '<div class="valikud"><button type="submit" class="esile">Lisa üritus</button>'
+    + '<button type="button" class="pisi" id="loobu">Loobu</button></div></form>';
+  document.getElementById("loobu").onclick = () => avaPäev(iso);
+  document.getElementById("vorm").onsubmit = async e => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    const algus = f.get("algus");
+    if (!algus) return teade("Vali algusaeg.", true);
+    if (minevikus(iso, algus)) return teade("Mineviku kellaaega ei saa sisestada.", true);
+    const r = await päring("/api/yritused", "POST", {
+      koht_id: f.get("koht_id"), pealkiri: f.get("pealkiri"),
+      algus: iso + "T" + algus + ":00",
+      lopp: f.get("lopp") ? iso + "T" + f.get("lopp") + ":00" : null,
+      asukoht: f.get("asukoht"), kirjeldus: f.get("kirjeldus")
+    });
+    if (r) await uuendaKalender();
+  };
+}
+
+function vormToo(iso) {
+  const d = new Date(iso + "T00:00:00");
+  const s = document.getElementById("akenSisu");
+  s.innerHTML = '<h2>Uus töö</h2><p class="kuup">' + paevaks(iso) + "</p>"
+    + '<form id="vorm"><div class="vorm üleval">'
+    + '<label class="väli">Mis tööd<input type="text" name="nimi" required '
+    + 'placeholder="näiteks lillede kastmine"></label>' + majaVäli("koht_id") + "</div>"
+    + '<div class="vorm üleval">'
+    + '<label class="väli">Algus' + kellavalik("algus", "", "kellaajata") + "</label>"
+    + '<label class="väli">Lõpp' + kellavalik("lopp", "", "ei ole") + "</label></div>"
+    + '<p class="abi" style="margin:6px 0 8px">Kellaaeg ei ole kohustuslik. Kellaajata töö '
+    + "teeb ära see, kes parasjagu majas tööl on, ja kinnitab siis „Tegin ära“.</p>"
+    + '<label class="väli">Kordub<div class="paevanupud" id="paevad">'
+    + LYHI.map((t, i) => '<button type="button" data-paev="' + i + '" aria-pressed="'
+        + (i === nadalapaev(d) ? "false" : "false") + '">' + t + "</button>").join("")
+    + "</div></label>"
+    + '<p class="abi" style="margin:8px 0 0">Vali nädalapäevad, kui töö kordub — näiteks '
+    + "kolmapäev ja laupäev. Kui ei vali ühtegi, jääb töö ainult sellesse päeva.</p>"
+    + '<div class="valikud"><button type="submit" class="esile">Lisa töö</button>'
+    + '<button type="button" class="pisi" id="loobu">Loobu</button></div></form>';
+  document.getElementById("loobu").onclick = () => avaPäev(iso);
+  document.getElementById("paevad").onclick = e => {
+    const n = e.target.closest("[data-paev]");
+    if (n) n.setAttribute("aria-pressed", n.getAttribute("aria-pressed") === "true" ? "false" : "true");
+  };
+  document.getElementById("vorm").onsubmit = async e => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    const algus = f.get("algus"), lopp = f.get("lopp");
+    if (algus && minevikus(iso, algus)) return teade("Mineviku kellaaega ei saa sisestada.", true);
+    if (algus && lopp && lopp <= algus) return teade("Lõpp peab olema pärast algust.", true);
+    const paevad = [...document.querySelectorAll('#paevad [aria-pressed="true"]')]
+      .map(n => Number(n.dataset.paev));
+    const r = await päring("/api/tood", "POST", {
+      koht_id: f.get("koht_id"), nimi: f.get("nimi"),
+      algus: algus || null, lopp: lopp || null,
+      /* Kuupäev käib alati kaasa: ühekordse töö puhul on see töö päev,
+         korduva puhul päev, millest alates ta kordub. */
+      kuup: iso, paevad
+    });
+    if (r) await uuendaKalender();
+  };
+}
+
+/* Mineviku kellaaega ei saa sisestada — aga ainult tänase päeva sees.
+   Eilsesse päeva märkmete tegemine on omaette asi ja seda me ei keela. */
+function minevikus(iso, aeg) {
+  const nyyd = new Date();
+  if (iso !== isoks(nyyd)) return false;
+  return aeg < p2(nyyd.getHours()) + ":" + p2(nyyd.getMinutes());
+}
+
+/* ══ TÖÖ GRAAFIK ════════════════════════════════════════════════
+   Mõlema maja graafik on kohe näha, üks teise all. */
+async function vaadeGraafik() {
+  const d = await päring("/api/graafik");
+  const kaart = maja => {
+    const read = d.graafik.filter(g => g.koht_id === maja.id);
+    return '<article class="card"><p class="h3">' + esc(maja.nimi) + "</p>"
+      + PAEVAD.map((nimi, i) => {
+          const p = read.filter(g => g.paev === i);
+          return '<div class="gpaev"><b>' + nimi[0].toUpperCase() + nimi.slice(1) + "</b>"
+            + '<div class="read">' + (p.length
+              ? p.map(g => '<div class="gtook"><span class="nim">' + esc(g.nimi) + "</span>"
+                  + '<span class="aeg">' + (g.algus ? kell(g.algus) + "–" + (kell(g.lopp) || "…")
+                                                    : "kellaajata") + "</span>"
+                  + '<button class="pisi punane" data-gkustuta="' + g.id + '">Võta ära</button>'
+                  + "</div>").join("")
+              : '<span class="puudub">— kedagi ei ole kirjas —</span>')
+            + "</div></div>";
+        }).join("")
+      + '<form class="vorm" data-maja="' + maja.id + '">'
+      + '<label class="väli">Kes<select name="liige_id">'
+      + LIIKMED.map(l => '<option value="' + l.id + '">' + esc(l.nimi) + "</option>").join("")
+      + "</select></label>"
+      + '<label class="väli">Päev<select name="paev">'
+      + PAEVAD.map((n, i) => '<option value="' + i + '">' + n + "</option>").join("")
+      + "</select></label>"
+      + '<label class="väli">Algus' + kellavalik("algus", "", "kellaajata") + "</label>"
+      + '<label class="väli">Lõpp' + kellavalik("lopp", "", "ei ole") + "</label>"
+      + '<button type="submit" class="esile">Lisa</button></form></article>';
+  };
+
+  document.getElementById("sisu").innerHTML = MAJAD.map(kaart).join("")
+    + '<article class="card"><p class="h3">PUHKUSED JA HAIGUSLEHED</p>'
+    + (d.puudumised.length
+        ? '<table><thead><tr><th>Kes</th><th>Mis</th><th>Algus</th><th>Lõpp</th>'
+          + "<th>Märkus</th><th></th></tr></thead><tbody>"
+          + d.puudumised.map(p => "<tr><td>" + esc(p.nimi) + "</td><td>"
+            + esc(PUUDUMISED[p.liik] || p.liik)
+            + "</td><td>" + isoks(new Date(p.algus)).split("-").reverse().join(".")
+            + "</td><td>" + isoks(new Date(p.lopp)).split("-").reverse().join(".")
+            + "</td><td>" + esc(p.markus || "—") + '</td><td class="n">'
+            + '<button class="pisi punane" data-pkustuta="' + p.id + '">Kustuta</button>'
+            + "</td></tr>").join("") + "</tbody></table>"
+        : '<p class="tyhi">Ühtegi puudumist ei ole kirjas.</p>')
+    + '<form class="vorm" id="puudumine">'
+    + '<label class="väli">Kes<select name="liige_id">'
+    + LIIKMED.map(l => '<option value="' + l.id + '">' + esc(l.nimi) + "</option>").join("")
+    + "</select></label>"
+    + '<label class="väli">Mis<select name="liik">'
+    + Object.keys(PUUDUMISED).map(k => '<option value="' + k + '">' + PUUDUMISED[k]
+        + "</option>").join("") + "</select></label>"
+    + '<label class="väli">Algus<input type="date" name="algus" required></label>'
+    + '<label class="väli">Lõpp<input type="date" name="lopp" required></label>'
+    + '<label class="väli">Märkus<input type="text" name="markus"></label>'
+    + '<button type="submit" class="esile">Lisa</button></form></article>';
+
+  document.querySelectorAll("form[data-maja]").forEach(f => f.onsubmit = async e => {
+    e.preventDefault();
+    const d2 = new FormData(f);
+    const r = await päring("/api/graafik", "POST", {
+      koht_id: f.dataset.maja, liige_id: d2.get("liige_id"), paev: Number(d2.get("paev")),
+      algus: d2.get("algus") || null, lopp: d2.get("lopp") || null
+    });
+    if (r) await vaadeGraafik();
+  });
+  document.querySelectorAll("[data-gkustuta]").forEach(n => n.onclick = async () => {
+    if (await päring("/api/graafik", "DELETE", { id: n.dataset.gkustuta })) await vaadeGraafik();
+  });
+  document.querySelectorAll("[data-pkustuta]").forEach(n => n.onclick = async () => {
+    if (await päring("/api/puudumised", "DELETE", { id: n.dataset.pkustuta })) await vaadeGraafik();
+  });
+  document.getElementById("puudumine").onsubmit = async e => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    const r = await päring("/api/puudumised", "POST", {
+      liige_id: f.get("liige_id"), liik: f.get("liik"),
+      algus: f.get("algus"), lopp: f.get("lopp"), markus: f.get("markus")
+    });
+    if (r) await vaadeGraafik();
+  };
+}
+
+/* ══ KONTAKTID ══════════════════════════════════════════════════
+   Numbrid on kopeeritavad, mitte helistamislingid — see rakendus on
+   arvutis ja arvutist ei helista keegi. */
+async function vaadeKontakt() {
+  LIIKMED = await päring("/api/liikmed") || [];
+  document.getElementById("sisu").innerHTML =
+    '<article class="card"><p class="h3">KONTAKTID</p>'
+    + '<p class="abi">Klõpsa numbril „Kopeeri“, siis saad selle telefoni sisestada. '
+    + "Numbrit ja tööd majas saab siin ka muuta — muudatus salvestub, kui väljalt ära liigud.</p>"
+    + LIIKMED.map(l => '<div class="liige" data-id="' + l.id + '">'
+      + '<span class="pilt">' + esc(algustähed(l.nimi)) + "</span>"
+      + '<input class="nm muuda" data-val="nimi" value="' + esc(l.nimi) + '">'
+      + '<input class="rl muuda" data-val="roll" value="' + esc(l.roll || "")
+      + '" placeholder="töö majas">'
+      + '<input class="tl muuda" data-val="telefon" value="' + esc(l.telefon || "")
+      + '" placeholder="telefon">'
+      + (l.telefon ? '<button class="pisi" data-kopeeri="' + esc(l.telefon) + '">Kopeeri</button>' : "")
+      + "</div>").join("") + "</article>";
+
+  document.querySelectorAll("#sisu .muuda").forEach(n => n.onchange = () => salvestaLiige(n.closest(".liige")));
+  document.querySelectorAll("[data-kopeeri]").forEach(n => n.onclick = async () => {
+    try { await navigator.clipboard.writeText(n.dataset.kopeeri); n.textContent = "Kopeeritud"; }
+    catch { teade("Kopeerimine ei õnnestunud. Number: " + n.dataset.kopeeri, true); }
+  });
+}
+const algustähed = nimi => String(nimi || "?").trim().split(/\s+/)
+  .slice(0, 2).map(o => o[0].toUpperCase()).join("");
+
+async function salvestaLiige(rida) {
+  const võta = v => { const n = rida.querySelector('[data-val="' + v + '"]'); return n ? n.value : undefined; };
+  const keha = { id: rida.dataset.id, nimi: võta("nimi"), roll: võta("roll") };
+  if (võta("telefon") !== undefined) keha.telefon = võta("telefon");
+  if (võta("amet") !== undefined) keha.amet = võta("amet");
+  const r = await päring("/api/liikmed", "PATCH", keha);
+  if (!r) return näita(VAADE);
+  LIIKMED = await päring("/api/liikmed") || LIIKMED;
+  if (keha.id === MINA.id) algus();
+}
+
+/* ══ ARUANNE ════════════════════════════════════════════════════ */
+async function vaadeAruanne(algusK, loppK) {
+  const täna = new Date();
+  const kuuAlgus = isoks(new Date(täna.getFullYear(), täna.getMonth(), 1));
+  const a = algusK || kuuAlgus, l = loppK || isoks(täna);
+  const d = await päring("/api/aruanne?algus=" + a + "&lopp=" + l);
+  if (!d) return;
+
+  const tabel = (pealkiri, read) => '<article class="card"><p class="h3">' + pealkiri + "</p>"
+    + (read.length
+      ? '<table><thead><tr><th>Nimi</th><th class="n">Kordi</th><th class="n">Tükki</th>'
+        + '<th class="n">Summa</th></tr></thead><tbody>'
+        + read.map(r => "<tr><td>" + esc(r.nimi) + '</td><td class="n">' + r.kordi
+          + '</td><td class="n">' + r.tk + '</td><td class="n"><b>' + raha(r.eur)
+          + "</b></td></tr>").join("") + "</tbody></table>"
+      : '<p class="tyhi">Sellel ajavahemikul müüke ei ole.</p>') + "</article>";
+
+  document.getElementById("sisu").innerHTML =
+    '<article class="card"><p class="h3">MÜÜGIARUANNE</p>'
+    + '<form class="vorm üleval" id="vahemik">'
+    + '<label class="väli">Alates<input type="date" name="algus" value="' + a + '"></label>'
+    + '<label class="väli">Kuni<input type="date" name="lopp" value="' + l + '"></label>'
+    + '<button type="submit" class="n2">Näita</button>'
+    + '<button type="button" class="esile" id="csv">Lae väljavõte raamatupidajale</button>'
+    + "</form>"
+    + '<div class="riba"><b>' + d.kokku.kordi + "</b><span>müügikorda</span><b>"
+    + d.kokku.tk + "</b><span>tükki</span><b>" + raha(d.kokku.eur) + "</b></div>"
+    + '<p class="abi" style="margin:14px 0 0">' + esc(d.kaibemaks) + "</p></article>"
+    + tabel("MÜÜJATE KAUPA", d.myyjate)
+    + tabel("OSADE KAUPA", d.osade)
+    + tabel("TOODETE KAUPA", d.toodete);
+
+  document.getElementById("vahemik").onsubmit = e => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    vaadeAruanne(f.get("algus"), f.get("lopp"));
+  };
+  document.getElementById("csv").onclick = () => {
+    location.href = "/api/aruanne.csv?algus=" + a + "&lopp=" + l;
+  };
+}
+
+/* ══ SEADED ═════════════════════════════════════════════════════ */
+async function vaadeSeaded() {
+  const [info, osad, hind] = await Promise.all([
+    päring("/api/info"), päring("/api/osad"), päring("/api/tooted")]);
+  LIIKMED = await päring("/api/liikmed") || [];
+
+  document.getElementById("sisu").innerHTML =
+    /* maja info */
+    '<article class="card"><p class="h3">MAJA INFO</p>'
+    + '<p class="abi">Lahtiolekuajad, asukoht, telefon — kõik, mida on vaja käepärast '
+    + "hoida. Seda näevad kõik majas.</p>"
+    + (info.length ? info.map(i => '<div class="kirje" data-info="' + i.id + '">'
+        + '<span class="nim">' + esc(i.pealkiri) + "</span>"
+        + '<button class="pisi" data-muuda="' + i.id + '">Muuda</button>'
+        + '<button class="pisi punane" data-ikustuta="' + i.id + '">Kustuta</button>'
+        + '<p class="lisa infotekst">' + esc(i.sisu) + "</p></div>").join("")
+      : '<p class="tyhi">Infot ei ole veel lisatud.</p>')
+    + '<form class="vorm" id="uusInfo">'
+    + '<label class="väli">Pealkiri<input type="text" name="pealkiri" required '
+    + 'placeholder="näiteks Lahtiolekuajad"></label>'
+    + '<label class="väli" style="flex:2 1 300px">Sisu<textarea name="sisu" rows="3"></textarea></label>'
+    + '<button type="submit" class="esile">Lisa</button></form></article>'
+
+    /* hinnakiri */
+    + '<article class="card"><p class="h3">HINNAKIRI</p>'
+    + '<p class="abi">Piletid, raamatud ja muu, mida majas müüakse. Hinna muutmine ei muuda '
+    + "vanu müüke — need jäävad selle hinnaga, millega nad müüdi.</p>"
+    + (hind.some(o => o.tooted.length)
+      ? hind.filter(o => o.tooted.length).map(o => '<div class="osa"><p>' + esc(o.nimi) + "</p>"
+        + o.tooted.map(t => '<div class="liige" data-toode="' + t.id + '">'
+          + '<input class="nm tmuuda" data-val="nimetus" value="' + esc(t.nimetus) + '">'
+          + '<input class="tl tmuuda" data-val="hind" value="'
+          + Number(t.hind).toFixed(2).replace(".", ",") + '"> '
+          + '<button class="pisi punane" data-tkustuta="' + t.id + '">Kustuta</button>'
+          + "</div>").join("") + "</div>").join("")
+      : '<p class="tyhi">Hinnakiri on tühi.</p>')
+    + '<form class="vorm" id="uusToode">'
+    + '<label class="väli">Nimetus<input type="text" name="nimetus" required></label>'
+    + '<label class="väli">Osa<select name="osa_id">'
+    + osad.map(o => '<option value="' + o.id + '">' + esc(o.nimi) + "</option>").join("")
+    + "</select></label>"
+    + '<label class="väli">Hind €<input type="text" name="hind" value="0,00"></label>'
+    + '<button type="submit" class="esile">Lisa toode</button></form></article>'
+
+    /* liikmed */
+    + '<article class="card"><p class="h3">LIIKMED JA SISSELOGIMINE</p>'
+    + '<p class="abi">Tee liikmele link ja anna see talle ise kätte — telefonis, sõnumiga '
+    + "või paberil. E-posti teenust ei ole vaja. Link kehtib 7 päeva ja ühe korra; pärast "
+    + "sisenemist püsib inimene sees 60 päeva.</p>"
+    + (MINA.annabOigusi ? "" : '<p class="abi">Ameteid muudab ainult administraator — amet '
+      + "otsustab, kes ühiskassat näeb. Kõik muu on sinu teha.</p>")
+    + '<div class="ametid">' + AMETID.map(a => '<div class="amet"><b>' + esc(a.nimi)
+      + "</b><span>" + esc(a.selgitus) + "</span></div>").join("") + "</div>"
+    + LIIKMED.map(l => '<div class="liige" data-id="' + l.id + '">'
+      + '<span class="pilt">' + esc(algustähed(l.nimi)) + "</span>"
+      + '<input class="nm muuda" data-val="nimi" value="' + esc(l.nimi) + '">'
+      + '<input class="rl muuda" data-val="roll" value="' + esc(l.roll || "")
+      + '" placeholder="töö majas">'
+      + '<select class="am muuda" data-val="amet"' + (MINA.annabOigusi ? "" : " disabled") + ">"
+      + AMETID.map(a => '<option value="' + a.id + '"' + (l.amet === a.id ? " selected" : "")
+          + ">" + esc(a.nimi) + "</option>").join("") + "</select>"
+      + (l.onepost ? '<span class="mark">saab sisse</span>' : "")
+      + '<button class="pisi" data-kutse="' + l.id + '">Tee sisselogimise link</button>'
+      + "</div>").join("")
+    + '<form class="vorm" id="uusLiige">'
+    + '<label class="väli">Nimi<input type="text" name="nimi" required></label>'
+    + '<label class="väli">Töö majas<input type="text" name="roll"></label>'
+    + '<label class="väli">Amet<select name="amet">'
+    + AMETID.filter(a => MINA.annabOigusi || !a.kassa)
+        .map(a => '<option value="' + a.id + '">' + esc(a.nimi) + "</option>").join("")
+    + "</select></label>"
+    + '<button type="submit" class="esile">Lisa liige</button></form></article>';
+
+  seaSeaded();
+}
+
+function seaSeaded() {
+  const s = document.getElementById("sisu");
+
+  s.querySelectorAll(".muuda").forEach(n => n.onchange = () => salvestaLiige(n.closest(".liige")));
+
+  s.querySelectorAll(".tmuuda").forEach(n => n.onchange = async () => {
+    const rida = n.closest("[data-toode]");
+    const r = await päring("/api/tooted", "PATCH", {
+      id: rida.dataset.toode,
+      nimetus: rida.querySelector('[data-val="nimetus"]').value,
+      hind: rida.querySelector('[data-val="hind"]').value
+    });
+    if (r) { teade("Hinnakiri salvestatud."); }
+    else vaadeSeaded();
+  });
+
+  s.querySelectorAll("[data-tkustuta]").forEach(n => n.onclick = async () => {
+    if (!confirm("Kustutan selle toote hinnakirjast?")) return;
+    if (await päring("/api/tooted", "DELETE", { id: n.dataset.tkustuta })) vaadeSeaded();
+  });
+
+  s.querySelectorAll("[data-ikustuta]").forEach(n => n.onclick = async () => {
+    if (!confirm("Kustutan selle info?")) return;
+    if (await päring("/api/info", "DELETE", { id: n.dataset.ikustuta })) vaadeSeaded();
+  });
+
+  s.querySelectorAll("[data-muuda]").forEach(n => n.onclick = () => {
+    const rida = n.closest("[data-info]");
+    const pealkiri = rida.querySelector(".nim").textContent;
+    const sisu = rida.querySelector(".infotekst").textContent;
+    rida.innerHTML = '<form class="vorm üleval" style="width:100%">'
+      + '<label class="väli">Pealkiri<input type="text" name="pealkiri" value="'
+      + esc(pealkiri) + '" required></label>'
+      + '<label class="väli" style="flex:2 1 300px">Sisu<textarea name="sisu" rows="4">'
+      + esc(sisu) + "</textarea></label>"
+      + '<button type="submit" class="esile">Salvesta</button></form>';
+    rida.querySelector("form").onsubmit = async e => {
+      e.preventDefault();
+      const f = new FormData(e.target);
+      const r = await päring("/api/info", "PATCH", {
+        id: rida.dataset.info, pealkiri: f.get("pealkiri"), sisu: f.get("sisu") });
+      if (r) vaadeSeaded();
+    };
+  });
+
+  s.querySelectorAll("[data-kutse]").forEach(n => n.onclick = async () => {
+    n.disabled = true; n.textContent = "Teen…";
+    const r = await päring("/api/kutse", "POST", { liige_id: n.dataset.kutse });
+    n.disabled = false; n.textContent = "Tee uus link";
+    if (!r) return;
+    const rida = n.closest(".liige");
+    let ala = rida.querySelector(".link");
+    if (!ala) { ala = document.createElement("div"); ala.className = "link"; rida.appendChild(ala); }
+    ala.innerHTML = '<input readonly value="' + esc(r.link) + '"><button class="pisi">Kopeeri</button>';
+    const väli = ala.querySelector("input");
+    ala.querySelector("button").onclick = async () => {
+      try { await navigator.clipboard.writeText(r.link); ala.querySelector("button").textContent = "Kopeeritud"; }
+      catch { väli.select(); }
+    };
+    väli.select();
+  });
+
+  document.getElementById("uusInfo").onsubmit = async e => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    if (await päring("/api/info", "POST", { pealkiri: f.get("pealkiri"), sisu: f.get("sisu") }))
+      vaadeSeaded();
+  };
+  document.getElementById("uusToode").onsubmit = async e => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    if (await päring("/api/tooted", "POST", {
+      nimetus: f.get("nimetus"), osa_id: f.get("osa_id"), hind: f.get("hind") })) vaadeSeaded();
+  };
+  document.getElementById("uusLiige").onsubmit = async e => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    if (await päring("/api/liikmed", "POST", {
+      nimi: f.get("nimi"), roll: f.get("roll"), amet: f.get("amet") })) vaadeSeaded();
+  };
+}
+
+document.getElementById("valja").onclick = async () => {
   await fetch("/api/valja", { method: "POST" });
   location.href = "/";
+};
+document.getElementById("aken").addEventListener("click", e => {
+  if (e.target.id === "aken") e.target.close();
 });
 
-laadi();
+algus();
 </script>
 </body>
 </html>

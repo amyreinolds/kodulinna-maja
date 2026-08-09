@@ -48,8 +48,37 @@ Kui võtit ei ole, ilmub link ekraanile — muidu ei saaks keegi sisse.
 | `db.js` | ühendus andmebaasiga |
 | `auth.js` | sisselogimine, küpsis, märgid |
 | `public/login.html` | sisselogimise leht |
-| `public/app.html` | rakendus — praegu müügivaade |
-| `test/proov.js` | otsast lõpuni proov |
+| `ametid.js` | ametid ja õigused ühes kohas |
+| `public/app.html` | rakendus — kõik vaated |
+| `andmebaas/*.sql` | andmebaasi muudatused, nummerdatud |
+| `test/` | `npm test` — 10 komplekti, üle 130 kontrolli |
+
+## Mis rakenduses on
+
+| Vaade | Mida teeb |
+|---|---|
+| **Müük** | vali kogus, klõpsa tootel. Oma müük on kohe all näha |
+| **Kalender** | üritused ja tööd ühes kalendris, maja vahetatakse ülal („Kõik“ näitab mõlemat). Korduv töö (näiteks lillede kastmine kolmapäeval ja laupäeval), kellaajaga või ilma. Tehtud töö nimi läheb roheliseks |
+| **Töö graafik** | mõlema maja nädalagraafik üksteise all, ühel päeval võib olla mitu vahetust. Puhkused ja haiguslehed |
+| **Kontaktid** | nimed, töö majas ja telefoninumbrid. Number kopeeritakse, helistamislinki ei ole — see rakendus on arvutis |
+| **Aruanne** | ainult kassaõigusega. Kokkuvõte müüjate, osade ja toodete kaupa ning väljavõte raamatupidajale (CSV, Eesti Exceli jaoks) |
+| **Seaded** | maja info, hinnakiri, liikmed ja sisselogimislingid |
+
+## Õigused
+
+Kõik liikmed haldavad kõike — infot, üritusi, kalendrit, graafikut, liikmeid
+ja sisselogimislinke. **Ühiskassa on erand.**
+
+| | Liige | Raamatupidaja | Ülemus | Administraator |
+|---|---|---|---|---|
+| Kogu maja kassa ja aruanne | ei (ainult oma müük) | jah | jah | jah |
+| Kõik muu | jah | jah | jah | jah |
+| Ameti muutmine | ei | ei | ei | **jah** |
+
+Ameti muutmine on ainult administraatoril, sest amet otsustab, kes kassat
+näeb. Kui igaüks saaks ametit muuta, annaks igaüks endale kassaõiguse ja
+lukk ei loeks midagi. Samal põhjusel ei saa õiguseta liige luua uut liiget
+kassaametiga.
 
 ## Kes rakendust näeb
 
