@@ -1,0 +1,1302 @@
+/* Kaks teemat. Kummaski ei ole puhast valget ega puhast musta —
+   need on kaks kõige silmi väsitavamat värvi ekraanil. */
+:root, :root[data-teema="hele"]{
+  color-scheme:light;
+  --bg:#A9C9EC;          /* sinine taust */
+  --card:#FFFFFF;        /* valged pinnad */
+  --soft:#ECEFF4;
+  --ink:#1D1D1F;
+  --ink-2:#424245;
+  --ink-3:#66666A;       /* mõõdetud: >=4.5:1 ka halli pinna peal */
+  --line:#D8D8DE;
+  --line-2:#E8E8EE;
+  --accent:#0071E3;      /* täidetud pindadele */
+  --accent-ink:#0060C0;  /* tekstile — tumedam, nagu Apple ise teeb */
+  --accent-tekst:var(--card);  /* kiri täidetud aktsendi peal */
+  --kaart:#FFFFFF;             /* kaardid valged — värv on nüüd taustas */
+  --accent-soft:#E7F1FD;
+  --accent-line:#C2DCF8;
+  --green:#12784A;
+  --green-soft:#E3F1EA;
+  --red:#C9261B;
+  --red-soft:#FBE9E7;
+  --shadow:0 1px 2px rgba(20,24,28,.05);
+  --dlg-shadow:0 22px 60px rgba(20,24,28,.24);
+  --bg-pilt:
+    radial-gradient(1200px 700px at 14% -10%, rgba(120,170,225,.60), transparent 60%),
+    radial-gradient(900px 620px at 90% 8%, rgba(150,190,235,.55), transparent 62%),
+    linear-gradient(160deg, #C3DBF6 0%, #A9C9EC 45%, #8FB4DD 100%);
+}
+
+:root[data-teema="tume"]{
+  color-scheme:dark;
+  /* Claude Code'i tume teema: soe neutraalne must, kreemikas kiri, üks
+     oranž aktsent. Värvid Anthropicu ametlikust paletist. Taust on kõige
+     tumedam, pinnad tõusevad sellest välja. */
+  --bg:#141413;          /* ametlik tume */
+  --card:#1F1F1D;        /* pind taustast kõrgemal */
+  --soft:#2A2A27;
+  --ink:#FAF9F5;         /* ametlik hele */
+  --ink-2:#D6D3C9;
+  --ink-3:#B0AEA5;       /* ametlik keskhall */
+  --line:#35352F;
+  --line-2:#26262A;
+  /* Oranž on piisavalt hele, et tema peal seisaks tume kiri. */
+  --accent:#D97757;      /* ametlik oranž */
+  --accent-tekst:#141413;
+  --kaart:var(--card);
+  --accent-ink:#D97757;  /* sama oranž ka tekstina — pind on tume */
+  --accent-soft:#2B211C;
+  --accent-line:#4A362C;
+  --green:#8FA372;       /* ametlik roheline, tekstiks heledamaks */
+  --green-soft:#1E2418;
+  --red:#D4776E;         /* soe punane, oranžist selgelt eristuv */
+  --red-soft:#2A1A18;
+  --shadow:0 1px 2px rgba(0,0,0,.7);
+  --dlg-shadow:0 22px 60px rgba(0,0,0,.85);
+  /* Lame must muudab kõik pinnad ühesuguseks. Pehme bordookalle annab
+     sügavuse, ilma et taust heledaks läheks. */
+  /* Claude Code on lame. Kalle on nii vaikne, et seda pigem tunneb kui näeb. */
+  --bg-pilt:linear-gradient(180deg, #171715 0%, #141413 55%, #111110 100%);
+  /* Sektsioonivärvid peavad tumedal jääma heledaks — nad on täidetud pinnad
+     tumeda kirjaga. Heledus on sama mis enne, küllastus umbes kolmandik:
+     värv on ikka äratuntav, aga ei helenda mustal pinnal. */
+  /* Tumedal bordool töötavad maalähedased toonid: küllastus on keskmine,
+     heledus kõigil ühtlane. Nii on värvid selged, aga ei löö silma. */
+  /* Sektsioonivärvid samast perest: madal küllastus, ühtlane heledus.
+     Sinine ja roheline on ametlikud, ülejäänud on nendega kokku häälestatud. */
+  --s-vestlus:#7FA6CE;   /* ametlik sinine, heledamaks */
+  --s-yritused:#8FA372;  /* ametlik roheline, heledamaks */
+  --s-kalender:#CE8A80;  /* tuhm tellis */
+  --s-info:#C9A468;      /* kuldne */
+  --s-kontakt:#A992C2;   /* tuhm mauve */
+  --s-failid:#93A3A8;    /* kivihall */
+  --s-myyk:#D08A66;      /* vask */
+  --s-too:#8E93C7;       /* indigo */
+}
+
+/* Sektsioonivärvid on teemast sõltumatud: „Kalender on see bordoo“ jääb
+   meelde ka siis, kui taustateemat vahetada. Kõik on piisavalt tumedad,
+   et valge kiri nende peal loetav oleks. */
+:root{
+  --s-vestlus:#0071E3;
+  --s-yritused:#0D6E42;
+  --s-kalender:#C11F45;
+  --s-info:#9A6405;
+  --s-kontakt:#6B34C4;
+  --s-failid:#0C6E6B;
+  --s-myyk:#9A5327;
+  --s-too:#4A4FA0;
+  /* Pinnatoon: sektsiooni värv kaardi sisse segatud. Varuvariant ees. */
+  --s-tint:var(--soft);
+  --s-tint:color-mix(in srgb, var(--s) 13%, var(--card));
+  --s-tint2:var(--soft);
+  --s-tint2:color-mix(in srgb, var(--s) 7%, var(--card));
+  --accent-ink:var(--accent);
+  --s-kuma:rgba(0,0,0,.22);
+  --s-kuma:color-mix(in srgb, var(--s) 42%, transparent);
+  --a-kuma:rgba(0,0,0,.22);
+  --a-kuma:color-mix(in srgb, var(--accent) 42%, transparent);
+  --s:var(--accent);
+}
+:root[data-vaade="vestlus"] {--s:var(--s-vestlus)}
+:root[data-vaade="yritused"]{--s:var(--s-yritused)}
+:root[data-vaade="kalender"]{--s:var(--s-kalender)}
+:root[data-vaade="info"]    {--s:var(--s-info)}
+  :root[data-vaade="tootajad"]{--s:var(--s-too)}
+:root[data-vaade="kontakt"] {--s:var(--s-kontakt)}
+:root[data-vaade="failid"]  {--s:var(--s-failid)}
+:root[data-vaade="myyk"]    {--s:var(--s-myyk)}
+
+:root{
+  --z:1;            /* kirja suurus: 1 / 1.15 / 1.32 */
+  --r:14px;
+  --sans:system-ui,-apple-system,"Segoe UI Variable Text","Segoe UI",Roboto,sans-serif;
+  --display:system-ui,-apple-system,"Segoe UI Variable Display","Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"Cascadia Code","SF Mono",Consolas,monospace;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  zoom:var(--z);
+  background-image:var(--bg-pilt,none);
+  background-attachment:fixed;
+  font-family:var(--sans);
+  background:var(--bg);
+  color:var(--ink);
+  font-size:17px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  overflow:hidden;
+}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:none;padding:0;text-align:left}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:4px}
+@keyframes kerki{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.canvas .card{animation:kerki .44s cubic-bezier(.2,.7,.2,1) backwards}
+.canvas .card:nth-child(2){animation-delay:.05s}
+.canvas .card:nth-child(3){animation-delay:.1s}
+.canvas .card:nth-child(4){animation-delay:.15s}
+.canvas .card:nth-child(n+5){animation-delay:.2s}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+svg.ic{width:22px;height:22px;flex:none}
+.laine{
+  position:absolute;border-radius:50%;pointer-events:none;z-index:0;
+  background:rgba(255,255,255,.3);
+  transform:translate(-50%,-50%) scale(0);
+  animation:laineks .55s ease-out forwards;
+}
+@keyframes laineks{to{transform:translate(-50%,-50%) scale(1);opacity:0}}
+.answer button:not([aria-pressed="true"]) .laine,
+.btn.ghost .laine,.qbtn .laine,.nav button:not([aria-current="true"]) .laine{background:color-mix(in srgb,var(--s) 22%,transparent)}
+hr.hr{border:none;border-top:1px solid var(--line-2);margin:0}
+
+/* ── trükk ────────────────────────────────────────── */
+#prindi{display:none}
+@media print{
+  .kuma,.shell,.scrim,.dlg,.toasts{display:none!important}
+  html,body{height:auto!important;background:#fff!important;zoom:1!important;color:#000}
+  /* Ekraanivärvid ei kuulu paberile — must kiri valgel. */
+  #prindi{display:block;font-family:inherit}
+  #prindi,#prindi *{color:#000!important;background:transparent}
+  #prindi th{background:#eee!important}
+  #prindi tr.kokku td{background:#f2f2f2!important}
+  #prindi h1{font-size:16pt;margin:0 0 2mm}
+  #prindi h2{font-size:12pt;margin:6mm 0 2mm}
+  #prindi .p-meta{font-size:9.5pt;line-height:1.5;margin:0 0 5mm}
+  #prindi table{width:100%;border-collapse:collapse;margin:0}
+  #prindi th,#prindi td{border:1px solid #888;padding:1.4mm 2mm;font-size:9.5pt;text-align:left}
+  #prindi th{background:#eee}
+  #prindi .n{text-align:right;white-space:nowrap}
+  #prindi tr{break-inside:avoid}
+  #prindi thead{display:table-header-group}   /* päis kordub igal lehel */
+  #prindi tr.kokku td{font-weight:700;background:#f2f2f2}
+  @page{margin:14mm}
+}
+
+/* ── raam ─────────────────────────────────────────── */
+/* Klaas ei paista, kui selle taga pole midagi. Kolm suurt hajutatud laiku
+   annavad hagustamisele sisu. */
+.kuma{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.kuma i{position:absolute;display:block;border-radius:50%;filter:blur(110px)}
+.kuma i:nth-child(1){width:44vw;height:44vw;left:14%;top:-16vw;background:var(--accent);opacity:.24}
+.kuma i:nth-child(2){width:38vw;height:38vw;right:-8vw;top:22vh;background:var(--s);opacity:.20;transition:background .4s}
+.kuma i:nth-child(3){width:34vw;height:34vw;left:-6vw;bottom:-12vw;background:var(--s-kontakt);opacity:.13}
+/* Taust on bordoo, seega kuma pole vaja — ja kaardid peavad jääma mustaks,
+   mitte taustavärvist läbi kumama. */
+.kuma{display:none}
+:root[data-teema="tume"] .card,
+:root[data-teema="tume"] .tabel,
+:root[data-teema="tume"] .files,
+:root[data-teema="tume"] .cal,
+:root[data-teema="tume"] .convo,
+:root[data-teema="tume"] .mcal,
+:root[data-teema="tume"] .dlg{background:var(--card)}
+:root[data-teema="tume"] .side,
+:root[data-teema="tume"] .main{background:color-mix(in srgb, var(--card) 96%, transparent)}
+:root[data-teema="tume"] .tlist{background:color-mix(in srgb, var(--card) 92%, transparent)}
+:root[data-teema="tume"] .side,
+:root[data-teema="tume"] .main{border-color:rgba(255,255,255,.06)}
+/* Pind tõuseb taustast varjuga, mitte ainult värviga. */
+:root[data-teema="tume"] .card,
+:root[data-teema="tume"] .side,
+:root[data-teema="tume"] .main{box-shadow:0 1px 2px rgba(0,0,0,.5),0 8px 24px -12px rgba(0,0,0,.6)}
+.shell{
+  position:relative;z-index:1;box-sizing:border-box;
+  display:grid;grid-template-columns:264px minmax(0,1fr);gap:14px;
+  height:calc(100dvh / var(--z));padding:14px;
+}
+/* Molemad paneelid holjuvad ymbritseva kuma peal, nagu viites. */
+.side,.main{
+  border-radius:26px;border:1px solid var(--line-2);overflow:hidden;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.55) inset,
+    0 2px 6px rgba(20,24,28,.05),
+    0 24px 60px -34px rgba(20,24,28,.55);
+}
+
+.side{
+  background:color-mix(in srgb, var(--card) 88%, transparent);
+  backdrop-filter:blur(30px) saturate(185%);
+  -webkit-backdrop-filter:blur(30px) saturate(185%);
+  display:flex;flex-direction:column;min-height:0;position:relative;z-index:2;
+}
+.brand{padding:22px 18px 18px;border-bottom:1px solid var(--line-2)}
+.brand{display:flex;align-items:center;gap:13px}
+.brand .mark{
+  position:relative;overflow:hidden;flex:none;
+  width:44px;height:44px;border-radius:14px;display:grid;place-items:center;
+  background:var(--accent);color:var(--accent-tekst);
+  box-shadow:0 1px 1px rgba(255,255,255,.3) inset,0 5px 16px -7px var(--a-kuma);
+}
+.brand .mark::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:48%;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.3) 0%,rgba(255,255,255,0) 100%);
+}
+.brand .mark svg{width:24px;height:24px;position:relative;z-index:1}
+.brand h1{font-family:var(--display);font-size:23px;font-weight:800;margin:0;letter-spacing:-.032em;line-height:1.1}
+.brand-tekst{display:flex;flex-direction:column;gap:2px;min-width:0}
+.brand .me{
+  align-self:flex-start;display:inline-flex;align-items:center;gap:6px;
+  min-height:34px;padding:5px 9px;margin-left:-9px;border-radius:9px;
+  font-size:14.5px;color:var(--ink-3);
+}
+.brand .me b{font-weight:700;color:var(--ink-2)}
+.brand .me:hover{background:var(--soft);color:var(--ink-2)}
+
+/* Kui kirjasuurus on suur, ei mahu nimekiri ära — siis peab saama kerida. */
+.nav{padding:10px 10px 4px;display:flex;flex-direction:column;gap:2px;
+     flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.nav button{
+  position:relative;overflow:hidden;
+  display:flex;align-items:center;gap:12px;width:100%;min-height:50px;
+  padding:0 12px;border-radius:16px;font-size:17px;font-weight:550;color:var(--ink-2);
+  transition:background .18s,color .18s;
+}
+.nav button .ic{
+  width:34px;height:34px;padding:6px;border-radius:10px;box-sizing:border-box;
+  background:var(--ik);transition:background .18s;
+}
+.nav button:hover{background:var(--soft)}
+/* Iga sektsioon kannab oma värvi — ikoon on värviline ka siis, kui rida
+   pole valitud, nii et külgriba ise on värvilegend. */
+.nav button[data-view="vestlus"] .ic{color:var(--s-vestlus);--ik:color-mix(in srgb, var(--s-vestlus) 15%, transparent)}
+.nav button[data-view="yritused"] .ic{color:var(--s-yritused);--ik:color-mix(in srgb, var(--s-yritused) 15%, transparent)}
+.nav button[data-view="kalender"] .ic{color:var(--s-kalender);--ik:color-mix(in srgb, var(--s-kalender) 15%, transparent)}
+.nav button[data-view="info"]     .ic{color:var(--s-info)}
+.nav button[data-view="tootajad"] .ic{color:var(--s-too);--ik:color-mix(in srgb, var(--s-too) 15%, transparent)}
+.nav button[data-view="kontakt"] .ic{color:var(--s-kontakt);--ik:color-mix(in srgb, var(--s-kontakt) 15%, transparent)}
+.nav button[data-view="failid"] .ic{color:var(--s-failid);--ik:color-mix(in srgb, var(--s-failid) 15%, transparent)}
+.nav button[data-view="myyk"] .ic{color:var(--s-myyk);--ik:color-mix(in srgb, var(--s-myyk) 15%, transparent)}
+.nav button[aria-current="true"]{
+  background:var(--accent);color:var(--accent-tekst);font-weight:600;
+  box-shadow:0 1px 1px rgba(255,255,255,.3) inset,0 4px 14px -3px var(--a-kuma);
+}
+.nav button[aria-current="true"] .ic{color:var(--accent-tekst);background:rgba(255,255,255,.18)}
+.nav .badge{margin-left:auto;min-width:26px;height:26px;padding:0 8px;border-radius:999px;background:var(--accent);color:var(--accent-tekst);font-size:13.5px;font-weight:800;display:grid;place-items:center}
+.nav button[aria-current="true"] .badge{background:var(--card);color:var(--accent-ink)}
+
+/* Kogu sisu elab praegu ainult selles arvutis. Kui koopiat pole tehtud,
+   peab seda nägema — mitte alles siis, kui midagi on kadunud. */
+.varuriba{
+  display:flex;align-items:center;gap:8px;width:100%;min-height:36px;
+  padding:7px 9px;margin-top:8px;border-radius:10px;border:none;
+  font-family:inherit;font-size:13.5px;text-align:left;cursor:pointer;
+  background:transparent;color:var(--ink-3);
+}
+.varuriba:hover{background:var(--soft);color:var(--ink-2)}
+.varuriba svg{width:16px;height:16px;flex:none}
+.varuriba.vaja{background:var(--red-soft);color:var(--red);font-weight:600}
+.side-foot{margin-top:auto;border-top:1px solid var(--line-2);padding:10px}
+.olek{
+  display:flex;align-items:center;gap:9px;padding:9px 12px;
+  font-size:13px;color:var(--ink-3);
+}
+.olek i{
+  width:8px;height:8px;border-radius:50%;background:var(--green);flex:none;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 22%,transparent);
+  animation:hingab 2.4s ease-in-out infinite;
+}
+@keyframes hingab{0%,100%{opacity:1}50%{opacity:.45}}
+.side-foot button{display:flex;align-items:center;gap:10px;width:100%;min-height:46px;padding:0 12px;border-radius:10px;font-size:16px;color:var(--ink-2)}
+.side-foot button:hover{background:var(--soft)}
+.side-foot .me b{font-weight:650;color:var(--ink)}
+.side-foot .help{color:var(--accent-ink);font-weight:600}
+.side-foot .help:hover{background:var(--accent-soft)}
+
+/* „Mis on uut“ — üks koht, kust näeb kõike, mis on juurde tulnud. */
+.nav .uut{
+  min-height:52px;margin-bottom:6px;border:1.5px solid var(--line);
+  background:var(--card);color:var(--ink);font-weight:650;
+}
+.nav .uut:hover{border-color:var(--accent-ink);background:var(--soft)}
+.nav .uut .badge{background:var(--accent)}
+.nav .uut.vaikne{color:var(--ink-3);font-weight:500}
+.lbl-short{display:none}
+
+/* „UUS“ silt: sõna, mitte punkt — sõna on vanemale silmale selgem. */
+.uus{
+  display:inline-block;flex:none;vertical-align:middle;
+  padding:3px 10px;border-radius:999px;background:var(--s);color:var(--card);
+  font-size:12.5px;font-weight:800;letter-spacing:.04em;margin-right:8px;
+}
+.tlist .uus{margin:0 0 0 8px}
+
+/* ── sisu ─────────────────────────────────────────── */
+.main{
+  display:flex;flex-direction:column;min-width:0;min-height:0;
+  background:color-mix(in srgb, var(--card) 84%, transparent);
+  backdrop-filter:blur(30px) saturate(185%);
+  -webkit-backdrop-filter:blur(30px) saturate(185%);
+}
+.top{
+  flex:none;display:flex;align-items:center;gap:15px;padding:16px 24px;
+  border-bottom:1px solid var(--line-2);
+  background:color-mix(in srgb, var(--card) 45%, transparent);
+  position:relative;z-index:2}
+/* Ikoonplaat sektsiooni varvis, nagu viite paise sinine ruut. */
+.top .plaat{
+  position:relative;overflow:hidden;flex:none;
+  width:46px;height:46px;border-radius:14px;display:grid;place-items:center;
+  background:var(--s);color:var(--card);
+  box-shadow:0 1px 1px rgba(255,255,255,.3) inset,0 5px 16px -6px var(--s-kuma);
+}
+.top .plaat::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:48%;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.32) 0%,rgba(255,255,255,0) 100%);
+}
+.top .plaat svg{width:24px;height:24px;position:relative;z-index:1}
+.top .tekst{display:flex;flex-direction:column;gap:2px;min-width:0}
+.top h2{
+  font-family:var(--display);font-size:26px;font-weight:800;margin:0;
+  letter-spacing:-.034em;line-height:1.05;color:var(--ink);
+}
+.top .sub{font-size:14.5px;color:var(--ink-3);line-height:1.25}
+.top .sp{flex:1}
+
+.explain{
+  flex:none;display:flex;align-items:center;gap:11px;
+  padding:13px 24px;border-bottom:1px solid var(--line-2);
+  background:color-mix(in srgb, var(--s-tint2) 78%, transparent);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  position:relative;z-index:2;
+  font-size:16px;line-height:1.45;color:var(--ink-2);
+}
+.explain svg{width:21px;height:21px;flex:none;color:var(--s)}
+.top h2{color:var(--s)}
+
+
+/* Neli kihti, nagu Apple'i nupul:
+   1) sisemine heleduse joon üleval    2) värviline ümbritsev vari
+   3) läige ainult ülemisel poolel     4) sisemine faasitud serv
+   Läige kaob 48% peal ära — seetõttu ei lahjenda ta teksti kontrasti. */
+.btn{
+  position:relative;overflow:hidden;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  min-height:48px;padding:0 24px;border-radius:16px;
+  font-size:17px;font-weight:600;letter-spacing:-.012em;
+  background:var(--accent);color:var(--accent-tekst);
+  box-shadow:
+    0 1px 1px rgba(255,255,255,.35) inset,
+    0 4px 14px -1px var(--a-kuma),
+    0 1px 2px rgba(0,0,0,.12);
+  transition:transform .2s cubic-bezier(.2,.7,.2,1),box-shadow .22s,filter .18s;
+}
+.btn::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:48%;
+  border-radius:16px 16px 0 0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.32) 0%,rgba(255,255,255,.06) 60%,rgba(255,255,255,0) 100%);
+}
+.btn::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  border:1px solid rgba(255,255,255,.2);
+}
+.btn>*:not(.laine){position:relative;z-index:1}
+.btn:hover{box-shadow:0 1px 1px rgba(255,255,255,.4) inset,0 7px 22px -2px var(--a-kuma),0 2px 4px rgba(0,0,0,.15)}
+.btn:active{transform:scale(.955);box-shadow:0 1px 0 rgba(0,0,0,.2) inset}
+.btn:hover{filter:brightness(1.1)}
+.btn svg{width:20px;height:20px}
+.btn.ghost{
+  background:color-mix(in srgb, var(--card) 70%, transparent);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  color:var(--ink);border:1px solid var(--line);
+  box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 2px 8px rgba(0,0,0,.06);
+}
+.btn.ghost::before{opacity:.5}
+.btn.ghost::after{border-color:rgba(255,255,255,.35)}
+.btn.ghost:hover{background:var(--soft);filter:none}
+.btn.small{min-height:42px;padding:0 18px;font-size:15px;border-radius:13px}
+.btn.small::before{border-radius:13px 13px 0 0}
+.btn.danger{background:var(--red-soft);color:var(--red);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.btn.danger::before{opacity:.35}
+.btn.danger:hover{background:var(--red-soft);filter:none}
+
+.canvas{flex:1;min-height:0;overflow-y:auto;padding:30px 30px 48px}
+.wrap{max-width:880px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+
+.card{
+  background:color-mix(in srgb, var(--kaart) 82%, transparent);
+  backdrop-filter:blur(30px) saturate(180%);
+  -webkit-backdrop-filter:blur(30px) saturate(180%);
+  border:1px solid var(--line-2);border-radius:26px;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.6) inset,
+    0 1px 2px rgba(20,24,28,.04),
+    0 18px 44px -28px rgba(20,24,28,.5);
+  padding:26px 28px;
+}
+.h3{
+  display:inline-flex;align-items:center;align-self:flex-start;margin:0;
+  padding:5px 13px;border-radius:999px;background:var(--s-tint);color:var(--s);
+  font-size:13px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+}
+
+/* ── üritus ───────────────────────────────────────── */
+.ev{display:flex;flex-direction:column;gap:18px}
+.ev-pea{display:flex;gap:20px;align-items:flex-start}
+.paev{
+  position:relative;overflow:hidden;
+  flex:none;width:86px;padding:13px 6px 14px;border-radius:20px;
+  background:var(--s);color:var(--card);text-align:center;
+  box-shadow:0 1px 1px rgba(255,255,255,.3) inset,0 8px 22px -10px var(--s-kuma);
+}
+.paev::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:48%;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.3) 0%,rgba(255,255,255,.05) 60%,rgba(255,255,255,0) 100%);
+}
+.paev>*:not(.laine){position:relative;z-index:1}
+.paev .d{
+  display:block;font-family:var(--display);font-size:38px;line-height:.92;
+  font-weight:800;letter-spacing:-.045em;
+}
+.paev .k{display:block;font-size:14px;font-weight:650;margin-top:6px}
+.paev .n{display:block;font-size:12.5px;margin-top:2px}
+/* Läbipaistvus ainult värvilisel plaadil; möödunud ürituse hallil pinnal
+   viiks see halli kirja alla loetavuse piiri. */
+.paev:not(.past) .n{opacity:.92}
+.paev.past{background:var(--soft);color:var(--ink-3);box-shadow:none}
+.ev-when{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--ink-2);letter-spacing:-.01em}
+.ev-when.past{color:var(--ink-3)}
+.ev h3{font-family:var(--display);font-size:23px;font-weight:750;margin:0;letter-spacing:-.024em;text-wrap:balance;line-height:1.2}
+.ev-where{font-size:16px;color:var(--ink-2);margin:6px 0 0}
+.ev-desc{font-size:16px;color:var(--ink-2);margin:0;line-height:1.55}
+
+.answer{display:flex;gap:10px;flex-wrap:wrap}
+.answer button{
+  position:relative;overflow:hidden;
+  display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  min-height:50px;padding:0 26px;border-radius:16px;
+  font-size:17px;font-weight:600;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);
+  box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 2px 8px rgba(0,0,0,.05);
+  transition:transform .2s cubic-bezier(.2,.7,.2,1),box-shadow .22s,background .18s;
+}
+.answer button>*:not(.laine){position:relative;z-index:1}
+.answer button:active{transform:scale(.955)}
+.answer button[aria-pressed="true"]{border-color:transparent;color:var(--card)}
+.answer button[aria-pressed="true"]::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:48%;
+  border-radius:15px 15px 0 0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(255,255,255,.32) 0%,rgba(255,255,255,.06) 60%,rgba(255,255,255,0) 100%);
+}
+.answer button:hover{border-color:var(--ink-3)}
+.answer button svg{width:20px;height:20px}
+.answer button[aria-pressed="true"].yes{background:var(--green);box-shadow:0 1px 1px rgba(255,255,255,.35) inset,0 4px 14px -1px color-mix(in srgb,var(--green) 42%,transparent)}
+.answer button[aria-pressed="true"].no{background:var(--red);box-shadow:0 1px 1px rgba(255,255,255,.35) inset,0 4px 14px -1px color-mix(in srgb,var(--red) 42%,transparent)}
+
+.confirm{display:flex;align-items:center;gap:13px;width:100%;min-height:58px;padding:13px 18px;border-radius:16px;border:2px solid var(--line);background:var(--card);font-size:17px;color:var(--ink-2);transition:background .16s,border-color .16s}
+.confirm:hover{border-color:var(--accent-ink)}
+.confirm .box{width:26px;height:26px;flex:none;border-radius:6px;border:2px solid var(--ink-3);display:grid;place-items:center}
+.confirm .box svg{width:17px;height:17px;color:var(--card);opacity:0}
+.confirm[aria-pressed="true"]{background:var(--green-soft);border-color:var(--green);color:var(--green);font-weight:600}
+.confirm[aria-pressed="true"] .box{background:var(--green);border-color:var(--green)}
+.confirm[aria-pressed="true"] .box svg{opacity:1}
+.confirm .need{margin-left:auto;flex:none;font-size:15px;font-weight:700;color:var(--accent-ink)}
+
+.riba{display:flex;gap:4px;height:14px;margin-bottom:16px}
+.riba i{display:block;border-radius:7px;min-width:8px}
+.riba .y{background:var(--green)}
+.riba .e{background:var(--red)}
+.riba .v{background:var(--line)}
+.who{display:flex;flex-direction:column;gap:9px}
+.wline{display:flex;gap:10px;font-size:16px;line-height:1.45;align-items:baseline}
+.wline .k{flex:none;font-weight:650;min-width:136px}
+.wline .k.yes{color:var(--green)}
+.wline .k.no{color:var(--red)}
+.wline .k.non{color:var(--ink-3)}
+.wline .v{color:var(--ink-2);min-width:0}
+.wline .v.non{color:var(--ink-3)}
+
+.tasks{display:flex;flex-direction:column;gap:2px}
+.task{display:flex;align-items:center;gap:12px;min-height:46px;padding:4px 10px;border-radius:9px}
+.task:hover{background:var(--soft)}
+.task .mark{width:22px;height:22px;flex:none;color:var(--green)}
+.task .mark.free{color:var(--ink-3)}
+.task .t{flex:1;min-width:0;font-size:16px}
+.task .n{flex:none;font-size:15px;color:var(--ink-2);font-weight:600}
+.task .take{flex:none;min-height:38px;padding:0 16px;border-radius:19px;border:1.5px solid var(--accent);color:var(--accent-ink);font-size:15px;font-weight:600;display:inline-flex;align-items:center}
+.task .take:hover{background:var(--accent);color:var(--card)}
+
+.tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.tools .sp{flex:1}
+.linkbtn{min-height:40px;padding:0 4px;font-size:16px;font-weight:600;color:var(--accent-ink);display:inline-flex;align-items:center;gap:6px}
+.linkbtn:hover{text-decoration:underline}
+.linkbtn.mut{color:var(--ink-3);font-weight:500;font-size:15px}
+
+/* ── kommentaarid ─────────────────────────────────── */
+.qbtn{
+  display:flex;align-items:center;gap:11px;width:100%;min-height:54px;
+  padding:11px 18px;border-radius:16px;border:none;
+  background:var(--s-tint);font-size:17px;font-weight:700;color:var(--s);
+  transition:filter .16s;
+}
+.qbtn{position:relative;overflow:hidden}
+.qbtn:hover{filter:brightness(.96)}
+.qbtn svg{width:22px;height:22px;flex:none}
+.qbtn .n{margin-left:auto;font-weight:500;color:var(--ink-3);font-size:16px}
+
+.qlist{display:flex;flex-direction:column;gap:14px}
+.q{border-left:3px solid var(--accent-line);padding-left:14px}
+.q .hd{font-size:15px;margin-bottom:4px}
+.q .hd b{font-size:16px;font-weight:650}
+.q .hd span:not(.uus){color:var(--ink-3);margin-left:8px}
+.q .tx{font-size:16px;line-height:1.55;color:var(--ink-2);white-space:pre-wrap;overflow-wrap:anywhere}
+.qform{display:flex;flex-direction:column;gap:10px}
+.qform textarea{width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid var(--line);background:var(--card);font-size:17px;line-height:1.5;resize:vertical;min-height:80px;outline:none;font-family:inherit}
+.qform textarea:focus{border-color:var(--accent-ink)}
+
+/* ── vestlus ──────────────────────────────────────── */
+.chat{display:grid;grid-template-columns:290px minmax(0,1fr);height:100%;min-height:0}
+.tlist{
+  border-right:1px solid var(--line-2);overflow-y:auto;padding:10px;min-height:0;
+  background:color-mix(in srgb, var(--card) 70%, transparent);
+  backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);
+}
+.tlist .grp{padding:14px 14px 6px;font-size:13px;font-weight:700;color:var(--ink-3);letter-spacing:.03em}
+.tlist .grp small{display:block;font-weight:500;font-size:13px;letter-spacing:0;margin-top:2px;text-transform:none}
+.tlist button{display:block;width:100%;padding:11px 14px;border-radius:10px;margin-bottom:2px}
+.tlist button:hover{background:var(--soft)}
+.tlist button[aria-current="true"]{background:var(--accent-soft)}
+.tlist .t{display:block;font-size:17px;font-weight:700;line-height:1.3;margin-bottom:4px;letter-spacing:-.012em}
+.tlist button[aria-current="true"] .t{color:var(--accent-ink)}
+.tlist .m{display:block;font-size:14px;color:var(--ink-3);line-height:1.35}
+.tlist .dot{display:inline-block;width:9px;height:9px;border-radius:5px;background:var(--accent);margin-left:6px;vertical-align:middle}
+
+.convo{
+  display:flex;flex-direction:column;min-height:0;min-width:0;
+  background:color-mix(in srgb, var(--kaart) 88%, transparent);
+  backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);
+}
+.cvhead{flex:none;padding:14px 26px;border-bottom:1px solid var(--line);background:var(--card)}
+.cvhead b{font-family:var(--display);font-size:20px;font-weight:750;letter-spacing:-.02em}
+.cvhead span{display:block;font-size:15px;color:var(--ink-3);margin-top:2px}
+.msgs{flex:1;overflow-y:auto;padding:20px 26px;display:flex;flex-direction:column;gap:18px}
+.msg{max-width:640px}
+.piir{display:flex;align-items:center;gap:12px;margin:2px 0}
+.piir::before,.piir::after{content:"";flex:1;height:2px;background:var(--accent);opacity:.55;border-radius:1px}
+.piir span{
+  flex:none;font-size:14px;font-weight:700;color:var(--accent-ink);
+  letter-spacing:.02em;text-transform:uppercase;
+}
+.msg .hd{font-size:15px;margin-bottom:5px}
+.msg .hd b{font-size:16px;font-weight:650}
+.msg .hd span:not(.uus){color:var(--ink-3);margin-left:8px}
+.msg .tx{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 16px;font-size:17px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.mine{margin-left:auto}
+.msg.mine .tx{background:var(--accent-soft);border-color:var(--accent-line)}
+
+.composer{flex:none;border-top:1px solid var(--line);background:var(--card);padding:14px 26px 18px}
+.cbox{display:flex;gap:12px;align-items:flex-end}
+.cbox textarea{flex:1;border:1.5px solid var(--line);border-radius:12px;background:var(--card);resize:none;outline:none;font-size:17px;line-height:1.5;padding:12px 15px;max-height:150px;font-family:inherit}
+.cbox textarea:focus{border-color:var(--accent-ink)}
+.cbox .btn{flex:none}
+
+/* ── kalender ─────────────────────────────────────── */
+.calbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.calbar h3{font-family:var(--display);font-size:23px;font-weight:800;margin:0;min-width:200px;letter-spacing:-.028em;color:var(--s)}
+.cal{
+  background:color-mix(in srgb, var(--kaart) 82%, transparent);
+  backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);
+  border:1px solid var(--line-2);border-radius:26px;overflow:hidden;
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 18px 44px -28px rgba(20,24,28,.5);
+}
+.cal .dow{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--line)}
+.cal .dow span{padding:11px 0;text-align:center;font-size:14px;font-weight:700;color:var(--ink-3)}
+.cal .g{display:grid;grid-template-columns:repeat(7,1fr)}
+.cell{min-height:100px;padding:8px;border-right:1px solid var(--line-2);border-bottom:1px solid var(--line-2);display:flex;flex-direction:column;gap:5px}
+.cell:nth-child(7n){border-right:none}
+.cell.out{background:var(--soft)}
+.cell .n{font-size:16px;color:var(--ink-2);width:30px;height:30px;display:grid;place-items:center;border-radius:15px;flex:none}
+.cell.out .n{color:var(--ink-3)}
+.cell.today .n{background:var(--s);color:var(--card);font-weight:800}
+.cell .pill{padding:7px 10px;border-radius:10px;background:var(--s-tint);color:var(--s);font-size:14px;font-weight:700;line-height:1.3}
+.cell .pill:hover{filter:brightness(1.06)}
+
+/* ── info ─────────────────────────────────────────── */
+.info h3{font-family:var(--display);font-size:23px;font-weight:750;margin:0;letter-spacing:-.024em;text-wrap:balance}
+.ikoonplaat{
+  width:44px;height:44px;flex:none;border-radius:14px;display:grid;place-items:center;
+  background:var(--s-tint);color:var(--s);margin-bottom:2px;
+}
+.ikoonplaat svg{width:23px;height:23px}
+.info .body{font-size:17px;line-height:1.65;color:var(--ink-2);max-width:62ch}
+.info .body p{margin:0 0 .75em}
+.info .body p:last-child{margin-bottom:0}
+.info .body strong{color:var(--ink);font-weight:650}
+.info .body ul{margin:.3em 0 .8em;padding-left:1.3em}
+.info .body li{margin-bottom:.35em}
+.meta{font-size:15px;color:var(--ink-3)}
+
+.notice{display:flex;align-items:center;gap:14px;padding:16px 20px;background:var(--accent-soft);border:1px solid var(--accent-line);border-radius:var(--r);font-size:17px;line-height:1.45}
+.notice svg{width:26px;height:26px;flex:none;color:var(--accent-ink)}
+
+/* ── kontaktid ────────────────────────────────────── */
+.people{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:14px}
+.person h3{font-family:var(--display);font-size:20px;font-weight:750;margin:0 0 2px;letter-spacing:-.02em}
+.person .role{font-size:15px;color:var(--ink-3);margin:0 0 10px}
+.person a{display:block;font-size:17px;color:var(--accent-ink);text-decoration:none;padding:7px 0;overflow-wrap:anywhere}
+.person .nimenupp{
+  font:inherit;color:var(--accent-ink);min-height:34px;
+  padding:2px 0;border-radius:6px;
+}
+.person .nimenupp:hover{text-decoration:underline}
+.person .myygirida{
+  display:block;width:100%;margin-top:8px;min-height:38px;
+  padding:8px 12px;border-radius:12px;
+  background:var(--s-tint);color:var(--s);
+  font-size:15px;font-weight:650;text-align:left;
+}
+.person .myygirida:hover{filter:brightness(.96)}
+.person a:hover{text-decoration:underline}
+.kohasilt{
+  display:inline-block;margin-left:10px;vertical-align:middle;
+  padding:3px 10px;border-radius:11px;background:var(--s-tint);
+  font-size:13px;font-weight:700;color:var(--s);letter-spacing:0;
+}
+.tagh{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:650;color:var(--green);background:var(--green-soft);padding:4px 10px;border-radius:14px;margin-bottom:10px}
+
+/* ── müük ─────────────────────────────────────────── */
+.osad{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.pernupud{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:2px}
+
+/* ── pilt ─────────────────────────────────────────── */
+/* Initsiaalid on all, pilt tuleb peale. Kui pilti ei ole või ta ei avane,
+   jäävad initsiaalid nähtavale — eraldi veakäsitlust pole vaja. */
+.ava{
+  position:relative;display:inline-flex;align-items:center;justify-content:center;
+  width:30px;height:30px;border-radius:50%;overflow:hidden;flex:none;
+  background:var(--s-tint);
+}
+.ava .init{font-size:12px;font-weight:700;color:var(--s);letter-spacing:.02em}
+.ava img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ava.suur{width:52px;height:52px}
+.ava.suur .init{font-size:19px}
+.piltala{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+
+
+/* ── töötajad ─────────────────────────────────────── */
+.tanariba{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media (max-width:820px){.tanariba{grid-template-columns:1fr}}
+.tanariba .sild{
+  display:block;font-size:12.5px;font-weight:800;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink-3);margin-bottom:8px;
+}
+.isik{display:inline-flex;align-items:center;gap:8px;margin:0 10px 8px 0;font-size:16px;font-weight:600}
+.kell2{font-family:var(--mono);font-size:14px;font-weight:600;color:var(--s)}
+.kes3{font-size:14px;color:var(--ink-3);font-weight:500}
+.tyhi{color:var(--ink-3);font-size:15.5px}
+button.isik.too{
+  min-height:38px;padding:5px 12px;border-radius:11px;gap:9px;
+  border:1px solid var(--line);background:var(--card);color:var(--ink);
+  font-family:inherit;cursor:pointer;
+}
+button.isik.too:hover{border-color:var(--s);background:var(--s-tint)}
+
+.gtabel{border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:4px}
+.grida{
+  display:grid;grid-template-columns:minmax(150px,1.4fr) repeat(7,minmax(0,1fr));
+  gap:0;align-items:stretch;width:100%;text-align:left;
+  border-bottom:1px solid var(--line-2);background:transparent;
+  border-left:none;border-right:none;border-top:none;
+  font-family:inherit;color:var(--ink);cursor:pointer;padding:0;
+}
+.grida:last-child{border-bottom:none}
+/* Rida ei ole enam nupp — nupud on nimi ja iga lahter eraldi. */
+.grida>button{
+  border:none;background:transparent;font-family:inherit;color:inherit;
+  cursor:pointer;text-align:left;
+}
+.gnimi:hover{background:var(--s-tint2)}
+button.lahter:hover{background:var(--s-tint);box-shadow:inset 0 0 0 1.5px var(--s)}
+button.lahter.ara:hover{box-shadow:inset 0 0 0 1.5px var(--s)}
+.grida>*{padding:10px 12px;display:flex;align-items:center;min-height:48px}
+.grida .isik{margin:0;min-width:0}
+.grida .isik{overflow:hidden}
+.gpais{background:var(--soft);font-size:12.5px;font-weight:800;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);cursor:default}
+.gpais>span{flex-direction:column;align-items:flex-start;gap:1px;min-height:0;padding:9px 12px}
+.gpais i{font-style:normal;font-size:11.5px;font-weight:600;letter-spacing:0;color:var(--ink-3)}
+.gpais .tana{color:var(--s)}
+.gpais .tana i{color:var(--s)}
+.lahter{font-family:var(--mono);font-size:13.5px;font-weight:600;
+  border-left:1px solid var(--line-2);justify-content:center;text-align:center}
+.lahter.tyhi2{color:var(--ink-3);font-weight:400}
+.lahter.ara{font-family:inherit;font-size:13px;font-weight:700;color:var(--s);background:var(--s-tint)}
+
+.tlist2{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:4px}
+.trida2{
+  display:grid;grid-template-columns:minmax(0,1fr) 150px 74px 130px 16px;
+  gap:14px;align-items:center;width:100%;text-align:left;padding:12px 16px;
+  border:none;border-bottom:1px solid var(--line-2);background:transparent;
+  font-family:inherit;color:var(--ink);cursor:pointer;
+}
+.trida2.puh{grid-template-columns:minmax(0,1fr) 120px 190px 16px}
+.trida2:last-child{border-bottom:none}
+.trida2:hover{background:var(--s-tint2)}
+.nm3{font-size:16px;font-weight:650;display:flex;flex-direction:column;gap:1px;min-width:0}
+.nm3 .osa2{font-size:13.5px;font-weight:400;color:var(--ink-3)}
+.paevad{display:flex;gap:5px;flex-wrap:wrap}
+.paevad i{
+  font-style:normal;font-size:12.5px;font-weight:700;min-width:23px;height:23px;
+  display:inline-flex;align-items:center;justify-content:center;
+  border-radius:7px;background:var(--soft);color:var(--ink-2);
+}
+.paevad i.tana{background:var(--s);color:var(--card)}
+.liik{font-size:14.5px;font-weight:600;color:var(--s)}
+
+.pvalik{display:flex;gap:8px;flex-wrap:wrap}
+.lnupp{
+  min-height:46px;padding:0 18px;border-radius:13px;
+  border:1.5px solid var(--line);background:var(--card);color:var(--ink);
+  font-family:inherit;font-size:16px;font-weight:600;cursor:pointer;
+}
+.lnupp:hover{border-color:var(--s)}
+.lnupp[aria-pressed="true"]{background:var(--s);border-color:var(--s);color:var(--accent-tekst)}
+.pnupp{
+  display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  min-width:74px;min-height:56px;padding:6px 10px;border-radius:13px;
+  border:1.5px solid var(--line);background:var(--card);color:var(--ink);
+  font-family:inherit;font-size:16px;font-weight:700;cursor:pointer;
+}
+.pnupp i{font-style:normal;font-size:11px;font-weight:500;color:var(--ink-3)}
+.pnupp:hover{border-color:var(--s)}
+.pnupp[aria-pressed="true"]{background:var(--s);border-color:var(--s);color:var(--accent-tekst)}
+.pnupp[aria-pressed="true"] i{color:var(--accent-tekst);opacity:.85}
+
+.glist{display:flex;flex-direction:column;gap:8px}
+.grida2{display:grid;grid-template-columns:150px minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:center}
+.grida2 select.kell{width:100%;padding:9px 8px;border-radius:9px;
+  border:1.5px solid var(--line);background:var(--card);color:var(--ink);
+  font-size:15px;font-family:inherit;outline:none;cursor:pointer;min-height:42px}
+.grida2 select.kell:hover,.grida2 select.kell:focus{border-color:var(--accent-ink)}
+select.kell{font-variant-numeric:tabular-nums}
+select.kell option{background:var(--card);color:var(--ink)}
+.majarida{margin-bottom:10px}
+.majarida .kohasilt{margin:0 0 6px;display:block;width:fit-content}
+.gpais2{font-size:12.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+/* Kaks vahetust peavad olema ustelaimuti all, mitte korvuti: .lahter on
+   flex-konteiner, seega display:block ei loe — suund tuleb umber poorata. */
+.lahter{flex-direction:column;gap:2px}
+.lahter i{font-style:normal;line-height:1.3;white-space:nowrap}
+.grida2 label{font-size:15.5px;font-weight:600}
+.grida2 input{width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);
+  background:var(--card);font-size:16px;font-family:inherit;outline:none}
+.grida2 input:focus{border-color:var(--accent-ink)}
+
+/* Kalendris eristub korduv töö ürituse pillist. */
+.pill.too2{
+  background:var(--s-tint);color:var(--s);border:1px dashed var(--s);
+  display:flex;flex-direction:column;align-items:flex-start;gap:1px;
+}
+.pill.too2 b{font-weight:800;display:inline-flex;align-items:center;gap:5px}
+.pill.too2 .mark{font-style:normal;font-size:13px;line-height:1}
+/* Tehtud töö tõmbub tagasi, tegemata jääb silma. */
+.pill.too2.tehtud{opacity:1;border-style:solid;background:var(--green-soft);
+  color:var(--green);border-color:var(--green)}
+.pill.too2.ootab{border-width:2px}
+.teebriba{
+  display:flex;flex-direction:column;gap:6px;padding:12px 15px;
+  border-radius:13px;background:var(--s-tint2);
+}
+.teebriba .sild{
+  font-size:12.5px;font-weight:800;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink-3);
+}
+.teebriba .isik{margin:0}
+.olekriba{
+  display:flex;flex-direction:column;gap:3px;padding:13px 15px;border-radius:13px;
+  background:var(--soft);font-size:15.5px;
+}
+.olekriba b{font-size:17px}
+.olekriba span{color:var(--ink-2)}
+.olekriba.on{background:var(--green-soft)}
+.olekriba.on b{color:var(--green)}
+/* Labipaistvus vahendaks kontrasti: mullis on kiri niigi varvilisel pinnal. */
+.pill.too2 span{font-family:var(--mono);font-size:12.5px;font-weight:600}
+/* Kiirvalik: mida selles osas müüakse. Üks klõps täidab nime ja hinna. */
+.kiirvalik{display:flex;gap:8px;flex-wrap:wrap}
+.kiirvalik button{
+  display:inline-flex;align-items:center;gap:8px;
+  min-height:42px;padding:0 14px;border-radius:12px;
+  border:1.5px solid var(--line);background:var(--card);
+  font-family:inherit;font-size:15.5px;font-weight:600;color:var(--ink);cursor:pointer;
+}
+.kiirvalik button:hover{border-color:var(--s);background:var(--s-tint)}
+.kiirvalik .h{font-weight:600;color:var(--s)}
+.kiirvalik .uus2{font-weight:400;color:var(--ink-3)}
+.kiirvalik .tasuta{font-weight:600;color:var(--green)}
+/* Hinnakirja rida: nimetus lai, hind kitsas. */
+.rowlist.hrida .r{grid-template-columns:minmax(0,1fr) 110px 44px}
+.arukast{margin-top:4px}
+.osad button{
+  position:relative;overflow:hidden;
+  min-height:44px;padding:0 18px;border-radius:14px;font-size:15.5px;font-weight:600;
+  border:1px solid var(--line);background:var(--card);color:var(--ink-2);
+  display:inline-flex;align-items:center;gap:8px;
+  transition:transform .18s cubic-bezier(.2,.7,.2,1),background .18s;
+}
+.osad button:active{transform:scale(.96)}
+.osad button[aria-pressed="true"]{
+  background:var(--s);color:var(--card);border-color:transparent;font-weight:700;
+  box-shadow:0 1px 1px rgba(255,255,255,.3) inset,0 4px 14px -4px var(--s-kuma);
+}
+.osad button .n{
+  font-family:var(--mono);font-size:13px;opacity:.75;font-variant-numeric:tabular-nums;
+}
+/* Täidetud nupul lahjendaks .75 valge kirja alla loetavuse piiri. */
+.osad button[aria-pressed="true"] .n{opacity:.88}
+
+.tabel{
+  background:color-mix(in srgb, var(--kaart) 82%, transparent);
+  backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);
+  border:1px solid var(--line-2);border-radius:26px;overflow:hidden;
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 18px 44px -28px rgba(20,24,28,.5);
+}
+.trida{
+  display:grid;grid-template-columns:minmax(0,1fr) 78px 104px 116px 138px 128px;
+  gap:16px;align-items:center;padding:10px 20px;
+  border-bottom:1px solid var(--line-2);
+}
+.trida:last-child{border-bottom:none}
+.trida.pais{
+  background:var(--soft);border-bottom:1px solid var(--line);
+  font-size:12.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);
+}
+.trida .nim{font-size:16px;font-weight:600}
+.trida .osa{font-size:13px;color:var(--ink-3);display:block;margin-top:1px}
+.trida .arv{
+  font-family:var(--mono);font-size:16px;text-align:right;
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em;
+}
+/* Rea enda summa on see, mida küsitakse: kui palju just see asi sisse tõi. */
+.trida .rida-summa{font-weight:700;color:var(--ink)}
+button.nim.toode{
+  text-align:left;color:var(--accent-ink);font-weight:650;
+  padding:2px 0;border-radius:6px;
+}
+button.nim.toode:hover{text-decoration:underline}
+/* Kolm-neli arvu mahuvad ühele reale — kastid võtsid ainult ruumi. */
+.statriba{
+  display:flex;flex-wrap:wrap;gap:6px 22px;align-items:baseline;
+  padding:12px 16px;border-radius:14px;background:var(--s-tint);
+}
+.statriba span{font-size:15px;color:var(--s)}
+.statriba b{font-family:var(--mono);font-size:20px;font-weight:800;letter-spacing:-.02em}
+.mlist{display:flex;flex-direction:column;gap:2px}
+.mline{
+  display:grid;grid-template-columns:minmax(0,1fr) 150px 104px 78px;
+  gap:12px;align-items:center;padding:7px 12px;border-radius:10px;
+}
+.mline:nth-child(even){background:var(--soft)}
+.mline .kuup{font-size:15px}
+.mline .tk{
+  font-family:var(--mono);font-size:15px;text-align:right;
+  font-variant-numeric:tabular-nums;letter-spacing:-.01em;
+}
+.mline .kes2{font-size:15px;color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mline .linkbtn{justify-self:end}
+.mline2{display:grid;grid-template-columns:minmax(0,1fr) 148px;gap:12px;align-items:center;padding:7px 12px;border-radius:10px}
+.mline2:nth-child(even){background:var(--soft)}
+.mline2 .nm2{font-size:16px;font-weight:600;display:flex;flex-direction:column;gap:1px;min-width:0}
+.mline2 .nm2 .osa2{font-size:13.5px;font-weight:500;color:var(--ink-3)}
+/* Müüja nimi on osa vastusest, mitte kõrvalmärkus — sama kaal kui numbritel. */
+.trida .kes{font-size:15.5px;font-weight:600;color:var(--ink);padding-left:4px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trida.pais .kes,.trida.pais>span:nth-child(5){padding-left:4px}
+.trida .teod{display:flex;gap:6px;justify-content:flex-end}
+.trida.kokku{
+  background:var(--s-tint);border-bottom:none;font-weight:700;
+}
+.trida.kokku .nim{font-size:16px;color:var(--s)}
+.trida.kokku .arv{font-weight:700;color:var(--s)}
+.osad button.yld{font-weight:700}
+.kaks{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.pool{display:flex;flex-direction:column;gap:10px;min-width:0}
+@media (max-width:1180px){.kaks{grid-template-columns:1fr}}
+/* Kaks tabelit kõrvuti: nimi, tükid, summa. Ridade arv on detailaknas. */
+.trida.kat{grid-template-columns:minmax(0,1fr) 84px 118px 16px;width:100%;text-align:left}
+/* Nool ütleb, et rida avaneb — muidu ei ole seda näha. */
+.nool{font-size:19px;line-height:1;color:var(--ink-3);text-align:right}
+button.trida.kat:hover .nool{color:var(--s)}
+.pool .trida.kat{gap:8px;padding:10px 16px}
+.pool .trida.pais.kat{font-size:11.5px}
+.pool .trida .arv{font-size:15px}
+.pool .trida .nim{
+  font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.trida.pvrida{grid-template-columns:minmax(0,1fr) 96px 130px 160px}
+.kalpais{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.kalpais .h3{margin:0}
+.kalpais .kuunimi{font-size:17px;font-weight:800;letter-spacing:-.02em}
+.kalpais .kuusumma{
+  margin-left:auto;font-family:var(--mono);font-size:15px;font-weight:700;color:var(--s);
+  font-variant-numeric:tabular-nums;
+}
+.mcal{
+  background:color-mix(in srgb, var(--kaart) 82%, transparent);
+  backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);
+  border:1px solid var(--line-2);border-radius:22px;overflow:hidden;
+  box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 14px 36px -26px rgba(20,24,28,.5);
+}
+.mcal .mdow{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--line)}
+.mcal .mdow span{padding:8px 0;text-align:center;font-size:12px;font-weight:800;letter-spacing:.06em;color:var(--ink-3)}
+.mcal .mgrid{display:grid;grid-template-columns:repeat(7,1fr)}
+.mcell{
+  min-height:66px;padding:7px 8px;text-align:left;
+  border-right:1px solid var(--line-2);border-bottom:1px solid var(--line-2);
+  display:flex;flex-direction:column;gap:1px;
+}
+.mcell:nth-child(7n){border-right:none}
+/* Läbipaistvus muudaks numbri loetamatuks — kasuta pinnatooni. */
+.mcell.out{background:var(--soft)}
+.mcell .d{font-family:var(--mono);font-size:13px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.mcell.today .d{color:var(--s);font-weight:800}
+.mcell .sum{
+  font-family:var(--mono);font-size:14.5px;font-weight:800;color:var(--s);
+  letter-spacing:-.03em;margin-top:2px;
+}
+.mcell .tkk{font-size:11.5px;color:var(--ink-3)}
+button.mcell{transition:background .16s}
+button.mcell:hover{background:var(--s-tint)}
+button.mcell.valitud{background:var(--s);box-shadow:inset 0 0 0 2px var(--s)}
+button.mcell.valitud .d,
+button.mcell.valitud .sum,
+button.mcell.valitud .tkk{color:var(--card)}
+/* Aknas on kalender kitsam — ruudud madalamad. */
+.dlg-bd .mcell{min-height:56px;padding:6px}
+.dlg-bd .mcal .mdow span{padding:6px 0;font-size:11.5px}
+.paevariba{
+  display:flex;align-items:center;gap:12px;padding:9px 20px;
+  background:var(--s-tint);border-bottom:1px solid var(--line-2);
+}
+.paevariba .pk{font-size:16px;font-weight:800;color:var(--s);letter-spacing:-.01em}
+.paevariba .ps{
+  margin-left:auto;font-family:var(--mono);font-size:15px;font-weight:700;color:var(--s);
+  font-variant-numeric:tabular-nums;
+}
+button.trida.kat{transition:background .16s}
+button.trida.kat:hover{background:var(--s-tint2)}
+button.trida.kat .nim{color:var(--s);font-weight:650}
+button.trida.kat.orb .nim{color:var(--red)}
+.osad button.orb{border-color:var(--red);color:var(--red)}
+.osad button.orb[aria-pressed="true"]{background:var(--red);color:var(--card);border-color:transparent}
+.osapais{display:flex;align-items:center;gap:14px}
+.osapais .h3{margin:0}
+.osapais .linkbtn{margin-left:auto}
+
+/* ── failid ───────────────────────────────────────── */
+.files{
+  background:color-mix(in srgb, var(--kaart) 82%, transparent);
+  backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);
+  border:1px solid var(--line-2);border-radius:26px;overflow:hidden;
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 18px 44px -28px rgba(20,24,28,.5);
+}
+.file{display:flex;align-items:center;gap:15px;padding:14px 20px;border-bottom:1px solid var(--line-2);flex-wrap:wrap}
+.file:last-child{border-bottom:none}
+.file .kind{
+  width:46px;height:46px;flex:none;border-radius:14px;display:grid;place-items:center;
+  font-size:12px;font-weight:800;letter-spacing:.02em;
+  background:var(--s-tint);color:var(--s);
+}
+.file .n{flex:1;min-width:150px}
+.file .n b{display:block;font-size:17px;font-weight:600;overflow-wrap:anywhere}
+.file .n>span{font-size:15px;color:var(--ink-3)}   /* > : ei ulatu UUS-sildini */
+
+.empty{padding:34px 20px;text-align:center;color:var(--ink-3);font-size:17px;line-height:1.55}
+.empty b{display:block;color:var(--ink-2);font-size:19px;font-weight:650;margin-bottom:6px}
+
+/* ── dialoog ──────────────────────────────────────── */
+.scrim{position:fixed;inset:0;z-index:50;background:rgba(15,18,20,.5);opacity:0;pointer-events:none;transition:opacity .2s}
+.scrim.open{opacity:1;pointer-events:auto}
+.dlg{
+  position:fixed;left:50%;top:50%;transform:translate(-50%,-48%) scale(.97);z-index:51;
+  width:min(600px,94vw);max-height:calc(88dvh / var(--z));opacity:0;pointer-events:none;
+  background:color-mix(in srgb, var(--card) 88%, transparent);
+  backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);
+  border:1px solid var(--line-2);border-radius:26px;
+  box-shadow:0 1px 0 rgba(255,255,255,.6) inset, var(--dlg-shadow);
+  display:flex;flex-direction:column;
+  transition:opacity .24s,transform .34s cubic-bezier(.2,.7,.2,1);
+}
+.dlg.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.dlg-hd{flex:none;padding:22px 24px 4px}
+.dlg-hd h3{font-family:var(--display);font-size:23px;font-weight:800;margin:0;letter-spacing:-.028em}
+.dlg-bd{flex:1;overflow-y:auto;padding:18px 24px 6px;display:flex;flex-direction:column;gap:18px}
+.dlg-ft{flex:none;padding:18px 24px 22px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+
+.field{display:flex;flex-direction:column;gap:7px}
+/* hidden tuleb brauseri stiililehest display:none-ina, aga meie display:flex
+   kaalub selle ules. Ilma selleta jaavad peidetud valjad ekraanile. */
+[hidden]{display:none!important}
+.field label{font-size:16px;font-weight:600}
+.paevpais{font-size:19px;font-weight:700;letter-spacing:-.01em}
+.field input,.field textarea{width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid var(--line);background:var(--card);font-size:17px;outline:none;font-family:inherit}
+/* Kuupäeva- ja kellavälja peab olema näha, et neid saab avada. */
+.field input[type="date"],.field input[type="time"]{cursor:pointer}
+.field input[type="date"]:hover,.field input[type="time"]:hover{border-color:var(--accent-ink)}
+.field input[type="date"]::-webkit-calendar-picker-indicator,
+.field input[type="time"]::-webkit-calendar-picker-indicator{
+  cursor:pointer;opacity:.65;width:20px;height:20px;
+}
+/* color-scheme teeb ikooni ise heledaks — käsitsi ümberpööramist pole vaja. */
+.field textarea{resize:vertical;min-height:110px;line-height:1.55}
+.field input:focus,.field textarea:focus{border-color:var(--accent-ink)}
+.field select{
+  width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--line);
+  background:var(--card);font-size:17px;outline:none;font-family:inherit;min-height:48px;
+  /* Ilma selleta jääb tumedas teemas must kiri mustale taustale. */
+  color:var(--ink);
+}
+.field select option{background:var(--card);color:var(--ink)}
+.field select:focus{border-color:var(--accent)}
+.field .hint{font-size:15px;color:var(--ink-3);line-height:1.45}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+.check{display:flex;align-items:flex-start;gap:13px;padding:15px 16px;border:1.5px solid var(--line);border-radius:10px;cursor:pointer}
+.check:has(input:checked){border-color:var(--accent-ink);background:var(--accent-soft)}
+.check input{width:24px;height:24px;flex:none;margin:1px 0 0;accent-color:var(--accent-ink)}
+.check b{display:block;font-size:17px;font-weight:600;margin-bottom:2px}
+.check span{font-size:15px;color:var(--ink-2);line-height:1.45}
+
+.rowlist{display:flex;flex-direction:column;gap:9px}
+.rowlist .r{display:flex;gap:10px;align-items:center}
+.rowlist .r input{flex:1}
+.rowlist .r button{flex:none;width:44px;height:44px;border-radius:10px;border:1.5px solid var(--line);display:grid;place-items:center;color:var(--ink-3)}
+.rowlist .r button:hover{border-color:var(--red);color:var(--red)}
+.rowlist .r button svg{width:20px;height:20px}
+
+.pick{display:flex;flex-direction:column;gap:3px}
+.pick button{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:52px;padding:0 15px;border-radius:10px;font-size:17px;border:1.5px solid transparent}
+.pick button:hover{background:var(--soft)}
+.pick button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent-ink);font-weight:650}
+.pick button .tick{color:var(--accent-ink);font-size:15px;font-weight:700}
+
+/* seaded */
+.sizepick{display:flex;gap:10px}
+.sizepick button{
+  flex:1;min-height:64px;border-radius:10px;border:1.5px solid var(--line);
+  background:var(--card);display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:2px;color:var(--ink-2);
+}
+.sizepick button:hover{background:var(--soft)}
+.sizepick button[aria-pressed="true"]{border-color:var(--accent-ink);background:var(--accent-soft);color:var(--accent-ink)}
+.sizepick .a{font-weight:700;line-height:1}
+.sizepick .l{font-size:13px;font-weight:600}
+/* Iga nupp on ise oma teema värvides — nii näed valikut, mitte sõna. */
+.themepick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.themepick button{
+  min-height:70px;padding:11px 13px;border-radius:12px;border:2px solid rgba(128,128,128,.32);
+  display:flex;align-items:center;gap:12px;font-size:17px;font-weight:600;
+  background:var(--pb);color:var(--pi);
+}
+.themepick .sw{
+  width:38px;height:38px;flex:none;border-radius:9px;background:var(--pc);
+  border:1px solid rgba(128,128,128,.3);display:flex;flex-direction:column;
+  justify-content:center;gap:4px;padding:0 7px;
+}
+.themepick .sw i{display:block;height:3px;border-radius:2px;background:var(--pi);opacity:.55}
+.themepick .sw i:first-child{opacity:.85}
+.themepick .sw i:last-child{width:60%}
+.themepick button[aria-pressed="true"]{border-color:var(--accent-ink);box-shadow:0 0 0 2px var(--accent)}
+.t-hele{--pb:#A9C9EC;--pc:#FFFFFF;--pi:#1D1D1F}
+.t-tume{--pb:#141413;--pc:#1F1F1D;--pi:#D97757}
+
+.helper{
+  display:flex;align-items:center;gap:14px;padding:14px 16px;
+  border:1.5px solid var(--line);border-radius:12px;flex-wrap:wrap;
+}
+.helper .nm{font-size:18px;font-weight:650;flex:1;min-width:120px}
+.helper a{font-size:21px;font-weight:700;color:var(--accent-ink);text-decoration:none;font-family:var(--mono);letter-spacing:-.01em}
+.helper a:hover{text-decoration:underline}
+/* Number näeb välja nagu link, aga käitub nagu kopeerimisnupp. */
+button.tel{
+  display:block;padding:2px 0;border:none;background:none;cursor:pointer;
+  font-family:var(--mono);font-size:21px;font-weight:700;letter-spacing:-.01em;
+  color:var(--accent-ink);text-align:left;
+}
+button.tel:hover{text-decoration:underline}
+.helper .r{display:block;font-size:15px;font-weight:400;color:var(--ink-3);margin-top:2px}
+
+/* ── teated ───────────────────────────────────────── */
+.toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;z-index:70;display:flex;flex-direction:column;gap:10px;align-items:center;width:max-content;max-width:92vw}
+.toast{display:flex;align-items:center;gap:16px;padding:14px 18px;background:var(--ink);color:var(--card);border-radius:12px;box-shadow:var(--dlg-shadow);font-size:17px}
+.toast .undo{flex:none;min-height:40px;padding:0 16px;border-radius:8px;border:1.5px solid var(--card);color:var(--card);font-size:16px;font-weight:600;display:inline-flex;align-items:center;opacity:.85}
+.toast .undo:hover{opacity:1}
+
+/* ── kitsas ekraan ────────────────────────────────── */
+@media (max-width:880px){
+  .shell{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto;padding:8px;gap:8px}
+  .side,.main{border-radius:20px}
+  .top .plaat{width:40px;height:40px;border-radius:12px}
+  .top .plaat svg{width:21px;height:21px}
+  .side{order:2;border-right:none;border-top:1px solid var(--line);flex-direction:row;overflow-x:auto}
+  .brand,.side-foot{display:none}
+  .nav{flex-direction:row;padding:4px 4px calc(4px + env(safe-area-inset-bottom));gap:0;width:100%}
+  .nav button{flex:1;flex-direction:column;gap:2px;min-height:60px;padding:6px 3px;font-size:12px;white-space:nowrap;justify-content:center}
+  .nav .uut{min-height:60px;margin:0;border:none;background:none}
+  .lbl-long{display:none}
+  .lbl-short{display:inline}
+  .nav .badge{position:absolute;margin:0;transform:translate(19px,-14px);min-width:20px;height:20px;font-size:12px}
+  .main{order:1;min-height:0}
+  .top{padding:12px 14px}
+  .top h2{font-size:26px}
+  .ev-pea{gap:14px}
+  .paev{width:60px;padding-right:14px}
+  .paev .d{font-size:30px}
+  .top .sub{display:none}
+  .explain{padding:10px 14px;font-size:15px}
+  .canvas{padding:16px 14px 30px}
+  .chat{grid-template-columns:1fr}
+  .chat[data-open="1"] .tlist{display:none}
+  .chat[data-open="0"] .convo{display:none}
+  .two{grid-template-columns:1fr}
+  .wline{flex-direction:column;gap:2px}
+  .wline .k{min-width:0}
+  .cell{min-height:70px;padding:5px}
+  .cell .pill{font-size:12px;padding:4px 6px}
+  .msg.mine{margin-left:0}
+}
+
+/* ── värvi kokkuhoid ──────────────────────────────────────────
+   Sektsioonivärv oli varem kõigel: nimedel, summadel, kellaaegadel,
+   siltidel. Kui kõik on rõhutatud, ei ole rõhutatud mitte miski.
+   Siin jäävad värviliseks ainult teeviidad ja olekud; andmed on
+   tavaline kiri ja tõusevad esile paksuse, mitte värviga.
+   Värviliseks jäävad: külgriba ikoon, pealkiri, ikooniplaat, kuupäevaplaat,
+   „UUS“ silt, tänane päev, valitud nupp ja hiirealune. */
+
+/* sildid ja plaadid */
+.h3{background:var(--soft);color:var(--ink-3)}
+.kohasilt{background:var(--soft);color:var(--ink-3)}
+.ikoonplaat{background:var(--soft);color:var(--ink-2)}
+.file .kind{background:var(--soft);color:var(--ink-2)}
+.ava{background:var(--soft)}
+.ava .init{color:var(--ink-2)}
+.explain svg{color:var(--ink-3)}
+
+/* andmed: nimed, summad, ajad */
+button.trida.kat .nim{color:var(--ink)}
+button.nim.toode{color:var(--ink)}
+.trida.kokku{background:var(--soft)}
+.trida.kokku .nim{color:var(--ink)}
+.trida.kokku .arv{color:var(--ink)}
+.statriba{background:var(--soft)}
+.statriba span{color:var(--ink-3)}
+.statriba b{color:var(--ink)}
+.kalpais .kuusumma{color:var(--ink-2)}
+.mcell .sum{color:var(--ink)}
+.paevariba{background:var(--soft)}
+.paevariba .pk{color:var(--ink)}
+.paevariba .ps{color:var(--ink-2)}
+.myygirida{background:var(--soft);color:var(--ink-2)}
+.kiirvalik .h{color:var(--ink-2)}
+.kell2{color:var(--ink-2)}
+.liik{color:var(--ink-2)}
+.lahter.ara{background:var(--soft);color:var(--ink-2)}
+.qbtn{background:var(--soft);color:var(--ink)}
+
+/* kalendri sisu: sündmus on pind, töö on katkendjoon, tehtud on roheline */
+.cell .pill{background:var(--soft);color:var(--ink)}
+.pill.too2{background:transparent;color:var(--ink-2);border:1px dashed var(--line)}
+.pill.too2.ootab{border-color:var(--ink-3);border-width:2px;color:var(--ink)}
+.pill.too2.tehtud{background:var(--green-soft);color:var(--green);
+  border-style:solid;border-width:1px;border-color:var(--green)}
+
+/* ── viimistlus ───────────────────────────────────────────────
+   Kolm distsipliini: kirjasuurused, nurgaraadiused ja kaalud tulevad
+   kindlast astmikust, mitte juhuslikest arvudest. */
+
+/* Ühtlane astmik. Kuus suurust kaheteistkümne asemel. */
+.meta,.hint,.trida.pais,.gpais,.gpais2,.file .meta{font-size:13px}
+.trida .kes,.trida .osa,.nm3 .osa2,.osa2,.kes3{font-size:14.5px}
+.trida .nim,.trida .arv,.nm2,.nm3{font-size:16px}
+
+/* Nurgad: kolm väärtust. Ümar kaart on sõbralik, liiga ümar on odav. */
+.card,.tabel,.files,.cal,.mcal,.convo,.gtabel,.tlist2,.dlg{border-radius:18px}
+.btn{border-radius:12px}
+.btn.small{border-radius:10px}
+.uus,.h3,.kohasilt{border-radius:999px}
+
+/* Rohkem õhku. Kallis kujundus hingab, odav on kokku surutud. */
+.canvas{padding:38px 38px 56px}
+.wrap{gap:24px}
+.trida{padding:13px 22px}
+.trida.pais{padding-top:11px;padding-bottom:11px}
+
+/* Pearaamatu joon. Tabel ei ole kast kastis: päis eraldub jämedama
+   joonega, read peenikesega ja summa kohal on joon, nagu arveraamatus. */
+.tabel{box-shadow:none;border:1px solid var(--line-2)}
+:root[data-teema="hele"] .tabel{box-shadow:0 1px 2px rgba(20,24,28,.04)}
+.trida.pais{
+  background:transparent;border-bottom:1.5px solid var(--line);
+  color:var(--ink-3);letter-spacing:.1em;
+}
+.trida.kokku{
+  background:transparent;border-top:2px solid var(--line);
+  border-bottom:none;margin-top:-1px;
+}
+.trida:last-child{border-bottom:none}
+
+/* Sektsioonisilt ei vaja kasti — suurtähed ja vahe ütlevad sama. */
+.h3{
+  background:transparent;padding:0;color:var(--ink-3);
+  font-size:12.5px;letter-spacing:.13em;
+}
+.kalpais .h3{margin-right:2px}
+
+/* Vari on olemas, aga teda ei märka. */
+.card{box-shadow:0 1px 2px rgba(20,24,28,.05),0 12px 28px -20px rgba(20,24,28,.28)}
+:root[data-teema="tume"] .card{box-shadow:0 1px 2px rgba(0,0,0,.45),0 14px 30px -22px rgba(0,0,0,.7)}
+/* Valge sisejoon kuulub heledale pinnale, mitte tumedale. */
+:root[data-teema="tume"] .tabel,
+:root[data-teema="tume"] .files,
+:root[data-teema="tume"] .cal{box-shadow:none}
+
+/* Raha ja arvud ühtemoodi: tabelinumbrid ei hüppa reast välja. */
+.arv,.kell2,.kuusumma,.mcell .sum,.mcell .d,.mcell .tkk,.lahter,.statriba b{
+  font-variant-numeric:tabular-nums;
+}
+
+/* ── tume teema: peaaegu värvitu ──────────────────────────────
+   Tumedal pinnal käitub iga värv valgusallikana ja tõmbab pilku ka siis,
+   kui ta midagi ei tähenda. Siin jäävad sektsioonidele ühine vaikne toon
+   ja aktsent ainult sinna, kus midagi on valitud või vajab tähelepanu.
+   Osa tunneb ära ikooni ja nime järgi, mitte värvi järgi. */
+:root[data-teema="tume"]{
+  --s-vestlus:#B5AFA4;
+  --s-yritused:#B5AFA4;
+  --s-kalender:#B5AFA4;
+  --s-info:#B5AFA4;
+  --s-kontakt:#B5AFA4;
+  --s-failid:#B5AFA4;
+  --s-myyk:#B5AFA4;
+  --s-too:#B5AFA4;
+}
+/* Pealkiri on kiri, mitte silt. */
+:root[data-teema="tume"] .top h2,
+:root[data-teema="tume"] .calbar h3{color:var(--ink)}
+/* Ikooniplaat on pind, mitte laik. */
+:root[data-teema="tume"] .plaat{background:var(--soft);color:var(--ink-2)}
+/* Ürituse kuupäev on kaardi ainus värviline asi — seal värv töötab. */
+:root[data-teema="tume"] .paev{background:var(--accent);color:var(--accent-tekst)}
+:root[data-teema="tume"] .paev .n{color:var(--accent-tekst)}
+/* Valitud rida külgribal on ainus koht, kus aktsent tervet pinda katab. */
+:root[data-teema="tume"] .nav button .ic{color:var(--ink-3)}
+:root[data-teema="tume"] .nav button[aria-current="true"] .ic{color:var(--accent-tekst)}
+/* „UUS“ ja tänane päev jäävad aktsendiks — need tähendavad midagi. */
+:root[data-teema="tume"] .uus,
+:root[data-teema="tume"] .cell.today .n,
+:root[data-teema="tume"] .mcell.valitud{background:var(--accent);color:var(--accent-tekst)}
+:root[data-teema="tume"] .mcell.today .d,
+:root[data-teema="tume"] .gpais .tana,
+:root[data-teema="tume"] .gpais .tana i,
+:root[data-teema="tume"] .paevad i.tana{color:var(--accent)}
+:root[data-teema="tume"] .paevad i.tana{background:var(--accent);color:var(--accent-tekst)}
+/* Valitud nupud: aktsent, mitte sektsioonivärv. */
+:root[data-teema="tume"] .osad button[aria-pressed="true"],
+:root[data-teema="tume"] .lnupp[aria-pressed="true"],
+:root[data-teema="tume"] .pnupp[aria-pressed="true"]{
+  background:var(--accent);border-color:var(--accent);color:var(--accent-tekst);
+}
+:root[data-teema="tume"] .pnupp[aria-pressed="true"] i{color:var(--accent-tekst)}
