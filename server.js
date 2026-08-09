@@ -17,11 +17,6 @@ const ANDJAD = AMETID.filter(a => a.annab).map(a => a.id);
 const PORT = Number(process.env.PORT || 3000);
 const AVALIK = path.join(__dirname, "public");
 
-/* MTÜ ei ole käibemaksukohustuslane. See käib väljavõttele kaasa, et
-   raamatupidajal ei tekiks küsimust, kuhu käibemaks jäi. */
-const KAIBEMAKS = "MTÜ Tallinna Noorte Klubi Kodulinn ei ole "
-  + "käibemaksukohustuslane — hinnad on lõplikud, käibemaksu ei ole.";
-
 /* Hind: number, null kui vigane. Tühi väli tähendab tasuta (0). */
 const hinnaks = v => {
   if (v === "" || v === null || v === undefined) return 0;
@@ -515,6 +510,121 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true });
     }
 
+    /* ── teated ja kirjad ─────────────────────────────────────────
+       Teema on kogu majale, kiri on kahe inimese vahel. Kirja näevad
+       ainult tema kaks osalist — seda kontrollib server, mitte ekraan. */
+    if (tee === "/api/vestlused" && req.method === "GET") {
+      const read = await q(
+        `SELECT v.id, v.liik, v.pealkiri, v.a_id, v.b_id, v.loodud,
+                a.nimi AS a_nimi, b.nimi AS b_nimi,
+                (SELECT count(*)::int FROM sonumid s WHERE s.vestlus_id = v.id) AS sonumeid,
+                (SELECT max(s.aeg) FROM sonumid s WHERE s.vestlus_id = v.id) AS viimane
+         FROM vestlused v
+         LEFT JOIN liikmed a ON a.id = v.a_id
+         LEFT JOIN liikmed b ON b.id = v.b_id
+         WHERE v.liik = 'teema' OR v.a_id = $1 OR v.b_id = $1
+         ORDER BY coalesce((SELECT max(s.aeg) FROM sonumid s WHERE s.vestlus_id = v.id),
+                           v.loodud) DESC`, [mina.id]);
+      return json(res, 200, read);
+    }
+
+    if (tee === "/api/vestlused" && req.method === "POST") {
+      const b = await keha(req);
+      if (b.liik === "kiri") {
+        if (!b.kellele || b.kellele === mina.id)
+          return json(res, 400, { viga: "Vali, kellele kirjutad." });
+        const t = await yks("SELECT id FROM liikmed WHERE id = $1", [b.kellele]);
+        if (!t) return json(res, 404, { viga: "Sellist liiget ei ole." });
+        /* a_id < b_id on andmebaasi nõue: nii on kahe inimese vahel
+           alati üks vestlus, mitte kaks eri suunda. */
+        const [x, y2] = [mina.id, b.kellele].sort();
+        const olemas = await yks(
+          "SELECT id FROM vestlused WHERE liik='kiri' AND a_id=$1 AND b_id=$2", [x, y2]);
+        if (olemas) return json(res, 200, { ok: true, id: olemas.id, oli: true });
+        const r = await yks(
+          `INSERT INTO vestlused (liik, a_id, b_id, autor) VALUES ('kiri',$1,$2,$3)
+           RETURNING id`, [x, y2, mina.id]);
+        return json(res, 200, { ok: true, id: r.id });
+      }
+      const pealkiri = String(b.pealkiri || "").trim();
+      if (!pealkiri) return json(res, 400, { viga: "Teate pealkiri on täitmata." });
+      const r = await yks(
+        `INSERT INTO vestlused (liik, pealkiri, autor) VALUES ('teema',$1,$2) RETURNING id`,
+        [pealkiri, mina.id]);
+      return json(res, 200, { ok: true, id: r.id });
+    }
+
+    /* Kas ma tohin seda vestlust näha. */
+    const tohinNaha = async id => {
+      const v = await yks("SELECT liik, a_id, b_id FROM vestlused WHERE id = $1", [id]);
+      if (!v) return null;
+      if (v.liik === "teema" || v.a_id === mina.id || v.b_id === mina.id) return v;
+      return false;
+    };
+
+    if (tee === "/api/sonumid" && req.method === "GET") {
+      const v = await tohinNaha(u.searchParams.get("vestlus"));
+      if (v === null) return json(res, 404, { viga: "Sellist vestlust ei ole." });
+      if (v === false) return json(res, 403, { viga: "See kiri ei ole sinule." });
+      return json(res, 200, await q(
+        `SELECT s.id, s.autor, s.aeg, s.tekst, l.nimi, l.pilt
+         FROM sonumid s LEFT JOIN liikmed l ON l.id = s.autor
+         WHERE s.vestlus_id = $1 ORDER BY s.aeg`, [u.searchParams.get("vestlus")]));
+    }
+
+    if (tee === "/api/sonumid" && req.method === "POST") {
+      const b = await keha(req);
+      const tekst = String(b.tekst || "").trim();
+      if (!tekst) return json(res, 400, { viga: "Sõnum on kirjutamata." });
+      const v = await tohinNaha(b.vestlus_id);
+      if (v === null) return json(res, 404, { viga: "Sellist vestlust ei ole." });
+      if (v === false) return json(res, 403, { viga: "See kiri ei ole sinule." });
+      const r = await yks(
+        `INSERT INTO sonumid (vestlus_id, autor, tekst) VALUES ($1,$2,$3)
+         RETURNING id, aeg`, [b.vestlus_id, mina.id, tekst]);
+      return json(res, 200, { ok: true, sonum: r });
+    }
+
+    /* Oma sõnumi saab ise ära võtta. Teise oma mitte. */
+    if (tee === "/api/sonumid" && req.method === "DELETE") {
+      const b = await keha(req);
+      const s = await yks("SELECT autor FROM sonumid WHERE id = $1", [b.id]);
+      if (!s) return json(res, 404, { viga: "Sellist sõnumit ei ole." });
+      if (s.autor !== mina.id)
+        return json(res, 403, { viga: "Kustutada saad ainult oma sõnumit." });
+      await q("DELETE FROM sonumid WHERE id = $1", [b.id]);
+      return json(res, 200, { ok: true });
+    }
+
+    if (tee === "/api/vestlused" && req.method === "DELETE") {
+      const b = await keha(req);
+      const v = await tohinNaha(b.id);
+      if (v === null) return json(res, 404, { viga: "Sellist vestlust ei ole." });
+      if (v === false) return json(res, 403, { viga: "See kiri ei ole sinule." });
+      await q("DELETE FROM vestlused WHERE id = $1", [b.id]);
+      return json(res, 200, { ok: true });
+    }
+
+    /* ── ühingu andmed ────────────────────────────────────────────
+       Need lähevad väljavõttele kaasa, et raamatupidaja näeks, kelle
+       paberiga on tegu. */
+    if (tee === "/api/grupp" && req.method === "GET")
+      return json(res, 200, await yks("SELECT * FROM grupp WHERE id") || {});
+
+    if (tee === "/api/grupp" && req.method === "PATCH") {
+      const b = await keha(req);
+      const nimi = String(b.nimi || "").trim();
+      if (!nimi) return json(res, 400, { viga: "Ühingu nimi on täitmata." });
+      await q(
+        `INSERT INTO grupp (id, nimi, ametlik, regkood, kaibemaksukohustuslane)
+         VALUES (true,$1,$2,$3,$4)
+         ON CONFLICT (id) DO UPDATE SET nimi=$1, ametlik=$2, regkood=$3,
+              kaibemaksukohustuslane=$4`,
+        [nimi, String(b.ametlik || "").trim() || null,
+         String(b.regkood || "").trim() || null, !!b.kaibemaksukohustuslane]);
+      return json(res, 200, { ok: true });
+    }
+
     /* ── aruanne ──────────────────────────────────────────────────
        Ainult kassaõigusega. Aruanne on kogu maja raha kokkuvõte —
        see on täpselt see, mis ei ole kõigile nähtav. */
@@ -524,6 +634,11 @@ const server = http.createServer(async (req, res) => {
       });
       const algus = u.searchParams.get("algus") || "2000-01-01";
       const lopp = u.searchParams.get("lopp") || "2999-12-31";
+      const ühing = await yks("SELECT * FROM grupp WHERE id") || {};
+      const km = ühing.kaibemaksukohustuslane
+        ? (ühing.nimi || "Ühing") + " on käibemaksukohustuslane."
+        : (ühing.nimi || "MTÜ Tallinna Noorte Klubi Kodulinn")
+          + " ei ole käibemaksukohustuslane — hinnad on lõplikud, käibemaksu ei ole.";
       const read = await q(
         `SELECT m.aeg, m.kogus, m.hind, m.summa, t.nimetus,
                 coalesce(o.nimi, 'Muu') AS osa, coalesce(l.nimi, '—') AS myyja
@@ -551,7 +666,7 @@ const server = http.createServer(async (req, res) => {
             kordi: a.kordi + 1, tk: a.tk + r.kogus, eur: a.eur + Number(r.summa)
           }), { kordi: 0, tk: 0, eur: 0 }),
           osade: kogum("osa"), toodete: kogum("nimetus"), myyjate: kogum("myyja"),
-          kaibemaks: KAIBEMAKS
+          kaibemaks: km, yhing: ühing
         });
       }
 
@@ -559,8 +674,16 @@ const server = http.createServer(async (req, res) => {
          ootab neid; BOM, et täpitähed ei läheks katki. */
       const koma = v => Number(v).toFixed(2).replace(".", ",");
       const puhas = t => '"' + String(t == null ? "" : t).replace(/"/g, '""') + '"';
-      const jooned = [["Kuupäev", "Kellaaeg", "Osa", "Nimetus", "Kogus", "Hind", "Summa", "Müüja"]
-        .map(puhas).join(";")];
+      const päis = [];
+      päis.push([puhas(ühing.ametlik || ühing.nimi
+        || "MTÜ Tallinna Noorte Klubi Kodulinn")].join(";"));
+      if (ühing.regkood) päis.push([puhas("Registrikood"), puhas(ühing.regkood)].join(";"));
+      päis.push([puhas("Müügiaruanne"),
+        puhas(algus.split("-").reverse().join(".") + "–" + lopp.split("-").reverse().join("."))
+      ].join(";"));
+      päis.push("");
+      const jooned = päis.concat([["Kuupäev", "Kellaaeg", "Osa", "Nimetus",
+        "Kogus", "Hind", "Summa", "Müüja"].map(puhas).join(";")]);
       for (const r of read) {
         const d = new Date(r.aeg), p = n => String(n).padStart(2, "0");
         jooned.push([
@@ -574,7 +697,7 @@ const server = http.createServer(async (req, res) => {
       jooned.push("");
       jooned.push([puhas("KOKKU"), "", "", "", read.reduce((a, r) => a + r.kogus, 0),
         "", puhas(koma(summa)), ""].join(";"));
-      jooned.push([puhas(KAIBEMAKS), "", "", "", "", "", "", ""].join(";"));
+      jooned.push([puhas(km), "", "", "", "", "", "", ""].join(";"));
       res.writeHead(200, {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": 'attachment; filename="kodulinna-maja-myyk.csv"'
