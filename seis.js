@@ -9,7 +9,15 @@
    Kassa on erand: kogu maja müüki näeb ainult see, kellel on selleks
    amet. Seda otsustatakse siin, mitte ekraanil. */
 "use strict";
+const crypto = require("crypto");
 const { q, yks } = require("./db");
+
+/* Iga osa saab lugemisel sõrmejälje. Salvestamisel vaatame, millised
+   sõrmejäljed on muutunud, ja kirjutame ainult need osad. Ilma selleta
+   käis iga klõps läbi kõik tabelid — üks salvestus võttis viis sekundit,
+   sest iga päring on eraldi käik andmebaasi ja tagasi. */
+const sorm = x => crypto.createHash("sha1")
+  .update(JSON.stringify(x === undefined ? null : x)).digest("hex").slice(0, 16);
 const { naebKassat, annabOigusi } = require("./ametid");
 
 const iso = d => d ? new Date(d).toISOString() : null;
@@ -174,6 +182,20 @@ async function loeSeis(mina) {
   };
 }
 
+/* Sõrmejäljed pannakse peale pärast kogumist, et nad kirjeldaksid
+   täpselt seda, mis ekraanile läks. */
+function margi(s) {
+  s.__h = {
+    members: sorm(s.members), group: sorm(s.group),
+    osad: sorm(s.myyk.osad), hinnad: sorm(s.myyk.hinnad), read: sorm(s.myyk.read),
+    events: sorm(s.events), info: sorm(s.info), files: sorm(s.files),
+    threads: sorm(s.threads), dms: sorm(s.dms),
+    graafik: sorm(s.too.graafik), tood: sorm(s.too.tood),
+    puhkused: sorm(s.too.puhkused), seen: sorm(s.seen)
+  };
+  return s;
+}
+
 /* ── kirjutamine ──────────────────────────────────────────────────
    Ekraan saadab terve seisu tagasi. Me ei kirjuta pimesi üle: iga
    nimekirja puhul vaatame, mis on juurde tulnud, mis muutunud ja mis
@@ -192,9 +214,13 @@ const onUuid = x => typeof x === "string" && UUID.test(x);
 async function salvestaSeis(mina, s) {
   if (!s || typeof s !== "object") return { viga: "Seis on tühi." };
   const koik = naebKassat(mina);
+  /* Puutumata osa jääb puutumata. Kui ekraan ei saatnud sõrmejälgi
+     kaasa, kirjutame igaks juhuks kõik — nii ei kao midagi ära. */
+  const h = s.__h && typeof s.__h === "object" ? s.__h : null;
+  const muutus = (nimi, väärtus) => !h || sorm(väärtus) !== h[nimi];
 
   /* ── grupp ──────────────────────────────────────────────────── */
-  if (s.group) {
+  if (s.group && muutus("group", s.group)) {
     const g = s.group;
     await q(
       `INSERT INTO grupp (id, nimi, ametlik, regkood, kaibemaksukohustuslane,
@@ -209,7 +235,7 @@ async function salvestaSeis(mina, s) {
   }
 
   /* ── liikmed ────────────────────────────────────────────────── */
-  if (Array.isArray(s.members)) {
+  if (Array.isArray(s.members) && muutus("members", s.members)) {
     const olemas = await q("SELECT id FROM liikmed");
     const alles = new Set();
     for (const m of s.members) {
@@ -238,7 +264,7 @@ async function salvestaSeis(mina, s) {
   }
 
   /* ── müügi osad ja hinnakiri ────────────────────────────────── */
-  if (Array.isArray(s.myyk && s.myyk.osad)) {
+  if (Array.isArray(s.myyk && s.myyk.osad) && muutus("osad", s.myyk.osad)) {
     const olemas = await q("SELECT id FROM myyk_osad");
     const alles = new Set();
     let jrk = 0;
@@ -259,7 +285,7 @@ async function salvestaSeis(mina, s) {
       await q("DELETE FROM myyk_osad WHERE id=$1", [x.id]);
   }
 
-  if (Array.isArray(s.myyk && s.myyk.hinnad)) {
+  if (Array.isArray(s.myyk && s.myyk.hinnad) && muutus("hinnad", s.myyk.hinnad)) {
     const olemas = await q("SELECT id FROM hinnakiri");
     const alles = new Set();
     for (const h of s.myyk.hinnad) {
@@ -284,7 +310,7 @@ async function salvestaSeis(mina, s) {
 
   /* ── müük ────────────────────────────────────────────────────
      Toode luuakse vajadusel: ekraanil on ainult osa ja nimetus. */
-  if (Array.isArray(s.myyk && s.myyk.read)) {
+  if (Array.isArray(s.myyk && s.myyk.read) && muutus("read", s.myyk.read)) {
     const olemas = await q(
       `SELECT id, myyja_id FROM myygid` + (koik ? "" : " WHERE myyja_id = $1"),
       koik ? [] : [mina.id]);
@@ -318,7 +344,7 @@ async function salvestaSeis(mina, s) {
   }
 
   /* ── üritused ────────────────────────────────────────────────── */
-  if (Array.isArray(s.events)) {
+  if (Array.isArray(s.events) && muutus("events", s.events)) {
     const olemas = await q("SELECT id FROM yritused");
     const alles = new Set();
     for (const e of s.events) {
@@ -347,7 +373,7 @@ async function salvestaSeis(mina, s) {
   }
 
   /* ── info ────────────────────────────────────────────────────── */
-  if (Array.isArray(s.info)) {
+  if (Array.isArray(s.info) && muutus("info", s.info)) {
     const olemas = await q("SELECT id FROM info");
     const alles = new Set();
     for (const i of s.info) {
@@ -372,7 +398,7 @@ async function salvestaSeis(mina, s) {
   }
 
   /* ── failid ──────────────────────────────────────────────────── */
-  if (Array.isArray(s.files)) {
+  if (Array.isArray(s.files) && muutus("files", s.files)) {
     const olemas = await q("SELECT id FROM failid");
     const alles = new Set();
     for (const f of s.files) {
@@ -398,7 +424,7 @@ async function salvestaSeis(mina, s) {
   }
 
   /* ── teemad ja kirjad ────────────────────────────────────────── */
-  if (Array.isArray(s.threads)) {
+  if (Array.isArray(s.threads) && muutus("threads", s.threads)) {
     const olemas = await q("SELECT id FROM vestlused WHERE liik='teema'");
     const alles = new Set();
     for (const t of s.threads) {
@@ -420,7 +446,7 @@ async function salvestaSeis(mina, s) {
       await q("DELETE FROM vestlused WHERE id=$1", [x.id]);
   }
 
-  if (s.dms && typeof s.dms === "object") {
+  if (s.dms && typeof s.dms === "object" && muutus("dms", s.dms)) {
     for (const [võti, vestlus] of Object.entries(s.dms)) {
       const [a, b] = String(võti).split("|");
       if (!onUuid(a) || !onUuid(b)) continue;
@@ -436,7 +462,8 @@ async function salvestaSeis(mina, s) {
   }
 
   /* ── graafik, tööd, puhkused ─────────────────────────────────── */
-  if (s.too && s.too.graafik && typeof s.too.graafik === "object") {
+  if (s.too && s.too.graafik && typeof s.too.graafik === "object"
+      && muutus("graafik", s.too.graafik)) {
     await q("DELETE FROM graafik");
     for (const [maja, liikmed] of Object.entries(s.too.graafik)) {
       if (maja !== "km" && maja !== "torn") continue;
@@ -455,7 +482,7 @@ async function salvestaSeis(mina, s) {
     }
   }
 
-  if (s.too && Array.isArray(s.too.tood)) {
+  if (s.too && Array.isArray(s.too.tood) && muutus("tood", s.too.tood)) {
     const olemas = await q("SELECT id FROM tood");
     const alles = new Set();
     for (const t of s.too.tood) {
@@ -497,7 +524,7 @@ async function salvestaSeis(mina, s) {
       await q("DELETE FROM tood WHERE id=$1", [x.id]);
   }
 
-  if (s.too && Array.isArray(s.too.puhkused)) {
+  if (s.too && Array.isArray(s.too.puhkused) && muutus("puhkused", s.too.puhkused)) {
     const olemas = await q("SELECT id FROM puudumised");
     const alles = new Set();
     for (const p of s.too.puhkused) {
@@ -521,7 +548,7 @@ async function salvestaSeis(mina, s) {
   }
 
   /* ── loetud märked: ainult enda omad ─────────────────────────── */
-  const minuSeen = s.seen && s.seen[mina.id];
+  const minuSeen = muutus("seen", s.seen) && s.seen && s.seen[mina.id];
   if (minuSeen && typeof minuSeen === "object") {
     for (const [votme, aeg] of Object.entries(minuSeen)) {
       if (votme === "__baas" || !aeg) continue;
@@ -614,4 +641,4 @@ async function syncSonumid(vId, sonumid, mina) {
     await q("DELETE FROM sonumid WHERE id=$1", [x.id]);
 }
 
-module.exports = { loeSeis, salvestaSeis, dmKey };
+module.exports = { loeSeis, salvestaSeis, margi, dmKey };

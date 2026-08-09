@@ -104,13 +104,13 @@ const server = http.createServer(async (req, res) => {
        Ekraan on prototüübi oma ja töötab terve seisuga korraga.
        seis.js tõlgib andmebaasi tema keelde ja tagasi. */
     if (tee === "/api/seis" && req.method === "GET")
-      return json(res, 200, await seis.loeSeis(mina));
+      return json(res, 200, seis.margi(await seis.loeSeis(mina)));
 
     if (tee === "/api/seis" && req.method === "PUT") {
       const b = await keha(req);
       const r = await seis.salvestaSeis(mina, b);
       if (r.viga) return json(res, 400, r);
-      return json(res, 200, await seis.loeSeis(mina));
+      return json(res, 200, seis.margi(await seis.loeSeis(mina)));
     }
 
     /* ── müük ─────────────────────────────────────────────────── */
