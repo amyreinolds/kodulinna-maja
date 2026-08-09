@@ -6,7 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "test": "node test/proov.js && node test/kutse.js && node test/muuda.js && node test/ametid.js && node test/kassa.js && node test/maja.js && node test/inimesed.js && node test/ulesanne.js && node test/teated.js && node test/privaatne.js && node test/majutus.js && node test/ssl.js"
+    "test": "node test/proov.js && node test/kutse.js && node test/muuda.js && node test/ametid.js && node test/kassa.js && node test/maja.js && node test/inimesed.js && node test/ulesanne.js && node test/teated.js && node test/failid.js && node test/privaatne.js && node test/majutus.js && node test/ssl.js"
   },
   "dependencies": {
     "pg": "^8.13.1"

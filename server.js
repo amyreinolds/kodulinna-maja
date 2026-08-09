@@ -33,8 +33,11 @@ const tekst = (res, kood, t) => {
   res.writeHead(kood, { "Content-Type": "text/plain; charset=utf-8" });
   res.end(t);
 };
+/* Kaheksa megabaiti: failid tulevad koos päringuga, tekstiks kirjutatult.
+   Üks fail tohib olla kuni viis megabaiti — vt /api/failid. */
+const KEHA_PIIR = 8e6;
 const keha = req => new Promise(r => {
-  let d = ""; req.on("data", c => { d += c; if (d.length > 1e6) req.destroy(); });
+  let d = ""; req.on("data", c => { d += c; if (d.length > KEHA_PIIR) req.destroy(); });
   req.on("end", () => { try { r(JSON.parse(d || "{}")); } catch { r({}); } });
 });
 
@@ -108,7 +111,13 @@ const server = http.createServer(async (req, res) => {
       const lopp = u.searchParams.get("lopp") || "2999-12-31";
       const tingimused = ["m.aeg::date BETWEEN $1 AND $2"];
       const väärtused = [algus, lopp];
-      if (!koik) { väärtused.push(mina.id); tingimused.push("m.myyja_id = $3"); }
+      /* Ühe müüja müük eraldi — nii saab vaadata inimese päeva. Teise
+         inimese müüki näeb ainult see, kes kogu kassat näeb. */
+      const myyja = u.searchParams.get("myyja");
+      if (myyja && myyja !== mina.id && !koik)
+        return json(res, 403, { viga: "Teise inimese müüki sa ei näe." });
+      if (myyja) { väärtused.push(myyja); tingimused.push("m.myyja_id = $3"); }
+      else if (!koik) { väärtused.push(mina.id); tingimused.push("m.myyja_id = $3"); }
       const read = await q(
         `SELECT m.id, m.aeg, m.kogus, m.hind, m.summa,
                 t.nimetus, o.nimi AS osa, l.nimi AS myyja, m.myyja_id
@@ -222,7 +231,7 @@ const server = http.createServer(async (req, res) => {
     if (tee === "/api/yritused" && req.method === "GET") {
       return json(res, 200, await q(
         `SELECT y.id, y.koht_id, y.pealkiri, y.algus, y.lopp, y.asukoht,
-                y.kirjeldus, m.nimi AS maja
+                y.kirjeldus, y.kinnitus_vaja, m.nimi AS maja
          FROM yritused y LEFT JOIN majad m ON m.id = y.koht_id
          ORDER BY y.algus`));
     }
@@ -234,11 +243,12 @@ const server = http.createServer(async (req, res) => {
       if (!b.algus) return json(res, 400, { viga: "Algusaeg on valimata." });
       if (!await onMaja(b.koht_id)) return json(res, 400, { viga: "Vali maja." });
       const r = await yks(
-        `INSERT INTO yritused (koht_id, pealkiri, algus, lopp, asukoht, kirjeldus, autor)
-         VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, koht_id, pealkiri, algus, lopp`,
+        `INSERT INTO yritused (koht_id, pealkiri, algus, lopp, asukoht, kirjeldus,
+                               kinnitus_vaja, autor)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id, koht_id, pealkiri, algus, lopp`,
         [b.koht_id, pealkiri, b.algus, b.lopp || null,
          String(b.asukoht || "").trim() || null,
-         String(b.kirjeldus || "").trim() || null, mina.id]);
+         String(b.kirjeldus || "").trim() || null, !!b.kinnitus_vaja, mina.id]);
       return json(res, 200, { ok: true, yritus: r });
     }
 
@@ -250,10 +260,12 @@ const server = http.createServer(async (req, res) => {
       if (!await onMaja(b.koht_id)) return json(res, 400, { viga: "Vali maja." });
       const r = await yks(
         `UPDATE yritused SET koht_id=$2, pealkiri=$3, algus=$4, lopp=$5,
-                asukoht=$6, kirjeldus=$7
+                asukoht=$6, kirjeldus=$7,
+                kinnitus_vaja = coalesce($8, kinnitus_vaja)
          WHERE id = $1 RETURNING id`,
         [b.id, b.koht_id, pealkiri, b.algus, b.lopp || null,
-         String(b.asukoht || "").trim() || null, String(b.kirjeldus || "").trim() || null]);
+         String(b.asukoht || "").trim() || null, String(b.kirjeldus || "").trim() || null,
+         b.kinnitus_vaja === undefined ? null : !!b.kinnitus_vaja]);
       if (!r) return json(res, 404, { viga: "Sellist üritust ei ole." });
       return json(res, 200, { ok: true });
     }
@@ -419,6 +431,95 @@ const server = http.createServer(async (req, res) => {
       const b = await keha(req);
       await q("DELETE FROM puudumised WHERE id = $1", [b.id]);
       return json(res, 200, { ok: true });
+    }
+
+    /* ── ürituse küsimused ────────────────────────────────────────
+       Iga ürituse all saab küsida. Oma küsimuse saab ise ära võtta. */
+    if (tee === "/api/kommentaarid" && req.method === "GET")
+      return json(res, 200, await q(
+        `SELECT k.id, k.yritus_id, k.autor, k.aeg, k.tekst, l.nimi
+         FROM kommentaarid k LEFT JOIN liikmed l ON l.id = k.autor
+         ORDER BY k.aeg`));
+
+    if (tee === "/api/kommentaarid" && req.method === "POST") {
+      const b = await keha(req);
+      const tekst = String(b.tekst || "").trim();
+      if (!tekst) return json(res, 400, { viga: "Küsimus on kirjutamata." });
+      const y = await yks("SELECT id FROM yritused WHERE id = $1", [b.yritus_id]);
+      if (!y) return json(res, 404, { viga: "Sellist üritust ei ole." });
+      const r = await yks(
+        `INSERT INTO kommentaarid (yritus_id, autor, tekst) VALUES ($1,$2,$3)
+         RETURNING id, aeg`, [b.yritus_id, mina.id, tekst]);
+      return json(res, 200, { ok: true, kommentaar: r });
+    }
+
+    if (tee === "/api/kommentaarid" && req.method === "DELETE") {
+      const b = await keha(req);
+      const k = await yks("SELECT autor FROM kommentaarid WHERE id = $1", [b.id]);
+      if (!k) return json(res, 404, { viga: "Sellist küsimust ei ole." });
+      if (k.autor !== mina.id)
+        return json(res, 403, { viga: "Kustutada saad ainult oma küsimust." });
+      await q("DELETE FROM kommentaarid WHERE id = $1", [b.id]);
+      return json(res, 200, { ok: true });
+    }
+
+    /* „Olen tutvunud“ ürituse kohta — sama tabel, mis info kinnitustel. */
+    if (tee === "/api/yritused/kinnita" && req.method === "POST") {
+      const b = await keha(req);
+      const y = await yks("SELECT id FROM yritused WHERE id = $1", [b.id]);
+      if (!y) return json(res, 404, { viga: "Sellist üritust ei ole." });
+      await q(
+        `INSERT INTO kinnitused (tyyp, kirje_id, liige_id) VALUES ('yritus',$1,$2)
+         ON CONFLICT DO NOTHING`, [b.id, mina.id]);
+      return json(res, 200, { ok: true });
+    }
+
+    if (tee === "/api/kinnitused" && req.method === "GET")
+      return json(res, 200, await q(
+        `SELECT k.tyyp, k.kirje_id, k.liige_id, k.aeg, l.nimi
+         FROM kinnitused k JOIN liikmed l ON l.id = k.liige_id`));
+
+    /* ── failid ───────────────────────────────────────────────────
+       Fail hoitakse andmebaasis tekstina. Väikese maja paarikümne
+       dokumendi jaoks on see lihtsam kui eraldi failihoidla, mille eest
+       tuleks maksta ja mida keegi peaks haldama. Piir on viis megabaiti,
+       et andmebaas ei paisuks märkamatult. */
+    if (tee === "/api/failid" && req.method === "GET")
+      return json(res, 200, await q(
+        `SELECT f.id, f.nimi, f.kirjeldus, f.suurus_baiti, f.tyyp, f.aeg,
+                l.nimi AS lisaja
+         FROM failid f LEFT JOIN liikmed l ON l.id = f.lisaja
+         ORDER BY f.aeg DESC`));
+
+    if (tee === "/api/failid" && req.method === "POST") {
+      const b = await keha(req);
+      const nimi = String(b.nimi || "").trim();
+      if (!nimi) return json(res, 400, { viga: "Faili nimi on täitmata." });
+      const viit = String(b.viit || "");
+      if (!/^data:/.test(viit)) return json(res, 400, { viga: "Fail on valimata." });
+      if (viit.length > 5e6)
+        return json(res, 400, { viga: "Fail on liiga suur. Piir on 5 MB." });
+      const r = await yks(
+        `INSERT INTO failid (nimi, kirjeldus, suurus_baiti, tyyp, viit, lisaja)
+         VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+        [nimi, String(b.kirjeldus || "").trim() || null,
+         Number(b.suurus_baiti) || viit.length, String(b.tyyp || "").slice(0, 100) || null,
+         viit, mina.id]);
+      return json(res, 200, { ok: true, id: r.id });
+    }
+
+    if (tee === "/api/failid" && req.method === "DELETE") {
+      const b = await keha(req);
+      await q("DELETE FROM failid WHERE id = $1", [b.id]);
+      return json(res, 200, { ok: true });
+    }
+
+    /* Faili sisu eraldi — nimekiri ei pea kandma megabaite kaasa. */
+    if (tee === "/api/fail") {
+      const f = await yks("SELECT nimi, viit FROM failid WHERE id = $1",
+        [u.searchParams.get("id")]);
+      if (!f) return json(res, 404, { viga: "Sellist faili ei ole." });
+      return json(res, 200, f);
     }
 
     /* ── ürituse ülesanded ────────────────────────────────────────

@@ -55,9 +55,15 @@ Kui võtit ei ole, ilmub link ekraanile — muidu ei saaks keegi sisse.
 
 ## Mis rakenduses on
 
+Üleval paremal saab vahetada **hele ja tume teema** — valik jääb selle
+brauseri sisse meelde.
+
 | Vaade | Mida teeb |
 |---|---|
-| **Müük** | vali kogus, klõpsa tootel. Oma müük on kohe all näha |
+| **Müük** | vali kogus, klõpsa tootel. Oma müük on kohe all näha. Allpool toodete kaupa kokkuvõte ja — kassaõigusega — müüjate kaupa. Vajuta müüja nimel, tema alla tuleb kalender; vajuta kuupäeval ja näed, mida ta sel päeval müüs |
+| **Üritused** | nimekiri suure kuupäevaga: „Osalen“ / „Ei osale“, „Olen tutvunud“, ülesanded („kes toob koogi“) ja küsimused iga ürituse all |
+| **Üldinfo** | tähtis info kõigile. Kinnitust nõudva ploki all on „Olen tutvunud“ ja kes on juba tutvunud |
+| **Failid** | dokumendid, mida teistel vaja läheb. Üks fail kuni 5 MB, hoitakse andmebaasis — eraldi failihoidlat ei ole vaja |
 | **Kalender** | üritused ja tööd ühes kalendris, maja vahetatakse ülal („Kõik“ näitab mõlemat). Korduv töö (näiteks lillede kastmine kolmapäeval ja laupäeval), kellaajaga või ilma. Tehtud töö nimi läheb roheliseks. Ürituse saab järele muuta ja vastata „Tulen“ / „Ei tule“ |
 | **Töö graafik** | mõlema maja nädalagraafik üksteise all, ühel päeval võib olla mitu vahetust. Puhkused ja haiguslehed |
 | **Kontaktid** | nimed, töö majas, telefoninumbrid ja pildid. Number kopeeritakse, helistamislinki ei ole — see rakendus on arvutis. Pilt tehakse brauseris 96 piksli peale väikeseks, failihoidlat ei ole vaja |
