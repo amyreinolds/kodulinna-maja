@@ -1126,6 +1126,8 @@ let myykOsa=null, myykKuu=null, hinnaOsa=null, nadalaNihe=0, kalKoht="koik", gra
    valid päeva ühes kohas, näitab teine sama päeva. Tühi tähendab tänast. */
 let kalPaev=null;
 const valitudPaevOn=()=>kalPaev||dkey(new Date());
+/* Kelle graafikut vaadatakse. Tühi tähendab kõiki. */
+let graIsik=null;
 
 /* Kustutatud osa read ei tohi kaduda — nad koonduvad „Ilma osata“ alla. */
 function myygiSeis(){
@@ -1672,12 +1674,19 @@ function vToo(w){
           +esc(k.nimi)+'<span class="n">'+mitu2+'</span></button>';
       }).join("")
     +'</div>'
-    +'<div class="card"><div class="kalpais"><p class="h3">NÄDAL</p>'
+    +'<div class="card"><div class="kalpais"><p class="h3">'
+    +(graIsik?esc((byId(graIsik)||{name:"?"}).name):"NÄDAL")+'</p>'
     +'<span class="kuunimi">'+paevad[0].getDate()+'. '+MON[paevad[0].getMonth()]
     +  ' – '+paevad[6].getDate()+'. '+MON[paevad[6].getMonth()]+'</span>'
     +'<button class="btn ghost small" data-act="nadal" data-v="-1">‹</button>'
     +'<button class="btn ghost small" data-act="nadal" data-v="0">Käesolev</button>'
-    +'<button class="btn ghost small" data-act="nadal" data-v="1">›</button></div>'
+    +'<button class="btn ghost small" data-act="nadal" data-v="1">›</button>'
+    +(graIsik?'<span class="sp"></span>'
+      +(tohinGraafikut(graIsik)
+        ? '<button class="btn ghost small" data-act="graafik" data-id="'+graIsik+'"'
+          +' data-koht="'+graKoht+'">Muuda kogu nädalat</button>' : "")
+      +'<button class="btn ghost small" data-act="gra-koik">Kõik inimesed</button>':"")
+    +'</div>'
     +'<div class="gtabel"><div class="grida gpais"><span>Inimene</span>'
     /* Kuupäev on nupp: klõps toob selle päeva info üles. */
     + paevad.map((d,i)=>{
@@ -1688,17 +1697,16 @@ function vToo(w){
           +'<i>'+d.getDate()+'.'+(d.getMonth()+1)+'</i></button>';
       }).join("")
     +'</div>'
-    + S.members.map(m=>{
+    + (graIsik?S.members.filter(m=>m.id===graIsik):S.members).map(m=>{
         const r=g2[m.id]||[];
         const tohin=tohinGraafikut(m.id);
+        /* Nimi avab selle inimese enda graafiku — seda saavad vaadata
+           kõik. Muutmine käib lahtritest ja nupust „Muuda kogu nädalat“
+           ning seal kehtib õigus edasi. */
         return '<div class="grida">'
-          +(tohin
-            ? '<button class="gnimi" data-act="graafik" data-id="'+m.id+'" data-koht="'+graKoht+'"'
-              +' aria-label="'+esc(m.name+" — kogu nädal")+'">'
-              +'<span class="isik">'+avaHtml(m)+esc(m.name)+'</span></button>'
-            : '<span class="gnimi lukus" title="Teise inimese tööaega muudavad ülemus ja '
-              +'administraator">'
-              +'<span class="isik">'+avaHtml(m)+esc(m.name)+'</span></span>')
+          +'<button class="gnimi" data-act="gra-isik" data-id="'+m.id+'"'
+          +' aria-label="'+esc(m.name+" — ainult tema graafik")+'">'
+          +'<span class="isik">'+avaHtml(m)+esc(m.name)+'</span></button>'
           + paevad.map((d,i)=>{
               const k=dkey(d), ara=araPaeval(m.id,k);
               const silt=esc(m.name+", "+DOW_P[i]+" "+d.getDate()+"."+(d.getMonth()+1)+" — ");
@@ -1726,8 +1734,41 @@ function vToo(w){
     +(S.haldabGraafikut?'':' Muuta saad oma ridu; teiste tööaega muudavad '
       +'ülemus ja administraator.')+'</p></div>';
 
-  /* Puudumised. */
-  const tulevad=puhkused().filter(p=>p.lopp>=tana).sort((a,b)=>a.algus.localeCompare(b.algus));
+  /* Ühe inimese vaates näitame ka teise maja rea — „kogu graafik“
+     tähendab kõike, mitte ainult parajasti valitud maja. */
+  if(graIsik){
+    const teine=KOHAD.find(k=>k.id!==graKoht);
+    const m=byId(graIsik);
+    if(teine&&m){
+      const r2=graafik(teine.id)[graIsik]||[];
+      const onMidagi=r2.some(v=>vahetusi(v).length);
+      h+='<div class="card"><p class="h3">'+esc(teine.nimi)+'</p>'
+        +(onMidagi
+          ? '<div class="gtabel"><div class="grida gpais"><span>Inimene</span>'
+            + paevad.map((d,i)=>'<span'+(dkey(d)===tana?' class="tana"':'')+'>'+DOW_S[i]
+                +'<i>'+d.getDate()+'.'+(d.getMonth()+1)+'</i></span>').join("")
+            +'</div><div class="grida">'
+            +'<span class="gnimi lukus"><span class="isik">'+avaHtml(m)+esc(m.name)+'</span></span>'
+            + paevad.map((d,i)=>{
+                const v=vahetusi(r2[i]);
+                const k=dkey(d);
+                return tohinGraafikut(graIsik)
+                  ? '<button class="lahter'+(v.length?"":" tyhi2")+'" data-act="graafik-paev"'
+                    +' data-id="'+graIsik+'" data-koht="'+teine.id+'" data-i="'+i+'"'
+                    +' data-kuup="'+k+'">'
+                    +(v.length?v.map(x=>'<i>'+esc(x)+'</i>').join(""):"–")+'</button>'
+                  : '<span class="lahter lukus'+(v.length?"":" tyhi2")+'">'
+                    +(v.length?v.map(x=>'<i>'+esc(x)+'</i>').join(""):"–")+'</span>';
+              }).join("")
+            +'</div></div>'
+          : '<p class="tyhi">Selles majas ei ole tema graafikus midagi.</p>')
+        +'</div>';
+    }
+  }
+
+  /* Puudumised. Ühe inimese vaates ainult tema omad. */
+  const tulevad=puhkused().filter(p=>p.lopp>=tana&&(!graIsik||p.kes===graIsik))
+    .sort((a,b)=>a.algus.localeCompare(b.algus));
   h+='<div class="card"><div class="kalpais">'
     +'<p class="h3">PUHKUS · HAIGUSLEHT · VABA PÄEV</p>'
     +'<span class="sp"></span>'
@@ -2748,6 +2789,8 @@ document.addEventListener("click",ev=>{
       break;}
     case "kal-koht": kalKoht=el.dataset.v;render();break;
     case "gra-koht": graKoht=el.dataset.v;render();break;
+    case "gra-isik": graIsik=(graIsik===id)?null:id;render();break;
+    case "gra-koik": graIsik=null;render();break;
     case "kal-paev": kalPaev=el.dataset.k;render();break;
     case "kal-nihe":{
       if(el.dataset.v==="0"){kalPaev=null;render();break;}
