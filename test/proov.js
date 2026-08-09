@@ -73,8 +73,8 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
        testi aadress andmebaasi ja blokeeriks päris esimese sisselogimise. */
     const { q: sql } = require("../db");
     await sql(
-      `INSERT INTO liikmed (nimi, epost, administraator)
-       VALUES ('Testija', 'test@proov.invalid', true)`);
+      `INSERT INTO liikmed (nimi, epost, amet, administraator)
+       VALUES ('Testija', 'test@proov.invalid', 'administraator', true)`);
 
     /* Alles nüüd, kui vähemalt ühel liikmel on aadress, käitub tundmatu
        aadress nii, nagu ta päris kasutuses käitub. Enne seda haaraks

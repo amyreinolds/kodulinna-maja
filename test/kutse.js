@@ -42,9 +42,9 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
     kontrolli("server vastab", elus);
 
     /* administraator ja tavaline liige */
-    await q(`INSERT INTO liikmed (nimi, epost, administraator)
-             VALUES ('Kutsuja', 'kutsuja@proov.invalid', true),
-                    ('Tavaline', 'tavaline@proov.invalid', false)`);
+    await q(`INSERT INTO liikmed (nimi, epost, amet, administraator) VALUES
+             ('Kutsuja', 'kutsuja@proov.invalid', 'administraator', true),
+             ('Tavaline', 'tavaline@proov.invalid', 'liige', false)`);
 
     /* administraator logib sisse */
     const k1 = await paring("/api/logi-sisse", { meetod: "POST", keha: { epost: "kutsuja@proov.invalid" } });

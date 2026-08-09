@@ -1,5 +1,5 @@
-/* Liikme muutmine: nimi, roll, õigused. Ja kaks kaitset:
-   tavaline liige ei tohi muuta, viimast administraatori ei tohi ära võtta. */
+/* Liikme muutmine: nimi, töö majas, amet. Ja kaks kaitset:
+   tavaline liige ei tohi muuta, viimast haldajat ei tohi ära võtta. */
 "use strict";
 const http = require("http");
 const { spawn } = require("child_process");
@@ -41,9 +41,9 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
     for (let i = 0; i < 40 && !elus; i++) { await oota(250); try { elus = (await paring("/tervis")).kood === 200; } catch { } }
     kontrolli("server vastab", elus);
 
-    await q(`INSERT INTO liikmed (nimi, epost, administraator)
-             VALUES ('Muutja','muutja@proov.invalid',true),
-                    ('Muudetav','muudetav@proov.invalid',false)`);
+    await q(`INSERT INTO liikmed (nimi, epost, amet, administraator) VALUES
+             ('Muutja','muutja@proov.invalid','administraator',true),
+             ('Muudetav','muudetav@proov.invalid','liige',false)`);
     const [muudetav] = await q("SELECT id FROM liikmed WHERE epost='muudetav@proov.invalid'");
 
     const k = await paring("/api/logi-sisse", { meetod: "POST", keha: { epost: "muutja@proov.invalid" } });
@@ -62,11 +62,13 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
     const tyhi = await paring("/api/liikmed", { meetod: "PATCH", keha: { id: muudetav.id, nimi: "  " } });
     kontrolli("tühi nimi ei kõlba", tyhi.kood === 400, tyhi.json && tyhi.json.viga);
 
-    /* õiguse andmine ja äravõtmine */
+    /* ameti andmine — ja et vana tuletatud veerg käiks kaasa */
     await paring("/api/liikmed", { meetod: "PATCH",
-      keha: { id: muudetav.id, nimi: "Uus Nimi", administraator: true } });
-    const [k2] = await q("SELECT administraator FROM liikmed WHERE id=$1", [muudetav.id]);
-    kontrolli("administraatoriks saab teha", k2.administraator === true);
+      keha: { id: muudetav.id, nimi: "Uus Nimi", amet: "administraator" } });
+    const [k2] = await q("SELECT amet, administraator FROM liikmed WHERE id=$1", [muudetav.id]);
+    kontrolli("administraatoriks saab teha",
+      k2.amet === "administraator" && k2.administraator === true,
+      k2.amet + " / " + k2.administraator);
 
     /* Viimast administraatorit ei tohi ära võtta.
 
@@ -76,26 +78,30 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
        Ja: `epost <> 'x'` EI ole tõene, kui epost on NULL — seepärast
        IS DISTINCT FROM. Selle peale läks esimene katse metsa. */
     const [mina] = await q("SELECT id FROM liikmed WHERE epost='muutja@proov.invalid'");
-    const teisedAdminid = await q(
-      "SELECT id FROM liikmed WHERE administraator AND id IS DISTINCT FROM $1", [mina.id]);
+    const teised = await q(
+      `SELECT id, amet FROM liikmed
+       WHERE amet IN ('ulemus','administraator') AND id IS DISTINCT FROM $1`, [mina.id]);
     try {
-      await q("UPDATE liikmed SET administraator = false WHERE id IS DISTINCT FROM $1", [mina.id]);
+      await q(`UPDATE liikmed SET amet = 'liige', administraator = false
+               WHERE id IS DISTINCT FROM $1`, [mina.id]);
       const viimane = await paring("/api/liikmed", { meetod: "PATCH",
-        keha: { id: mina.id, nimi: "Muutja", administraator: false } });
-      kontrolli("viimast administraatorit ei saa ära võtta", viimane.kood === 400,
+        keha: { id: mina.id, nimi: "Muutja", amet: "liige" } });
+      kontrolli("viimast haldajat ei saa ära võtta", viimane.kood === 400,
         viimane.json && viimane.json.viga);
     } finally {
-      if (teisedAdminid.length)
-        await q("UPDATE liikmed SET administraator = true WHERE id = ANY($1)",
-          [teisedAdminid.map(x => x.id)]);
-      const tagasi = await q("SELECT count(*)::int AS n FROM liikmed WHERE administraator");
-      console.log("         administraatorid taastatud: " + tagasi[0].n);
+      for (const r of teised)
+        await q(`UPDATE liikmed SET amet = $2,
+                   administraator = ($2 IN ('ulemus','administraator'))
+                 WHERE id = $1`, [r.id, r.amet]);
+      const tagasi = await q(
+        "SELECT count(*)::int AS n FROM liikmed WHERE amet IN ('ulemus','administraator')");
+      console.log("         haldajad taastatud: " + tagasi[0].n + " (oli " + (teised.length + 1) + ")");
     }
 
     /* tavaline liige ei tohi muuta */
-    await q("UPDATE liikmed SET administraator = true WHERE epost='muudetav@proov.invalid'");
     const admKupsis = kupsis; kupsis = "";
-    await q("UPDATE liikmed SET administraator = false WHERE epost='muudetav@proov.invalid'");
+    await q(`UPDATE liikmed SET amet = 'liige', administraator = false
+             WHERE epost='muudetav@proov.invalid'`);
     const k3 = await paring("/api/logi-sisse", { meetod: "POST", keha: { epost: "muudetav@proov.invalid" } });
     await paring("/sisene?mark=" + new URL(k3.json.arenduseLink).searchParams.get("mark"));
     const keeld = await paring("/api/liikmed", { meetod: "PATCH",

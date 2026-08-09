@@ -8,6 +8,7 @@ const fs = require("fs");
 const path = require("path");
 const { q, yks } = require("./db");
 const auth = require("./auth");
+const { AMETID, kehtiv, naebKassat, haldabLiikmeid } = require("./ametid");
 
 const PORT = Number(process.env.PORT || 3000);
 const AVALIK = path.join(__dirname, "public");
@@ -72,7 +73,12 @@ const server = http.createServer(async (req, res) => {
 
     /* ── kes ma olen ──────────────────────────────────────────── */
     const mina = await auth.kesOn(req);
-    if (tee === "/api/mina") return json(res, 200, { mina });
+    if (tee === "/api/mina") return json(res, 200, {
+      mina: mina && Object.assign({}, mina, {
+        naebKassat: naebKassat(mina), haldabLiikmeid: haldabLiikmeid(mina)
+      }),
+      ametid: AMETID
+    });
 
     /* Edasi ei lasta ilma sisselogimiseta. */
     if (tee.startsWith("/api/") && !mina) return json(res, 401, { viga: "Logi sisse." });
@@ -82,7 +88,7 @@ const server = http.createServer(async (req, res) => {
       /* Kogu maja müüki näeb administraator, teised näevad oma müüki.
          See kontroll on serveris, mitte ekraanil — nii ei saa sellest
          mööda minna, ükskõik mida brauseris teha. */
-      const koik = mina.administraator;
+      const koik = naebKassat(mina);
       const read = await q(
         `SELECT m.id, m.aeg, m.kogus, m.hind, m.summa,
                 t.nimetus, o.nimi AS osa, l.nimi AS myyja, m.myyja_id
@@ -100,49 +106,56 @@ const server = http.createServer(async (req, res) => {
 
     if (tee === "/api/liikmed" && req.method === "GET") {
       return json(res, 200, await q(
-        `SELECT id, nimi, roll, administraator, (epost IS NOT NULL) AS onEpost
+        `SELECT id, nimi, roll, amet, (epost IS NOT NULL) AS onEpost
          FROM liikmed ORDER BY nimi`));
     }
 
     /* Liikmete lisamine ja kutsed on administraatori asi. */
     if (tee === "/api/liikmed" && req.method === "POST") {
-      if (!mina.administraator) return json(res, 403, { viga: "Ainult administraator." });
+      if (!haldabLiikmeid(mina)) return json(res, 403, { viga: "Sinu amet ei luba liikmeid lisada." });
       const b = await keha(req);
       const nimi = String(b.nimi || "").trim();
       if (!nimi) return json(res, 400, { viga: "Nimi on täitmata." });
+      const amet = kehtiv(b.amet) ? b.amet : "liige";
       const r = await yks(
-        `INSERT INTO liikmed (nimi, roll, administraator)
-         VALUES ($1, $2, $3) RETURNING id, nimi`,
-        [nimi, String(b.roll || "").trim() || null, !!b.administraator]);
+        `INSERT INTO liikmed (nimi, roll, amet, administraator)
+         VALUES ($1, $2, $3, $4) RETURNING id, nimi, amet`,
+        [nimi, String(b.roll || "").trim() || null, amet, haldabLiikmeid({ amet })]);
       return json(res, 200, { ok: true, liige: r });
     }
 
     if (tee === "/api/liikmed" && req.method === "PATCH") {
-      if (!mina.administraator) return json(res, 403, { viga: "Ainult administraator." });
+      if (!haldabLiikmeid(mina)) return json(res, 403, { viga: "Sinu amet ei luba liikmeid muuta." });
       const b = await keha(req);
       const nimi = String(b.nimi || "").trim();
       if (!nimi) return json(res, 400, { viga: "Nimi on täitmata." });
-      /* Viimast administraatorit ei tohi ilma jätta — muidu ei saa keegi
-         enam kedagi kutsuda ega õigusi anda. */
-      if (b.administraator === false) {
+      if (b.amet !== undefined && !kehtiv(b.amet))
+        return json(res, 400, { viga: "Tundmatu amet." });
+
+      /* Maja ei tohi jääda ilma kellegita, kes liikmeid haldab — muidu ei
+         saa enam kedagi kutsuda ega ameteid muuta. */
+      if (b.amet !== undefined && !haldabLiikmeid({ amet: b.amet })) {
         const n = await yks(
-          "SELECT count(*)::int AS n FROM liikmed WHERE administraator AND id <> $1", [b.id]);
+          `SELECT count(*)::int AS n FROM liikmed
+           WHERE amet IN ('ulemus','administraator') AND id <> $1`, [b.id]);
         if (n.n === 0) return json(res, 400, {
-          viga: "Vähemalt üks administraator peab alles jääma."
+          viga: "Keegi peab liikmeid haldama. Anna enne kellelegi teisele ülemuse või administraatori amet."
         });
       }
+
+      const uusAmet = b.amet !== undefined ? b.amet : null;
       const r = await yks(
         `UPDATE liikmed SET nimi = $2, roll = $3,
-            administraator = coalesce($4, administraator)
-         WHERE id = $1 RETURNING id, nimi`,
-        [b.id, nimi, String(b.roll || "").trim() || null,
-         typeof b.administraator === "boolean" ? b.administraator : null]);
+            amet = coalesce($4, amet),
+            administraator = (coalesce($4, amet) IN ('ulemus','administraator'))
+         WHERE id = $1 RETURNING id, nimi, amet`,
+        [b.id, nimi, String(b.roll || "").trim() || null, uusAmet]);
       if (!r) return json(res, 404, { viga: "Sellist liiget ei ole." });
       return json(res, 200, { ok: true, liige: r });
     }
 
     if (tee === "/api/kutse" && req.method === "POST") {
-      if (!mina.administraator) return json(res, 403, { viga: "Ainult administraator." });
+      if (!haldabLiikmeid(mina)) return json(res, 403, { viga: "Sinu amet ei luba kutseid teha." });
       const b = await keha(req);
       const k = await auth.teeKutse(b.liige_id, alus);
       if (!k) return json(res, 404, { viga: "Sellist liiget ei ole." });

@@ -60,7 +60,17 @@ tr:last-child td{border-bottom:none}
 .liige input.rl{font-size:15px;color:var(--ink-3);flex:1;min-width:120px}
 .liige input.nm:hover,.liige input.rl:hover{border-color:var(--line)}
 .liige input.nm:focus,.liige input.rl:focus{border-color:var(--accent);background:var(--card)}
-.liige .kast{display:flex;align-items:center;gap:7px;font-size:15px;color:var(--ink-3)}
+.liige select.am,.uus select{
+  padding:10px 12px;border-radius:10px;border:1.5px solid var(--line);
+  background:var(--card);color:var(--ink);font-family:inherit;font-size:15px;
+  min-height:44px;cursor:pointer;outline:none;
+}
+.liige select.am:focus,.uus select:focus{border-color:var(--accent)}
+.ametid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:10px;margin:0 0 20px}
+.amet{padding:11px 13px;border-radius:12px;background:var(--soft);font-size:14.5px}
+.amet b{display:block;font-size:15.5px;margin-bottom:2px}
+.amet span{color:var(--ink-3)}
 .liige button{min-height:40px;padding:0 16px;border-radius:10px;border:1px solid var(--line);
   background:var(--card);font-family:inherit;font-size:15px;font-weight:600;cursor:pointer}
 .liige button:hover{border-color:var(--accent);color:var(--accent)}
@@ -100,11 +110,12 @@ tr:last-child td{border-bottom:none}
     <p class="abi">Tee liikmele link ja anna see talle ise kätte — telefonis,
       sõnumiga või paberil. E-posti teenust ei ole vaja. Link kehtib 7 päeva
       ja ühe korra; pärast sisenemist püsib inimene sees 60 päeva.</p>
+    <div class="ametid" id="ametiabi"></div>
     <div id="liikmed"></div>
     <form id="uusVorm" class="uus">
       <input id="uusNimi" type="text" placeholder="Uue liikme nimi" required>
-      <input id="uusRoll" type="text" placeholder="Roll (ei ole kohustuslik)">
-      <label class="kast"><input id="uusAdmin" type="checkbox"> Administraator</label>
+      <input id="uusRoll" type="text" placeholder="Töö majas (ei ole kohustuslik)">
+      <select id="uusAmet"></select>
       <button type="submit">Lisa liige</button>
     </form>
   </article>
@@ -120,15 +131,20 @@ const kuup = iso => {
 const esc = t => String(t == null ? "" : t)
   .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+let AMETID = [];
+
 async function laadi() {
-  const mina = (await (await fetch("/api/mina")).json()).mina;
+  const d0 = await (await fetch("/api/mina")).json();
+  const mina = d0.mina;
+  AMETID = d0.ametid || [];
   if (!mina) return location.href = "/";
-  document.getElementById("kes").textContent = "Sina oled: " + mina.nimi;
+  document.getElementById("kes").textContent =
+    "Sina oled: " + mina.nimi + " · " + (AMETID.find(a => a.id === mina.amet) || {}).nimi;
 
   const d = await (await fetch("/api/myyk")).json();
   document.getElementById("pealkiri").innerHTML =
-    (d.koikNahtav ? "KOGU MAJA MÜÜK" : "MINU MÜÜK")
-    + (d.koikNahtav ? '<span class="mark">administraator</span>' : "");
+    (d.koikNahtav ? "KOGU MAJA KASSA" : "MINU KASSA")
+    + (d.koikNahtav ? "" : '<span class="mark">ainult sinu oma</span>');
 
   document.getElementById("riba").innerHTML =
       "<b>" + d.kokku.kordi + "</b><span>"
@@ -151,8 +167,12 @@ async function laadi() {
       + "</tbody></table>"
     : '<p class="tyhi">Müüke ei ole veel kirjas.</p>';
 
-  if (mina.administraator) {
+  if (mina.haldabLiikmeid) {
     document.getElementById("liikmedKaart").hidden = false;
+    document.getElementById("ametiabi").innerHTML = AMETID.map(a =>
+      '<div class="amet"><b>' + esc(a.nimi) + "</b><span>" + esc(a.selgitus) + "</span></div>").join("");
+    document.getElementById("uusAmet").innerHTML = AMETID.map(a =>
+      '<option value="' + a.id + '">' + esc(a.nimi) + "</option>").join("");
     laadiLiikmed();
   }
 }
@@ -165,9 +185,11 @@ async function laadiLiikmed() {
   document.getElementById("liikmed").innerHTML = read.map(m =>
     '<div class="liige" data-id="' + m.id + '">'
     + '<input class="nm muuda" data-val="nimi" value="' + esc(m.nimi) + '">'
-    + '<input class="rl muuda" data-val="roll" value="' + esc(m.roll || "") + '" placeholder="roll">'
-    + '<label class="kast"><input type="checkbox" class="muuda" data-val="admin"'
-    + (m.administraator ? " checked" : "") + "> administraator</label>"
+    + '<input class="rl muuda" data-val="roll" value="' + esc(m.roll || "") + '" placeholder="töö majas">'
+    + '<select class="am muuda" data-val="amet">'
+    + AMETID.map(a => '<option value="' + a.id + '"'
+        + (m.amet === a.id ? " selected" : "") + ">" + esc(a.nimi) + "</option>").join("")
+    + "</select>"
     + (m.onepost ? '<span class="mark">saab sisse</span>' : "")
     + '<button data-kutse="' + m.id + '">Tee sisselogimise link</button>'
     + "</div>").join("");
@@ -181,7 +203,7 @@ async function salvestaLiige(rida) {
       id: rida.dataset.id,
       nimi: rida.querySelector('[data-val="nimi"]').value,
       roll: rida.querySelector('[data-val="roll"]').value,
-      administraator: rida.querySelector('[data-val="admin"]').checked
+      amet: rida.querySelector('[data-val="amet"]').value
     })
   })).json();
   if (r.viga) { alert(r.viga); laadiLiikmed(); return; }
@@ -229,13 +251,13 @@ document.getElementById("uusVorm").addEventListener("submit", async e => {
     body: JSON.stringify({
       nimi: document.getElementById("uusNimi").value,
       roll: document.getElementById("uusRoll").value,
-      administraator: document.getElementById("uusAdmin").checked
+      amet: document.getElementById("uusAmet").value
     })
   })).json();
   if (r.viga) return alert(r.viga);
   document.getElementById("uusNimi").value = "";
   document.getElementById("uusRoll").value = "";
-  document.getElementById("uusAdmin").checked = false;
+  document.getElementById("uusAmet").value = "liige";
   laadiLiikmed();
 });
 

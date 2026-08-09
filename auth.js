@@ -48,7 +48,10 @@ async function kesOn(req) {
     .filter(x => x.length === 2).map(([k, v]) => [k, decodeURIComponent(v)]));
   const id = loe(kupsised[KUPSIS]);
   if (!id) return null;
-  return await yks("SELECT id, nimi, roll, epost, administraator FROM liikmed WHERE id = $1", [id]);
+  /* NB: amet peab siin kaasa tulema — kogu õiguste kontroll käib selle
+     järgi. Ilma selleta paistab iga sisselogija tavalise liikmena. */
+  return await yks(
+    "SELECT id, nimi, roll, epost, amet, administraator FROM liikmed WHERE id = $1", [id]);
 }
 
 /* Märgi loomine.
