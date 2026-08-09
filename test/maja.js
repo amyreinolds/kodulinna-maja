@@ -90,6 +90,20 @@ const isoks = d => d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.get
               algus: täna + "T18:00:00", asukoht: "saal" } });
     kontrolli("ürituse saab lisada", y.kood === 200, "kood " + y.kood);
     yritusId = y.json.yritus.id;
+    /* Aeg peab tulema tagasi täpselt sama hetkena. Ekraan saadab alati
+       ajavööndiga aja; ilma selleta loeks andmebaas teda enda vööndis
+       ja üritus nihkuks paar tundi. */
+    const hetk = "2026-08-09T16:00:00.000Z";
+    const yAeg = await paring("/api/yritused", { meetod: "POST", kupsis: kL,
+      keha: { koht_id: majad.json[0].id, pealkiri: "Aja proov", algus: hetk } });
+    const yList = await paring("/api/yritused", { kupsis: kL });
+    const salvestatud = yList.json.find(x => x.id === yAeg.json.yritus.id).algus;
+    kontrolli("aeg tuleb tagasi sama hetkena",
+      new Date(salvestatud).getTime() === new Date(hetk).getTime(),
+      new Date(salvestatud).toISOString());
+    await paring("/api/yritused", { meetod: "DELETE", kupsis: kL,
+      keha: { id: yAeg.json.yritus.id } });
+
     const yTyhi = await paring("/api/yritused", { meetod: "POST", kupsis: kL,
       keha: { koht_id: majad.json[0].id, pealkiri: "  ", algus: täna + "T18:00:00" } });
     kontrolli("nimeta üritust ei tehta", yTyhi.kood === 400, yTyhi.json.viga);
@@ -178,7 +192,7 @@ const isoks = d => d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.get
     kontrolli("infot saab muuta", iM.kood === 200);
     const iL = await paring("/api/info", { kupsis: kL });
     kontrolli("muudatus jõudis kohale",
-      (iL.json.find(x => x.id === i.json.id) || {}).sisu === "E–R 10–19");
+      (iL.json.read.find(x => x.id === i.json.id) || {}).sisu === "E–R 10–19");
 
     /* ── aruanne: ainult kassaõigusega ─────────────────────────── */
     const aKeeld = await paring("/api/aruanne", { kupsis: kL });

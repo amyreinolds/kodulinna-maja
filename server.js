@@ -419,20 +419,68 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true });
     }
 
-    /* ── maja info ────────────────────────────────────────────── */
-    if (tee === "/api/info" && req.method === "GET")
+    /* ── ürituse ülesanded ────────────────────────────────────────
+       „Kes toob koogi.“ Ülesande võtab endale see, kes tahab — ja saab
+       ka tagasi anda, kui välja ei tule. */
+    if (tee === "/api/ulesanded" && req.method === "GET")
       return json(res, 200, await q(
-        `SELECT i.id, i.pealkiri, i.sisu, i.muudetud, l.nimi AS autor
+        `SELECT u.id, u.yritus_id, u.tekst, u.votja_id, l.nimi AS votja
+         FROM ulesanded u LEFT JOIN liikmed l ON l.id = u.votja_id
+         ORDER BY u.tekst`));
+
+    if (tee === "/api/ulesanded" && req.method === "POST") {
+      const b = await keha(req);
+      const tekst = String(b.tekst || "").trim();
+      if (!tekst) return json(res, 400, { viga: "Ülesanne on kirjutamata." });
+      const y = await yks("SELECT id FROM yritused WHERE id = $1", [b.yritus_id]);
+      if (!y) return json(res, 404, { viga: "Sellist üritust ei ole." });
+      const r = await yks(
+        `INSERT INTO ulesanded (yritus_id, tekst) VALUES ($1,$2) RETURNING id`,
+        [b.yritus_id, tekst]);
+      return json(res, 200, { ok: true, id: r.id });
+    }
+
+    /* Võtan enda peale / annan tagasi. Enda nimi tuleb küpsisest. */
+    if (tee === "/api/ulesanded" && req.method === "PATCH") {
+      const b = await keha(req);
+      const u = await yks("SELECT votja_id FROM ulesanded WHERE id = $1", [b.id]);
+      if (!u) return json(res, 404, { viga: "Sellist ülesannet ei ole." });
+      if (b.votan && u.votja_id && u.votja_id !== mina.id)
+        return json(res, 400, { viga: "Selle on juba keegi teine endale võtnud." });
+      if (!b.votan && u.votja_id && u.votja_id !== mina.id)
+        return json(res, 403, { viga: "Teise inimese ülesannet ei saa tagasi anda." });
+      await q("UPDATE ulesanded SET votja_id = $2 WHERE id = $1",
+        [b.id, b.votan ? mina.id : null]);
+      return json(res, 200, { ok: true });
+    }
+
+    if (tee === "/api/ulesanded" && req.method === "DELETE") {
+      const b = await keha(req);
+      await q("DELETE FROM ulesanded WHERE id = $1", [b.id]);
+      return json(res, 200, { ok: true });
+    }
+
+    /* ── maja info ────────────────────────────────────────────── */
+    if (tee === "/api/info" && req.method === "GET") {
+      const read = await q(
+        `SELECT i.id, i.pealkiri, i.sisu, i.muudetud, i.kinnitus_vaja, l.nimi AS autor
          FROM info i LEFT JOIN liikmed l ON l.id = i.autor
-         ORDER BY i.pealkiri`));
+         ORDER BY i.kinnitus_vaja DESC, i.pealkiri`);
+      const kinnitused = await q(
+        `SELECT k.kirje_id, k.liige_id, k.aeg, l.nimi
+         FROM kinnitused k JOIN liikmed l ON l.id = k.liige_id
+         WHERE k.tyyp = 'info'`);
+      return json(res, 200, { read, kinnitused });
+    }
 
     if (tee === "/api/info" && req.method === "POST") {
       const b = await keha(req);
       const pealkiri = String(b.pealkiri || "").trim();
       if (!pealkiri) return json(res, 400, { viga: "Pealkiri on täitmata." });
       const r = await yks(
-        `INSERT INTO info (pealkiri, sisu, autor) VALUES ($1,$2,$3) RETURNING id`,
-        [pealkiri, String(b.sisu || ""), mina.id]);
+        `INSERT INTO info (pealkiri, sisu, kinnitus_vaja, autor)
+         VALUES ($1,$2,$3,$4) RETURNING id`,
+        [pealkiri, String(b.sisu || ""), !!b.kinnitus_vaja, mina.id]);
       return json(res, 200, { ok: true, id: r.id });
     }
 
@@ -441,10 +489,23 @@ const server = http.createServer(async (req, res) => {
       const pealkiri = String(b.pealkiri || "").trim();
       if (!pealkiri) return json(res, 400, { viga: "Pealkiri on täitmata." });
       const r = await yks(
-        `UPDATE info SET pealkiri = $2, sisu = $3, autor = $4, muudetud = now()
+        `UPDATE info SET pealkiri = $2, sisu = $3, autor = $4, muudetud = now(),
+                kinnitus_vaja = coalesce($5, kinnitus_vaja)
          WHERE id = $1 RETURNING id`,
-        [b.id, pealkiri, String(b.sisu || ""), mina.id]);
+        [b.id, pealkiri, String(b.sisu || ""), mina.id,
+         b.kinnitus_vaja === undefined ? null : !!b.kinnitus_vaja]);
       if (!r) return json(res, 404, { viga: "Sellist teksti ei ole." });
+      return json(res, 200, { ok: true });
+    }
+
+    /* „Loetud ja arusaadav.“ Kinnitus on alati enda oma. */
+    if (tee === "/api/info/kinnita" && req.method === "POST") {
+      const b = await keha(req);
+      const i = await yks("SELECT id FROM info WHERE id = $1", [b.id]);
+      if (!i) return json(res, 404, { viga: "Sellist teksti ei ole." });
+      await q(
+        `INSERT INTO kinnitused (tyyp, kirje_id, liige_id) VALUES ('info',$1,$2)
+         ON CONFLICT DO NOTHING`, [b.id, mina.id]);
       return json(res, 200, { ok: true });
     }
 

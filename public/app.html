@@ -197,6 +197,21 @@ label.pildinupp input{display:none}
 .amet b{display:block;font-size:15.5px;margin-bottom:2px}
 .amet span{color:var(--ink-3)}
 .infotekst{white-space:pre-wrap;line-height:1.6;font-size:16px;margin:0}
+.kast{display:flex;align-items:center;gap:8px;font-size:15.5px;font-weight:650;
+  color:var(--ink-2);min-height:46px}
+.kinnitus{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px}
+.tehtudmark{color:var(--tehtud);font-weight:700;font-size:14.5px}
+
+/* ── päeva aken: kes majas, ürituse ülesanded ─────────────────── */
+.majas{padding:11px 14px;border-radius:12px;background:var(--soft);font-size:15px;
+  line-height:1.6;margin-bottom:14px}
+.majas b{color:var(--ink-2)}
+.ulesanded{width:100%;margin:8px 0 2px;padding-left:14px;
+  border-left:2.5px solid var(--line-2)}
+.ules{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:4px 0;font-size:15px}
+.ules.voetud>span:first-child{color:var(--tehtud);font-weight:650}
+.ulesvorm{display:flex;gap:8px;margin-top:6px}
+.ulesvorm input{flex:1;min-height:38px;font-size:15px;padding:6px 11px}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -411,10 +426,12 @@ async function müügiKustutus(e) {
    Üks kalender, maja vahetatakse ülal. „Kõik“ on olemas selleks, et
    ükski kirje ei jääks kogemata nähtamatuks. */
 let YRITUSED = [], TOOD = { tood: [], tehtud: [], vahele: [] }, OSALEMINE = [];
+let GRAAFIK = { graafik: [], puudumised: [] }, ULESANDED = [];
 
 async function laadiKalender() {
-  [YRITUSED, TOOD, OSALEMINE] = await Promise.all(
-    [päring("/api/yritused"), päring("/api/tood"), päring("/api/osalemine")]);
+  [YRITUSED, TOOD, OSALEMINE, GRAAFIK, ULESANDED] = await Promise.all([
+    päring("/api/yritused"), päring("/api/tood"), päring("/api/osalemine"),
+    päring("/api/graafik"), päring("/api/ulesanded")]);
 }
 async function vaadeKalender() {
   await laadiKalender();
@@ -524,6 +541,13 @@ function päevaKirjed(iso) {
   return välja.sort((a, b) => (a.aeg || "99").localeCompare(b.aeg || "99"));
 }
 const uusKell = iso => { const d = new Date(iso); return p2(d.getHours()) + ":" + p2(d.getMinutes()); };
+/* „2026-08-09“ + „19:00“ → hetk, mis on siin kell 19. Kellaaeg 24:00
+   tähendab päeva lõppu ehk järgmise päeva algust. */
+function kohalikuks(iso, aeg) {
+  const [t, m] = aeg.split(":").map(Number);
+  const [a, k, p] = iso.split("-").map(Number);
+  return new Date(a, k - 1, p, t, m).toISOString();
+}
 
 /* ── päeva aken ───────────────────────────────────────────────── */
 let AVATUD = null;
@@ -536,6 +560,7 @@ function avaPäev(iso) {
     + "<h2>" + paevaks(iso) + "</h2>"
     + '<p class="kuup">' + PAEVAD[nadalapaev(d)]
     + (MAJA === "koik" ? "" : " · " + esc((MAJAD.find(m => m.id === MAJA) || {}).nimi)) + "</p>"
+    + kesOnMajas(iso, d)
     + (k.length ? k.map(kirjeReaks).join("")
                 : '<p class="tyhi">Sellel päeval ei ole midagi kirjas.</p>')
     + '<div class="valikud"><button class="n2" id="lisaYritus">Lisa üritus</button>'
@@ -546,6 +571,24 @@ function avaPäev(iso) {
   seaPäevaNupud();
   const a = document.getElementById("aken");
   if (!a.open) a.showModal();
+}
+
+/* Kes sellel päeval majas on. Kellaajata töö teeb see, kes parajasti
+   tööl on — siis peab ka näha olema, kes see on. */
+function kesOnMajas(iso, d) {
+  const p = nadalapaev(d);
+  const tööl = GRAAFIK.graafik.filter(g => g.paev === p && majaSobib(g.koht_id));
+  const eemal = GRAAFIK.puudumised.filter(x =>
+    isoks(new Date(x.algus)) <= iso && iso <= isoks(new Date(x.lopp)));
+  if (!tööl.length && !eemal.length) return "";
+  return '<div class="majas">'
+    + (tööl.length
+        ? "<b>Majas:</b> " + tööl.map(g => esc(g.nimi)
+            + (g.algus ? " (" + kell(g.algus) + "–" + (kell(g.lopp) || "…") + ")" : "")).join(", ")
+        : "<b>Majas:</b> graafikus ei ole kedagi")
+    + (eemal.length ? "<br><b>Eemal:</b> " + eemal.map(x => esc(x.nimi)
+        + " — " + (PUUDUMISED[x.liik] || x.liik)).join(", ") : "")
+    + "</div>";
 }
 
 const kirjeReaks = x => '<div class="kirje' + (x.tehtud ? " tehtud" : "") + '">'
@@ -567,7 +610,25 @@ const kirjeReaks = x => '<div class="kirje' + (x.tehtud ? " tehtud" : "") + '">'
         + '<button class="pisi punane" data-kustutaYritus="' + x.id + '">Kustuta</button>')
   + (x.tehtud && x.kes ? '<span class="lisa">Tehtud — ' + esc(x.kes) + "</span>" : "")
   + (x.liik === "yritus" && x.y.asukoht ? '<span class="lisa">' + esc(x.y.asukoht) + "</span>" : "")
-  + (x.liik === "yritus" ? '<span class="lisa">' + tulijad(x.id) + "</span>" : "");
+  + (x.liik === "yritus" ? '<span class="lisa">' + tulijad(x.id) + "</span>"
+      + ulesandedReaks(x.id) : "");
+
+/* Ürituse ülesanded: „kes toob koogi“. Võtja on alati see, kes vajutab. */
+function ulesandedReaks(yId) {
+  const read = ULESANDED.filter(u => u.yritus_id === yId);
+  return '<div class="ulesanded">'
+    + read.map(u => '<div class="ules' + (u.votja_id ? " voetud" : "") + '">'
+        + "<span>" + esc(u.tekst) + "</span>"
+        + (u.votja_id
+            ? '<span class="mark">' + esc(u.votja) + "</span>"
+              + (u.votja_id === MINA.id
+                  ? '<button class="pisi" data-annan="' + u.id + '">Annan tagasi</button>' : "")
+            : '<button class="pisi" data-votan="' + u.id + '">Võtan enda peale</button>')
+        + '<button class="pisi punane" data-ukustuta="' + u.id + '">×</button></div>').join("")
+    + '<form class="ulesvorm" data-yritus="' + yId + '">'
+    + '<input type="text" name="tekst" placeholder="Lisa ülesanne — näiteks kes toob koogi">'
+    + '<button type="submit" class="pisi">Lisa</button></form></div>';
+}
 
 const tulen = id => (OSALEMINE.find(o => o.yritus_id === id && o.liige_id === MINA.id) || {}).vastus;
 function tulijad(id) {
@@ -595,6 +656,25 @@ function seaPäevaNupud() {
   });
   s.querySelectorAll("[data-muudaYritus]").forEach(n => n.onclick = () =>
     vormYritus(AVATUD, YRITUSED.find(y => y.id === n.dataset.muudayritus)));
+  s.querySelectorAll("[data-votan]").forEach(n => n.onclick = async () => {
+    if (await päring("/api/ulesanded", "PATCH", { id: n.dataset.votan, votan: true }))
+      await uuendaKalender();
+  });
+  s.querySelectorAll("[data-annan]").forEach(n => n.onclick = async () => {
+    if (await päring("/api/ulesanded", "PATCH", { id: n.dataset.annan, votan: false }))
+      await uuendaKalender();
+  });
+  s.querySelectorAll("[data-ukustuta]").forEach(n => n.onclick = async () => {
+    if (await päring("/api/ulesanded", "DELETE", { id: n.dataset.ukustuta }))
+      await uuendaKalender();
+  });
+  s.querySelectorAll(".ulesvorm").forEach(f => f.onsubmit = async e => {
+    e.preventDefault();
+    const tekst = new FormData(f).get("tekst");
+    if (!String(tekst).trim()) return;
+    if (await päring("/api/ulesanded", "POST",
+      { yritus_id: f.dataset.yritus, tekst })) await uuendaKalender();
+  });
   s.querySelectorAll("[data-tulen]").forEach(n => n.onclick = async () => {
     if (await päring("/api/osalemine", "POST",
       { yritus_id: n.dataset.tulen, vastus: "jah" })) await uuendaKalender();
@@ -679,8 +759,10 @@ function vormYritus(iso, vana) {
       return teade("Mineviku kellaaega ei saa sisestada.", true);
     const keha = {
       koht_id: f.get("koht_id"), pealkiri: f.get("pealkiri"),
-      algus: iso + "T" + algus + ":00",
-      lopp: f.get("lopp") ? iso + "T" + f.get("lopp") + ":00" : null,
+      /* Kellaaeg on Eesti aeg. Ilma ajavööndita saadetud aja loeks
+         andmebaas enda vööndis ja üritus nihkuks paar tundi edasi. */
+      algus: kohalikuks(iso, algus),
+      lopp: f.get("lopp") ? kohalikuks(iso, f.get("lopp")) : null,
       asukoht: f.get("asukoht"), kirjeldus: f.get("kirjeldus")
     };
     if (vana) keha.id = vana.id;
@@ -948,8 +1030,11 @@ async function vaadeAruanne(algusK, loppK) {
 
 /* ══ SEADED ═════════════════════════════════════════════════════ */
 async function vaadeSeaded() {
-  const [info, osad, hind] = await Promise.all([
+  const [infod, osad, hind] = await Promise.all([
     päring("/api/info"), päring("/api/osad"), päring("/api/tooted")]);
+  const info = infod.read, kinnitused = infod.kinnitused;
+  const kinnitanud = id => kinnitused.filter(k => k.kirje_id === id);
+  const olen = id => kinnitanud(id).some(k => k.liige_id === MINA.id);
   LIIKMED = await päring("/api/liikmed") || [];
 
   document.getElementById("sisu").innerHTML =
@@ -959,14 +1044,27 @@ async function vaadeSeaded() {
     + "hoida. Seda näevad kõik majas.</p>"
     + (info.length ? info.map(i => '<div class="kirje" data-info="' + i.id + '">'
         + '<span class="nim">' + esc(i.pealkiri) + "</span>"
+        + (i.kinnitus_vaja ? '<span class="mark">kinnitust vaja</span>' : "")
         + '<button class="pisi" data-muuda="' + i.id + '">Muuda</button>'
         + '<button class="pisi punane" data-ikustuta="' + i.id + '">Kustuta</button>'
-        + '<p class="lisa infotekst">' + esc(i.sisu) + "</p></div>").join("")
+        + '<p class="lisa infotekst">' + esc(i.sisu) + "</p>"
+        + (i.kinnitus_vaja
+            ? '<div class="lisa kinnitus">'
+              + (olen(i.id)
+                  ? '<span class="tehtudmark">Sina oled kinnitanud.</span>'
+                  : '<button class="pisi" data-ikinnita="' + i.id + '">Loetud ja arusaadav</button>')
+              + " <span>Kinnitanud: "
+              + (kinnitanud(i.id).length
+                  ? esc(kinnitanud(i.id).map(k => k.nimi).join(", "))
+                  : "ei keegi") + "</span></div>"
+            : "")
+        + "</div>").join("")
       : '<p class="tyhi">Infot ei ole veel lisatud.</p>')
     + '<form class="vorm" id="uusInfo">'
     + '<label class="väli">Pealkiri<input type="text" name="pealkiri" required '
     + 'placeholder="näiteks Lahtiolekuajad"></label>'
     + '<label class="väli" style="flex:2 1 300px">Sisu<textarea name="sisu" rows="3"></textarea></label>'
+    + '<label class="kast"><input type="checkbox" name="kinnitus_vaja"> Vajab kinnitust</label>'
     + '<button type="submit" class="esile">Lisa</button></form></article>'
 
     /* hinnakiri */
@@ -1097,11 +1195,16 @@ function seaSeaded() {
     väli.select();
   });
 
+  s.querySelectorAll("[data-ikinnita]").forEach(n => n.onclick = async () => {
+    if (await päring("/api/info/kinnita", "POST", { id: n.dataset.ikinnita })) vaadeSeaded();
+  });
+
   document.getElementById("uusInfo").onsubmit = async e => {
     e.preventDefault();
     const f = new FormData(e.target);
-    if (await päring("/api/info", "POST", { pealkiri: f.get("pealkiri"), sisu: f.get("sisu") }))
-      vaadeSeaded();
+    if (await päring("/api/info", "POST", {
+      pealkiri: f.get("pealkiri"), sisu: f.get("sisu"),
+      kinnitus_vaja: f.get("kinnitus_vaja") === "on" })) vaadeSeaded();
   };
   document.getElementById("uusToode").onsubmit = async e => {
     e.preventDefault();
