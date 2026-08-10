@@ -156,10 +156,8 @@ function ico(n){return '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="
 const VIEWS=[
   {id:"vestlus",  label:"Vestlus",   icon:"chat",   add:"Uus teema",
    help:"Ülemine osa on teemad, mida näevad kõik. Alumine osa on kirjad, mida näete ainult teie kahekesi."},
-  {id:"yritused", label:"Üritused",  icon:"event",  add:"Uus üritus",
-   help:"Vajuta „Osalen“ või „Ei osale“. Kui üritus küsib kinnitust, vajuta ka „Olen tutvunud“. Küsimusi saab küsida iga ürituse all."},
   {id:"kalender", label:"Kalender",  icon:"cal",    add:"Uus üritus",
-   help:"Kõik üritused ja tööd kuu kaupa. Üleval saab valida ühe maja. Korduv töö on katkendjoonega ja kordub igal nädalal."},
+   help:"Kõik üritused ja tööd kuu kaupa. Vajuta kuupäeval, et näha selle päeva oma. Üritused on kalendri all: vajuta „Osalen“ või „Ei osale“ ja küsi julgelt."},
   {id:"info",     label:"Üldinfo",   icon:"info",   add:"Uus infoplokk",
    help:"Tähtis info kõigile liikmetele. Kui plokk küsib kinnitust, loe läbi ja vajuta „Olen tutvunud“."},
   {id:"failid",   label:"Failid",    icon:"file",   add:"Lisa fail",
@@ -269,8 +267,8 @@ function uusDm(other){
   const d=S.dms[dmKey(S.me,other)];
   return d?d.messages.filter(m=>uus(m.at,"dm:"+dmKey(S.me,other),m.by)).length:0;
 }
-const uusEv=e=>uus(e.at||e.start,"view:yritused",e.by);
-const uusKomm=e=>(e.comments||[]).filter(c=>uus(c.at,"view:yritused",c.by)).length;
+const uusEv=e=>uus(e.at||e.start,"view:kalender",e.by);
+const uusKomm=e=>(e.comments||[]).filter(c=>uus(c.at,"view:kalender",c.by)).length;
 const uusInfo=i=>uus(i.at,"view:info",i.by);
 const uusFail=f=>uus(f.at,"view:failid",f.by);
 const uusMyyk=r=>uus(r.at,"view:myyk",r.kes);
@@ -291,17 +289,17 @@ function uudised(){
     n, tekst:mitu(n,"uus kiri","uut kirja")+" — "+m.name,
     mine:()=>{view="vestlus";chat={type:"kiri",id:m.id};snap={};markSeen("dm:"+dmKey(S.me,m.id));}});});
   S.events.forEach(e=>{
-    if(uusEv(e))out.push({n:1,tekst:"Uus üritus: „"+e.title+"“",mine:()=>mineVaade("yritused")});
+    if(uusEv(e))out.push({n:1,tekst:"Uus üritus: „"+e.title+"“",mine:()=>mineVaade("kalender")});
     const k=uusKomm(e);
     if(k)out.push({n:k,tekst:mitu(k,"uus küsimus","uut küsimust")+" ürituse „"+e.title+"“ all",
-      mine:()=>{opened.add(e.id);mineVaade("yritused");}});
+      mine:()=>{opened.add(e.id);mineVaade("kalender");}});
   });
   S.info.filter(uusInfo).forEach(i=>out.push({n:1,tekst:"Üldinfo muutus: „"+i.title+"“",mine:()=>mineVaade("info")}));
   S.files.filter(uusFail).forEach(f=>out.push({n:1,tekst:"Uus fail: "+f.name,mine:()=>mineVaade("failid")}));
   myygiRead().filter(uusMyyk).forEach(r=>out.push({
     n:1,tekst:"Uus müügirida: "+r.nimetus,mine:()=>{myykOsa=r.osa;mineVaade("myyk");}}));
   S.events.filter(e=>e.req&&new Date(e.start)>=new Date()&&!(e.acks||{})[S.me])
-    .forEach(e=>out.push({n:1,kinnitus:true,tekst:"Ootab sinu kinnitust: üritus „"+e.title+"“",mine:()=>mineVaade("yritused")}));
+    .forEach(e=>out.push({n:1,kinnitus:true,tekst:"Ootab sinu kinnitust: üritus „"+e.title+"“",mine:()=>mineVaade("kalender")}));
   S.info.filter(i=>i.req&&!(i.acks||{})[S.me])
     .forEach(i=>out.push({n:1,kinnitus:true,tekst:"Ootab sinu kinnitust: „"+i.title+"“",mine:()=>mineVaade("info")}));
   /* Tänased tööd, mis on kinnitamata — need ootavad kedagi, kes täna tööl on. */
@@ -396,7 +394,7 @@ function seed(){
        kõik pärast seda kirjutatu paistab neile uuena. */
     seen:Object.fromEntries(M.map(m=>[m.id, m.id==="m1" ? {
       __baas:dayAt(-45,12,0),
-      "view:yritused":dayAt(-5,12,0), "view:info":dayAt(-30,12,0),
+      "view:kalender":dayAt(-5,12,0), "view:info":dayAt(-30,12,0),
       "view:failid":dayAt(-10,12,0),  "view:kontakt":dayAt(-5,12,0),
       "thread:t1":dayAt(-2,12,0), "thread:t2":dayAt(-8,0,0)
     } : {__baas:new Date().toISOString()}])),
@@ -668,7 +666,7 @@ function chrome(){
   const badges={
     vestlus:S.threads.reduce((n,t)=>n+uusThread(t),0)
            +S.members.filter(m=>m.id!==meId()).reduce((n,m)=>n+uusDm(m.id),0),
-    yritused:S.events.filter(uusEv).length+S.events.reduce((n,e)=>n+uusKomm(e),0)+waitEv,
+    kalender:S.events.filter(uusEv).length+S.events.reduce((n,e)=>n+uusKomm(e),0)+waitEv,
     kalender:0,
     info:S.info.filter(uusInfo).length+waitIn,
     kontakt:0,
@@ -696,9 +694,9 @@ function chrome(){
     +esc((v.id==="myyk"&&!naebKogumyyki()&&v.help2)?v.help2:v.help)+'</span>';
 
   let sub="";
-  if(view==="yritused"){
+  if(view==="kalender"){
     const up=S.events.filter(e=>new Date(e.start)>=new Date()).length;
-    sub=up?up+" tulemas":"midagi tulemas ei ole";
+    sub=up?up+" üritust tulemas":"midagi tulemas ei ole";
     if(waitEv)sub+=" · "+waitEv+" ootab kinnitust";
   }
   else if(view==="vestlus")sub=S.threads.length+" teemat";
@@ -737,23 +735,29 @@ function render(){
   cv.style.overflow=view==="vestlus"?"hidden":"";
   w.style.maxWidth=(view==="vestlus"||view==="kalender"||view==="kontakt"||view==="myyk"||view==="tootajad")?"none":"";
   w.style.height=view==="vestlus"?"100%":"";
-  ({vestlus:vChat,yritused:vEvents,kalender:vCal,info:vInfo,kontakt:vPeople,failid:vFiles,myyk:vMyyk,tootajad:vToo})[view](w);
+  ({vestlus:vChat,kalender:vCal,info:vInfo,kontakt:vPeople,failid:vFiles,myyk:vMyyk,tootajad:vToo})[view](w);
   cv.scrollTop=keep;
   lastView=view;
 }
 
 /* ═══ Üritused ═══ */
-function vEvents(w){
-  const now=new Date();
-  const up=S.events.filter(e=>new Date(e.start)>=now).sort((a,b)=>new Date(a.start)-new Date(b.start));
-  const past=S.events.filter(e=>new Date(e.start)<now).sort((a,b)=>new Date(b.start)-new Date(a.start));
-  if(!S.events.length){
-    w.innerHTML='<div class="card"><div class="empty"><b>Ühtegi üritust ei ole.</b>Vajuta üleval paremal „Uus üritus“.</div></div>';return;
-  }
+/* Ürituste loend kalendri all. Kalendris valitud maja kehtib ka siin —
+   „Kõik“ näitab mõlemat. */
+function yritusteLoend(){
+  const nyyd=new Date();
+  const read=S.events.filter(e=>sobibKoht(e,kalKoht));
+  const tulemas=read.filter(e=>new Date(e.start)>=nyyd)
+    .sort((a,b)=>new Date(a.start)-new Date(b.start));
+  const olnud=read.filter(e=>new Date(e.start)<nyyd)
+    .sort((a,b)=>new Date(b.start)-new Date(a.start)).slice(0,10);
+  if(!read.length)
+    return '<div class="card"><div class="empty"><b>Ühtegi üritust ei ole.</b>'
+      +'Vajuta üleval paremal „Uus üritus“.</div></div>';
   let h="";
-  if(up.length)h+='<p class="h3">TULEMAS</p>'+up.map(evCard).join("");
-  if(past.length)h+='<p class="h3" style="margin-top:14px">TOIMUNUD</p>'+past.map(evCard).join("");
-  w.innerHTML=h;
+  if(tulemas.length)h+='<p class="h3">TULEMAS</p>'+tulemas.map(evCard).join("");
+  if(olnud.length)h+='<p class="h3" style="margin-top:14px">TOIMUNUD</p>'
+    +olnud.map(evCard).join("");
+  return h;
 }
 
 function evCard(e){
@@ -828,7 +832,7 @@ function evCard(e){
   if(on){
     h+='<div class="qlist">'
       +(cs.length?cs.map(c=>
-        '<div class="q"><div class="hd">'+(uus(c.at,"view:yritused",c.by)?'<span class="uus">UUS</span>':"")
+        '<div class="q"><div class="hd">'+(uus(c.at,"view:kalender",c.by)?'<span class="uus">UUS</span>':"")
         +'<b>'+esc(nameOf(c.by))+'</b><span>'+esc(fmtStamp(c.at))+'</span></div>'
         +'<div class="tx">'+esc(c.text)+'</div></div>').join("")
         :'<p class="meta">Keegi pole veel midagi küsinud. Küsi julgelt — teised näevad ka vastust.</p>')
@@ -911,50 +915,17 @@ function vCal(w){
     +'<span class="sp"></span>'
     +'<button class="btn ghost small" data-act="too-uus">+ Lisa töö</button></div>'
     +'<div class="cal"><div class="dow">'+DOW_S.map(d=>'<span>'+d+'</span>').join("")+'</div><div class="g">'+cells+'</div></div>'
-    +paevaPlokk(valitudPaev);
-}
-
-/* Töö graafiku suur kalender. Ruut näitab, mitu inimest sel päeval
-   graafikus on ja kes on ära. Klõps toob päeva info üles. */
-function graafikuKalender(tana){
-  if(!graKuu){const n=new Date();graKuu=new Date(n.getFullYear(),n.getMonth(),1);}
-  const y=graKuu.getFullYear(), m=graKuu.getMonth();
-  const algus=new Date(y,m,1-dowIdx(new Date(y,m,1)));
-  const valitud=valitudPaevOn();
-  let ruudud="";
-  for(let i=0;i<42;i++){
-    const d=new Date(algus); d.setDate(algus.getDate()+i);
-    const k=dkey(d), vali=d.getMonth()!==m, ni=dowIdx(d);
-    /* Mitu inimest sel päeval majas on — puudujaid ei loeta. */
-    const majas=S.members.filter(x=>
-      (graIsik?x.id===graIsik:true)
-      && KOHAD.some(kk=>paevalTööl(x.id,ni,kk.id))
-      && !araPaeval(x.id,k)).length;
-    const ara=puhkused().filter(x=>x.algus<=k&&x.lopp>=k
-      &&(graIsik?x.kes===graIsik:true)).length;
-    ruudud+='<button class="gcell'+(vali?" vali":"")+(k===tana?" tana":"")
-      +(k===valitud?" valitud":"")+'" data-act="kal-paev" data-k="'+k+'">'
-      +'<span class="d">'+d.getDate()+'</span>'
-      +(majas?'<span class="m">'+majas+'</span>':"")
-      +(ara?'<span class="a">'+ara+'</span>':"")
-      +'</button>';
-  }
-  return '<div class="card"><div class="kalpais"><p class="h3">KALENDER</p>'
-    +'<span class="kuunimi">'+MON[m].charAt(0).toUpperCase()+MON[m].slice(1)+' '+y+'</span>'
-    +'<button class="btn ghost small" data-act="gra-kuu" data-v="-1">‹</button>'
-    +'<button class="btn ghost small" data-act="gra-kuu" data-v="0">Täna</button>'
-    +'<button class="btn ghost small" data-act="gra-kuu" data-v="1">›</button></div>'
-    +'<div class="gkal"><div class="dow">'+DOW_S.map(x=>'<span>'+x+'</span>').join("")
-    +'</div><div class="g">'+ruudud+'</div></div>'
-    +'<p class="meta">Vajuta kuupäeval — selle päeva info tuleb üles. '
-    +'Number ruudus näitab, mitu inimest on sel päeval majas; punane number, '
-    +'mitu on ära.</p></div>';
+    +paevaPlokk(valitudPaev, false)
+    /* Üritused olid enne eraldi kategoorias, aga see oli sama asi kaks
+       korda: kalender näitas neid ruudustikus ja nimekiri loeteluna.
+       Nüüd on nad ühe katuse all — kalender üleval, üritused all. */
+    +yritusteLoend();
 }
 
 /* Ühe päeva plokk kalendri all: mis sel päeval toimub ja kes on majas.
    Varem oli see eraldi Töö graafiku all ja näitas ainult tänast. Nüüd on
    kõik ühe kalendri all: vajuta kuupäeval ja näed selle päeva kohta kõike. */
-function paevaPlokk(k){
+function paevaPlokk(k, tooga){
   const d=new Date(k+"T12:00:00");
   const i=dowIdx(d);
   const onTana=k===dkey(new Date());
@@ -975,19 +946,23 @@ function paevaPlokk(k){
   }).join("");
   const ara=puhkused().filter(x=>x.algus<=k&&x.lopp>=k);
 
+  /* Kes majas on ja kes ära — see on tööinfo ja seda näidatakse ainult
+     Töö graafiku all. Kalendris on üritused ja tööd. */
   return '<div class="card"><div class="kalpais">'
     +'<p class="h3">'+(onTana?"TÄNA":"PÄEV")+' — '+esc(DOW_P[i])+'</p>'
     +'<span class="kuunimi">'+d.getDate()+'. '+MON[d.getMonth()]+' '+d.getFullYear()+'</span>'
     +'</div>'
-    +'<div class="tanariba">'
-    +  '<div><span class="sild">Majas</span>'
-    +   (majasHtml||'<span class="tyhi">Graafikus ei ole '+millal+' kedagi.</span>')+'</div>'
-    +  '<div><span class="sild">Ära</span>'
-    +   (ara.length?ara.map(x=>'<span class="isik">'+avaHtml(byId(x.kes)||{name:"?"})
-          +esc(nameOf(x.kes))+'<span class="kes3">'+esc(liigiNimi(x.liik))+'</span></span>').join("")
-        :'<span class="tyhi">Keegi ei ole '+millal+' ära.</span>')+'</div>'
-    +'</div>'
-    +'<div class="tanariba" style="margin-top:16px">'
+    +(tooga
+      ? '<div class="tanariba">'
+        + '<div><span class="sild">Majas</span>'
+        +  (majasHtml||'<span class="tyhi">Graafikus ei ole '+millal+' kedagi.</span>')+'</div>'
+        + '<div><span class="sild">Ära</span>'
+        +  (ara.length?ara.map(x=>'<span class="isik">'+avaHtml(byId(x.kes)||{name:"?"})
+             +esc(nameOf(x.kes))+'<span class="kes3">'+esc(liigiNimi(x.liik))+'</span></span>').join("")
+           :'<span class="tyhi">Keegi ei ole '+millal+' ära.</span>')+'</div>'
+        +'</div>'
+      : "")
+    +'<div class="tanariba"'+(tooga?' style="margin-top:16px"':'')+'>'
     +  '<div><span class="sild">Üritused</span>'
     +   (yritused.length?yritused.map(e=>'<button class="pill" data-act="goto-ev" data-id="'
           +e.id+'">'+fmtTime(e.start)+' '+esc(e.title)+'</button>').join("")
@@ -1703,7 +1678,7 @@ function vToo(w){
   /* Kõige üleval on see päev, mida parasjagu vaadatakse: kes on majas,
      kes on ära, mis sel päeval toimub. Sama plokk on ka Kalendris ja
      mõlemad näitavad sama valitud päeva. */
-  let h=paevaPlokk(valitudPaevOn());
+  let h=paevaPlokk(valitudPaevOn(), true);
 
   /* Üks tabel korraga, maja valik peal — sama muster mis Kalendris. */
   const g2=graafik(graKoht);
@@ -1806,11 +1781,6 @@ function vToo(w){
         +'</div>';
     }
   }
-
-  /* Suur kalender: vajuta kuupäeval ja selle päeva info tuleb üles.
-     Ruudus on näha, mitu inimest sel päeval graafikus on — nii paistab
-     juba kalendrist, kus on auk. */
-  h+=graafikuKalender(tana);
 
   /* Puudumised. Ühe inimese vaates ainult tema omad. */
   const tulevad=puhkused().filter(p=>p.lopp>=tana&&(!graIsik||p.kes===graIsik))
@@ -2700,7 +2670,7 @@ document.addEventListener("click",ev=>{
     }
     case "add":
       if(view==="vestlus")dlgThread();
-      else if(view==="yritused"||view==="kalender")dlgEvent(null);
+      else if(view==="kalender")dlgEvent(null);
       else if(view==="info")dlgInfo(null);
       else if(view==="kontakt")dlgPerson(null);
       else if(view==="myyk")dlgMyyk(null);
@@ -2778,7 +2748,7 @@ document.addEventListener("click",ev=>{
       break;
     }
     case "goto-ev":
-      opened.add(id);mineVaade("yritused");save();render();
+      opened.add(id);mineVaade("kalender");save();render();
       setTimeout(()=>{const n=document.querySelector('[data-act="q"][data-id="'+id+'"]');
         if(n)n.closest(".card").scrollIntoView({block:"center",behavior:"smooth"});},60);
       break;
