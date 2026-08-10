@@ -978,9 +978,6 @@ function paevaPlokk(k){
   return '<div class="card"><div class="kalpais">'
     +'<p class="h3">'+(onTana?"TÄNA":"PÄEV")+' — '+esc(DOW_P[i])+'</p>'
     +'<span class="kuunimi">'+d.getDate()+'. '+MON[d.getMonth()]+' '+d.getFullYear()+'</span>'
-    +'<button class="btn ghost small" data-act="kal-nihe" data-v="-1">‹</button>'
-    +'<button class="btn ghost small" data-act="kal-nihe" data-v="0">Täna</button>'
-    +'<button class="btn ghost small" data-act="kal-nihe" data-v="1">›</button>'
     +'</div>'
     +'<div class="tanariba">'
     +  '<div><span class="sild">Majas</span>'
@@ -1723,7 +1720,7 @@ function vToo(w){
     +'<span class="kuunimi">'+paevad[0].getDate()+'. '+MON[paevad[0].getMonth()]
     +  ' – '+paevad[6].getDate()+'. '+MON[paevad[6].getMonth()]+'</span>'
     +'<button class="btn ghost small" data-act="nadal" data-v="-1">‹</button>'
-    +'<button class="btn ghost small" data-act="nadal" data-v="0">Käesolev</button>'
+    +'<button class="btn ghost small" data-act="nadal" data-v="0">Täna</button>'
     +'<button class="btn ghost small" data-act="nadal" data-v="1">›</button>'
     +(graIsik?'<span class="sp"></span>'
       +(tohinTeise(graIsik)
@@ -2879,16 +2876,6 @@ document.addEventListener("click",ev=>{
       if(calMonth&&(d.getMonth()!==calMonth.getMonth()
         ||d.getFullYear()!==calMonth.getFullYear()))
         calMonth=new Date(d.getFullYear(),d.getMonth(),1);
-      render();break;}
-    case "kal-nihe":{
-      if(el.dataset.v==="0"){kalPaev=null;render();break;}
-      const d=new Date((kalPaev||dkey(new Date()))+"T12:00:00");
-      d.setDate(d.getDate()+Number(el.dataset.v));
-      kalPaev=dkey(d);
-      /* Kui valitud päev jääb teise kuusse, liigub ka kuu kaasa. */
-      if(calMonth&&(d.getMonth()!==calMonth.getMonth()||d.getFullYear()!==calMonth.getFullYear()))
-        calMonth=new Date(d.getFullYear(),d.getMonth(),1);
-      if(kalPaev===dkey(new Date()))kalPaev=null;
       render();break;}
     case "liik-vali": {
       document.querySelectorAll('[data-act="liik-vali"]').forEach(x=>
