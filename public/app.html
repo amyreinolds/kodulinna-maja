@@ -915,10 +915,11 @@ function vCal(w){
     +'<span class="sp"></span>'
     +'<button class="btn ghost small" data-act="too-uus">+ Lisa töö</button></div>'
     +'<div class="cal"><div class="dow">'+DOW_S.map(d=>'<span>'+d+'</span>').join("")+'</div><div class="g">'+cells+'</div></div>'
-    +paevaPlokk(valitudPaev, false)
     /* Üritused olid enne eraldi kategoorias, aga see oli sama asi kaks
        korda: kalender näitas neid ruudustikus ja nimekiri loeteluna.
-       Nüüd on nad ühe katuse all — kalender üleval, üritused all. */
+       Nüüd on nad ühe katuse all — kalender üleval, üritused all.
+       Päevaplokki siin ei ole: ruudus on kirjas juba see, mis sel päeval
+       toimub, ja iga kirje avaneb klõpsuga. */
     +yritusteLoend();
 }
 
@@ -1953,31 +1954,130 @@ function dlgPuhkus(p){
 }
 
 /* Üks päev korraga: nii ei pea seitsme rea seast õiget otsima. */
+/* Üks lahter, kõik variandid. Inimese päev on kas tööpäev ühes majas
+   või ta ei ole tööl — puhkus, haigusleht, vaba päev või muu. Enne olid
+   need kahes eri kohas ja tööaja lahtrist ei saanud puhkust kirja panna.
+
+   Puudumine käib kuupäevade, mitte nädalapäeva järgi: puhkus on kindlate
+   päevade vahemik, tööaeg kordub igal nädalal. Seepärast küsime puudumise
+   puhul ka lõppkuupäeva. */
+const PAEVA_LIIGID = [
+  { id: "too",     nimi: "Tööl" },
+  { id: "puhkus",  nimi: "Puhkus" },
+  { id: "haigus",  nimi: "Haigusleht" },
+  { id: "vaba",    nimi: "Vaba päev" },
+  { id: "muu",     nimi: "Muu" }
+];
+
 function dlgGraafikPaev(mid,koht,i,kuup){
   const m=byId(mid); if(!m)return;
-  const g=graafik(koht);
-  const r=(g[mid]||[]).slice();
-  const v=vahetusYks(r[i]);
-  dlg("Tööaeg — "+m.name,
+  const olemasAra=araPaeval(mid,kuup);
+  /* „Muu“ hoiame andmebaasi „vaba“ all, aga märkusega — nii ei pea
+     andmebaasi iga uue põhjuse jaoks muutma. */
+  const algneLiik=olemasAra
+    ? (olemasAra.liik==="vaba"&&/^Muu/.test(olemasAra.markus||"")?"muu":olemasAra.liik)
+    : "too";
+  const v=vahetusYks((graafik(koht)[mid]||[])[i]);
+
+  dlg("Päev — "+m.name,
     '<div class="paevpais">'+esc(fmtPaev(kuup+"T12:00:00"))+'</div>'
-    +'<p class="hint" style="margin:0"><b>'+esc(kohaNimi(koht))+'</b> · kehtib igal '
-    +esc(DOW_P[i])+'al</p>'
-    +'<div class="two">'
-    +  '<div class="field"><label for="f_pa">Algab</label>'
-    +  kellSelect("f_pa",v.a,"Algab")+'</div>'
-    +  '<div class="field"><label for="f_pl">Lõpeb</label>'
-    +  kellSelect("f_pl",v.l,"Lõpeb")+'</div>'
-    +'</div>',
+    +'<div class="field"><label>Mis sel päeval on</label><div class="pvalik">'
+    + PAEVA_LIIGID.map(l=>'<button type="button" class="lnupp" data-act="paev-liik"'
+        +' data-v="'+l.id+'" aria-pressed="'+(l.id===algneLiik?"true":"false")+'">'
+        +esc(l.nimi)+'</button>').join("")
+    +'</div><input type="hidden" id="f_liik" value="'+esc(algneLiik)+'"></div>'
+
+    /* Tööl: kummas majas ja mis kellast. Kehtib igal sellel nädalapäeval. */
+    +'<div id="ala_too">'
+    +  '<div class="field"><label>Kus</label><div class="pvalik">'
+    +  KOHAD.map(x=>'<button type="button" class="lnupp" data-act="paev-koht"'
+        +' data-v="'+x.id+'" aria-pressed="'+(x.id===koht?"true":"false")+'">'
+        +esc(x.nimi)+'</button>').join("")
+    +  '</div><input type="hidden" id="f_koht" value="'+esc(koht)+'"></div>'
+    +  '<div class="two">'
+    +    '<div class="field"><label for="f_pa">Algab</label>'
+    +    kellSelect("f_pa",v.a,"Algab")+'</div>'
+    +    '<div class="field"><label for="f_pl">Lõpeb</label>'
+    +    kellSelect("f_pl",v.l,"Lõpeb")+'</div>'
+    +  '</div>'
+    +  '<span class="hint">Tööaeg kordub igal '+esc(DOW_P[i])+'al. '
+    +  'Jäta algus tühjaks, et tööaeg ära võtta.</span>'
+    +'</div>'
+
+    /* Puudumine: kuupäevade vahemik ja märkus. */
+    +'<div id="ala_ara" hidden>'
+    +  '<div class="two">'
+    +    '<div class="field"><label for="f_aalg">Alates</label>'
+    +    '<input type="date" id="f_aalg" value="'+esc(olemasAra?olemasAra.algus:kuup)+'"></div>'
+    +    '<div class="field"><label for="f_alopp">Kuni</label>'
+    +    '<input type="date" id="f_alopp" value="'+esc(olemasAra?olemasAra.lopp:kuup)+'"></div>'
+    +  '</div>'
+    +  '<span class="hint">Ühe päeva puhul jäta mõlemad samaks.</span>'
+    +  fld("f_amark","Märkus",olemasAra?String(olemasAra.markus||"").replace(/^Muu: ?/,""):"",
+        "text","Ei ole kohustuslik")
+    +'</div>'
+    +(olemasAra?'<div class="tools"><button type="button" class="btn danger"'
+      +' data-act="paev-ara-kustuta" data-id="'+olemasAra.id+'">Võta puudumine maha</button></div>':""),
     "Salvesta",()=>{
-      const a=fv("f_pa"), l=a?fv("f_pl"):"";
-      /* Tööpäev ei lõpe enne, kui ta algab. */
-      if(a&&l&&l<=a){toast("Lõpp peab olema algusest hiljem.");return false;}
-      while(r.length<7)r.push({});
-      r[i]={ha:a,hl:l};
-      g[mid]=r;
-      save();render();toast(a?"Tööaeg salvestatud.":"Tööaeg kustutatud.");
+      const liik=fv("f_liik");
+
+      if(liik==="too"){
+        /* Kui inimene oli sel päeval ära, siis tööle märkimine tähendab,
+           et puudumine käib maha — muidu jääks kaks vastuolulist kirjet. */
+        if(olemasAra)kustutaPuudumine(olemasAra.id);
+        const uusKoht=fv("f_koht")||koht;
+        const a=fv("f_pa"), l=a?fv("f_pl"):"";
+        if(a&&l&&l<=a){toast("Lõpp peab olema algusest hiljem.");return false;}
+        /* Maja vahetamisel võtame vana maja lahtri tühjaks. */
+        for(const x of KOHAD){
+          const g=graafik(x.id);
+          const r=(g[mid]||[]).slice();
+          while(r.length<7)r.push({});
+          if(x.id===uusKoht)r[i]={ha:a,hl:l};
+          else if(vahetusi(r[i]).length)r[i]={};
+          g[mid]=r;
+        }
+        save();render();
+        toast(a?"Tööaeg salvestatud — "+kohaNimi(uusKoht):"Tööaeg kustutatud.");
+        return true;
+      }
+
+      const alg=fv("f_aalg"), lopp=fv("f_alopp");
+      if(!alg||!lopp){toast("Kuupäevad on täitmata.");return false;}
+      if(lopp<alg){toast("Lõpp ei saa olla enne algust.");return false;}
+      const markus=fv("f_amark").trim();
+      const p=puhkused();
+      const kirje={
+        id: olemasAra?olemasAra.id:uid(),
+        kes: mid, algus: alg, lopp: lopp,
+        liik: liik==="muu"?"vaba":liik,
+        markus: liik==="muu"?("Muu"+(markus?": "+markus:"")):markus
+      };
+      const vana=p.findIndex(x=>x.id===kirje.id);
+      if(vana>=0)p[vana]=kirje; else p.push(kirje);
+      /* Puudumise päeval ei ole ta ka tööl — tööaeg jääb graafikusse
+         alles, aga ekraan näitab neil päevadel puudumist. */
+      save();render();
+      toast(PAEVA_LIIGID.find(x=>x.id===liik).nimi+" salvestatud.");
       return true;
     });
+
+  /* Alguses näitame õiget poolt. */
+  naitaPaevaAla(algneLiik);
+}
+
+function naitaPaevaAla(liik){
+  const too=document.getElementById("ala_too");
+  const ara=document.getElementById("ala_ara");
+  if(!too||!ara)return;
+  too.hidden=(liik!=="too");
+  ara.hidden=(liik==="too");
+}
+
+function kustutaPuudumine(id){
+  const p=puhkused();
+  const i=p.findIndex(x=>x.id===id);
+  if(i>=0)p.splice(i,1);
 }
 
 function dlgGraafik(mid,koht){
@@ -2847,6 +2947,21 @@ document.addEventListener("click",ev=>{
         ||d.getFullYear()!==calMonth.getFullYear()))
         calMonth=new Date(d.getFullYear(),d.getMonth(),1);
       render();break;}
+    case "paev-liik": {
+      document.querySelectorAll('[data-act="paev-liik"]').forEach(x=>
+        x.setAttribute("aria-pressed", x.dataset.v===el.dataset.v?"true":"false"));
+      document.getElementById("f_liik").value=el.dataset.v;
+      naitaPaevaAla(el.dataset.v);
+      break;}
+    case "paev-koht": {
+      document.querySelectorAll('[data-act="paev-koht"]').forEach(x=>
+        x.setAttribute("aria-pressed", x.dataset.v===el.dataset.v?"true":"false"));
+      document.getElementById("f_koht").value=el.dataset.v;
+      break;}
+    case "paev-ara-kustuta": {
+      kustutaPuudumine(id);
+      save();render();closeDlg();toast("Puudumine võetud maha.");
+      break;}
     case "liik-vali": {
       document.querySelectorAll('[data-act="liik-vali"]').forEach(x=>
         x.setAttribute("aria-pressed",(x.dataset.v===el.dataset.v)?"true":"false"));
