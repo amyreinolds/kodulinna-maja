@@ -914,6 +914,43 @@ function vCal(w){
     +paevaPlokk(valitudPaev);
 }
 
+/* Töö graafiku suur kalender. Ruut näitab, mitu inimest sel päeval
+   graafikus on ja kes on ära. Klõps toob päeva info üles. */
+function graafikuKalender(tana){
+  if(!graKuu){const n=new Date();graKuu=new Date(n.getFullYear(),n.getMonth(),1);}
+  const y=graKuu.getFullYear(), m=graKuu.getMonth();
+  const algus=new Date(y,m,1-dowIdx(new Date(y,m,1)));
+  const valitud=valitudPaevOn();
+  let ruudud="";
+  for(let i=0;i<42;i++){
+    const d=new Date(algus); d.setDate(algus.getDate()+i);
+    const k=dkey(d), vali=d.getMonth()!==m, ni=dowIdx(d);
+    /* Mitu inimest sel päeval majas on — puudujaid ei loeta. */
+    const majas=S.members.filter(x=>
+      (graIsik?x.id===graIsik:true)
+      && KOHAD.some(kk=>paevalTööl(x.id,ni,kk.id))
+      && !araPaeval(x.id,k)).length;
+    const ara=puhkused().filter(x=>x.algus<=k&&x.lopp>=k
+      &&(graIsik?x.kes===graIsik:true)).length;
+    ruudud+='<button class="gcell'+(vali?" vali":"")+(k===tana?" tana":"")
+      +(k===valitud?" valitud":"")+'" data-act="kal-paev" data-k="'+k+'">'
+      +'<span class="d">'+d.getDate()+'</span>'
+      +(majas?'<span class="m">'+majas+'</span>':"")
+      +(ara?'<span class="a">'+ara+'</span>':"")
+      +'</button>';
+  }
+  return '<div class="card"><div class="kalpais"><p class="h3">KALENDER</p>'
+    +'<span class="kuunimi">'+MON[m].charAt(0).toUpperCase()+MON[m].slice(1)+' '+y+'</span>'
+    +'<button class="btn ghost small" data-act="gra-kuu" data-v="-1">‹</button>'
+    +'<button class="btn ghost small" data-act="gra-kuu" data-v="0">Täna</button>'
+    +'<button class="btn ghost small" data-act="gra-kuu" data-v="1">›</button></div>'
+    +'<div class="gkal"><div class="dow">'+DOW_S.map(x=>'<span>'+x+'</span>').join("")
+    +'</div><div class="g">'+ruudud+'</div></div>'
+    +'<p class="meta">Vajuta kuupäeval — selle päeva info tuleb üles. '
+    +'Number ruudus näitab, mitu inimest on sel päeval majas; punane number, '
+    +'mitu on ära.</p></div>';
+}
+
 /* Ühe päeva plokk kalendri all: mis sel päeval toimub ja kes on majas.
    Varem oli see eraldi Töö graafiku all ja näitas ainult tänast. Nüüd on
    kõik ühe kalendri all: vajuta kuupäeval ja näed selle päeva kohta kõike. */
@@ -944,7 +981,6 @@ function paevaPlokk(k){
     +'<button class="btn ghost small" data-act="kal-nihe" data-v="-1">‹</button>'
     +'<button class="btn ghost small" data-act="kal-nihe" data-v="0">Täna</button>'
     +'<button class="btn ghost small" data-act="kal-nihe" data-v="1">›</button>'
-    +'<input type="date" id="kal-kuup" class="pvalik" value="'+k+'" aria-label="Vali päev">'
     +'</div>'
     +'<div class="tanariba">'
     +  '<div><span class="sild">Majas</span>'
@@ -1132,6 +1168,8 @@ let kalPaev=null;
 const valitudPaevOn=()=>kalPaev||dkey(new Date());
 /* Kelle graafikut vaadatakse. Tühi tähendab kõiki. */
 let graIsik=null;
+/* Töö graafiku suure kalendri kuu. */
+let graKuu=null;
 
 /* Kustutatud osa read ei tohi kaduda — nad koonduvad „Ilma osata“ alla. */
 function myygiSeis(){
@@ -1768,6 +1806,11 @@ function vToo(w){
         +'</div>';
     }
   }
+
+  /* Suur kalender: vajuta kuupäeval ja selle päeva info tuleb üles.
+     Ruudus on näha, mitu inimest sel päeval graafikus on — nii paistab
+     juba kalendrist, kus on auk. */
+  h+=graafikuKalender(tana);
 
   /* Puudumised. Ühe inimese vaates ainult tema omad. */
   const tulevad=puhkused().filter(p=>p.lopp>=tana&&(!graIsik||p.kes===graIsik))
@@ -2794,7 +2837,20 @@ document.addEventListener("click",ev=>{
     case "gra-koht": graKoht=el.dataset.v;render();break;
     case "gra-isik": graIsik=(graIsik===id)?null:id;render();break;
     case "gra-koik": graIsik=null;render();break;
-    case "kal-paev": kalPaev=el.dataset.k;render();break;
+    case "gra-kuu":{
+      if(el.dataset.v==="0"){graKuu=null;kalPaev=null;render();break;}
+      const p=graKuu||new Date();
+      graKuu=new Date(p.getFullYear(),p.getMonth()+Number(el.dataset.v),1);
+      render();break;}
+    case "kal-paev":{
+      kalPaev=el.dataset.k;
+      /* Kuu ja nädal järgnevad valitud päevale. */
+      const d=new Date(kalPaev+"T12:00:00");
+      graKuu=new Date(d.getFullYear(),d.getMonth(),1);
+      if(calMonth&&(d.getMonth()!==calMonth.getMonth()
+        ||d.getFullYear()!==calMonth.getFullYear()))
+        calMonth=new Date(d.getFullYear(),d.getMonth(),1);
+      render();break;}
     case "kal-nihe":{
       if(el.dataset.v==="0"){kalPaev=null;render();break;}
       const d=new Date((kalPaev||dkey(new Date()))+"T12:00:00");
@@ -2942,17 +2998,6 @@ document.addEventListener("pointerdown",e=>{
 },true);
 
 /* Osa vahetus vahetab ka selle, mida seal müüakse. */
-/* Kuupäevaväli kalendris: vali suvaline päev. */
-document.addEventListener("change",e=>{
-  if(e.target.id!=="kal-kuup")return;
-  const v=e.target.value;
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(v))return;
-  const d=new Date(v+"T12:00:00");
-  kalPaev=(v===dkey(new Date()))?null:v;
-  calMonth=new Date(d.getFullYear(),d.getMonth(),1);
-  render();
-});
-
 document.addEventListener("change",e=>{
   if(e.target.id!=="f_osa")return;
   const k=document.getElementById("kiirvalik");

@@ -685,6 +685,30 @@ hr.hr{border:none;border-top:1px solid var(--line-2);margin:0}
 }
 .cell .n:hover{color:var(--s);text-decoration:underline}
 
+/* Töö graafiku suur kalender. Ruudus on kuupäev, mitu inimest majas
+   ja mitu ära — nii paistab juba kalendrist, kus on auk. */
+.gkal{margin-top:14px}
+.gkal .dow{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px}
+.gkal .dow span{text-align:center;font-size:12px;font-weight:800;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--ink-3)}
+.gkal .g{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.gcell{
+  position:relative;display:flex;align-items:center;justify-content:center;gap:6px;
+  min-height:62px;border-radius:14px;border:1.5px solid var(--line-2);
+  background:var(--kaart);color:var(--ink);font:inherit;cursor:pointer;
+}
+.gcell:hover{border-color:var(--s)}
+.gcell.vali{opacity:.45}
+.gcell.tana{border-color:var(--accent)}
+.gcell.valitud{background:var(--s-tint);border-color:var(--s)}
+.gcell .d{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+.gcell .m,.gcell .a{
+  min-width:22px;height:22px;border-radius:999px;display:grid;place-items:center;
+  font-size:12.5px;font-weight:800;
+}
+.gcell .m{background:var(--s-tint);color:var(--s)}
+.gcell .a{background:var(--red-soft);color:var(--red)}
+
 /* Lukus rida: sama välimus, aga ei ole nupp. Teise inimese tööaega
    muudavad ülemus ja administraator. */
 .lukus{cursor:default}
