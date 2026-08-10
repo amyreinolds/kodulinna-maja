@@ -1729,10 +1729,13 @@ function vToo(w){
               const k=dkey(d), ara=araPaeval(m.id,k);
               const silt=esc(m.name+", "+DOW_P[i]+" "+d.getDate()+"."+(d.getMonth()+1)+" — ");
               if(ara){
+                /* Ka puudumise lahter avab sama akna — üks koht, kust
+                   inimese päeva vaadata ja muuta. */
                 const t=esc(liigiNimi(ara.liik));
                 return tohin
-                  ? '<button class="lahter ara" data-act="puhkus-muuda" data-id="'+ara.id+'"'
-                    +' aria-label="'+silt+t+'">'+t+'</button>'
+                  ? '<button class="lahter ara" data-act="graafik-paev"'
+                    +' data-id="'+m.id+'" data-koht="'+graKoht+'" data-i="'+i+'"'
+                    +' data-kuup="'+k+'" aria-label="'+silt+t+'">'+t+'</button>'
                   : '<span class="lahter ara lukus">'+t+'</span>';
               }
               const v=vahetusi(r[i]);
@@ -1784,26 +1787,10 @@ function vToo(w){
     }
   }
 
-  /* Puudumised. Ühe inimese vaates ainult tema omad. */
-  const tulevad=puhkused().filter(p=>p.lopp>=tana&&(!graIsik||p.kes===graIsik))
-    .sort((a,b)=>a.algus.localeCompare(b.algus));
-  h+='<div class="card"><div class="kalpais">'
-    +'<p class="h3">PUHKUS · HAIGUSLEHT · VABA PÄEV</p>'
-    +'<span class="sp"></span>'
-    +'</div>'
-    +(tulevad.length?'<div class="tlist2">'
-      + tulevad.map(p=>(tohinTeise(p.kes)
-          ? '<button class="trida2 puh" data-act="puhkus-muuda" data-id="'+p.id+'">'
-          : '<span class="trida2 puh lukus">')
-          +'<span class="nm3">'+esc(nameOf(p.kes))
-          + (p.markus?'<span class="osa2">'+esc(p.markus)+'</span>':"")+'</span>'
-          +'<span class="liik">'+esc(liigiNimi(p.liik))+'</span>'
-          +'<span class="kell2">'+esc(p.algus===p.lopp?lyhiKey(p.algus)
-              :lyhiKey(p.algus)+" – "+lyhiKey(p.lopp))+'</span>'
-          +(tohinTeise(p.kes)?'<span class="nool">›</span></button>':'</span>')).join("")
-      +'</div>'
-      :'<div class="empty"><b>Keegi ei ole ära.</b>Vajuta üleval paremal „Lisa“.</div>')
-    +'</div>';
+  /* Puudumiste eraldi nimekirja ei ole: nädalatabeli lahtris on juba
+     kirjas „Puhkus“ või „Haigusleht“ ja klõps sellel avab sama akna,
+     kust ta maha võtta saab. Päise all seisab, mitu puudumist tulemas
+     on, nii et miski ei jää märkamata. */
 
   w.innerHTML=h;
 }
@@ -1921,40 +1908,6 @@ function dlgToo(t){
     });
 }
 
-function dlgPuhkus(p){
-  const t=dkey(new Date());
-  dlg(p?"Muuda puudumist":"Lisa puudumine",
-    /* Ilma graafikuõiguseta saad kirja panna ainult enda puudumise. */
-    '<div class="field"><label for="f_pkes">Kes</label><select id="f_pkes">'
-    + S.members.filter(m=>tohinTeise(m.id))
-        .map(m=>'<option value="'+m.id+'"'+((p?p.kes===m.id:m.id===meId())?" selected":"")+'>'+esc(m.name)+'</option>').join("")
-    +'</select></div>'
-    +(S.haldabTeisi?"":'<span class="hint">Teiste puudumisi lisavad ülemus ja '
-      +'administraator.</span>')
-    +'<div class="field"><label>Mis liiki</label><div class="pvalik">'
-    + LIIGID.map((l,i)=>'<button type="button" class="lnupp" data-act="liik-vali" data-v="'+l.id+'"'
-        +' aria-pressed="'+((p?p.liik===l.id:i===0)?"true":"false")+'">'+esc(l.nimi)+'</button>').join("")
-    +'</div><input type="hidden" id="f_pliik" value="'+esc(p?p.liik:LIIGID[0].id)+'"></div>'
-    +'<div class="two">'
-    +  '<div class="field"><label for="f_palg">Alates</label>'
-    +  '<input type="date" id="f_palg" value="'+esc(p?p.algus:t)+'"></div>'
-    +  '<div class="field"><label for="f_plopp">Kuni</label>'
-    +  '<input type="date" id="f_plopp" value="'+esc(p?p.lopp:t)+'"></div></div>'
-    +'<span class="hint">Vajuta väljal, et avada kalender. Ühe päeva puhul jäta mõlemad samaks.</span>'
-    +fld("f_pmark","Märkus",p?p.markus:"","text","Ei ole kohustuslik")
-    +(p?'<div class="tools"><button type="button" class="btn danger" data-act="puhkus-kustuta" data-id="'+p.id+'">Kustuta</button></div>':""),
-    p?"Salvesta":"Lisa",()=>{
-      const a=fv("f_palg"), b=fv("f_plopp");
-      if(!a||!b){toast("Kuupäevad on täitmata.");return false;}
-      const d={kes:document.getElementById("f_pkes").value,
-               liik:fv("f_pliik"),
-               algus:a<=b?a:b, lopp:a<=b?b:a, markus:fv("f_pmark")};
-      if(p)Object.assign(p,d); else S.too.puhkused.push(Object.assign({id:uid()},d));
-      save();render();toast("Salvestatud.");return true;
-    });
-}
-
-/* Üks päev korraga: nii ei pea seitsme rea seast õiget otsima. */
 /* Üks lahter, kõik variandid. Inimese päev on kas tööpäev ühes majas
    või ta ei ole tööl — puhkus, haigusleht, vaba päev või muu. Enne olid
    need kahes eri kohas ja tööaja lahtrist ei saanud puhkust kirja panna.
@@ -2921,8 +2874,6 @@ document.addEventListener("click",ev=>{
       if(i>=0){const x=S.too.tood.splice(i,1)[0];save();render();closeDlg();
         toast('„'+x.nimi+'“ on kustutatud.',()=>{S.too.tood.splice(i,0,x);save();render();toast("Tagasi toodud.");});}
       break;}
-    case "puhkus-uus": dlgPuhkus(null);break;
-    case "puhkus-muuda": dlgPuhkus(puhkused().find(x=>x.id===id));break;
     case "puhkus-kustuta": {
       const i=puhkused().findIndex(x=>x.id===id);
       if(i>=0){const x=S.too.puhkused.splice(i,1)[0];save();render();closeDlg();
@@ -2992,11 +2943,6 @@ document.addEventListener("click",ev=>{
     case "paev-ara-kustuta": {
       kustutaPuudumine(id);
       save();render();closeDlg();toast("Puudumine võetud maha.");
-      break;}
-    case "liik-vali": {
-      document.querySelectorAll('[data-act="liik-vali"]').forEach(x=>
-        x.setAttribute("aria-pressed",(x.dataset.v===el.dataset.v)?"true":"false"));
-      const h=$("#f_pliik"); if(h)h.value=el.dataset.v;
       break;}
     case "koht-vali": {
       document.querySelectorAll('[data-act="koht-vali"]').forEach(x=>
