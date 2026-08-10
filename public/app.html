@@ -1146,6 +1146,9 @@ function vPeople(w){
                +(x?'Müünud '+x.tk+' tk · '+esc(raha(x.eur)):'Müüki ei ole')+'</button>';})()
       +'<hr class="hr" style="margin:14px 0 10px"><div class="tools">'
       +(m.id===meId()?"":'<button class="linkbtn" data-act="kirjuta" data-id="'+m.id+'">Kirjuta talle</button>')
+      /* Sisselogimislink: teed selle ise ja annad inimesele kätte.
+         Postiteenust ei ole vaja — väikeses majas on telefon kiirem. */
+      +'<button class="linkbtn" data-act="kutse" data-id="'+m.id+'">Sisselogimise link</button>'
       +'<span class="sp"></span>'
       /* Teise inimese andmeid muudavad ülemus ja administraator. */
       +(tohinTeise(m.id)
@@ -2837,6 +2840,32 @@ document.addEventListener("click",ev=>{
     case "gra-koht": graKoht=el.dataset.v;render();break;
     case "gra-isik": graIsik=(graIsik===id)?null:id;render();break;
     case "gra-koik": graIsik=null;render();break;
+
+    /* Sisselogimislink ühele inimesele. Server teeb märgi, meie näitame
+       linki ja pakume kopeerimist — link kehtib 7 päeva ja ühe korra. */
+    case "kutse":{
+      const nimi=nameOf(id);
+      fetch("/api/kutse",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({liige_id:id})})
+        .then(r=>r.json()).then(v=>{
+          if(v.viga){toast(v.viga);return;}
+          dlg("Sisselogimise link — "+nimi,
+            '<p class="hint" style="margin:0 0 10px">Anna see link '+esc(nimi)
+            +'-le ise kätte — telefonis, sõnumiga või paberil. Link kehtib '
+            +v.paevi+' päeva ja ühe korra.</p>'
+            +'<div class="field"><input type="text" id="f_link" readonly value="'
+            +esc(v.link)+'"></div>',
+            "Kopeeri",()=>{
+              const väli=document.getElementById("f_link");
+              if(navigator.clipboard&&navigator.clipboard.writeText)
+                navigator.clipboard.writeText(v.link).then(()=>toast("Link kopeeritud."));
+              else {väli.select();toast("Vajuta Ctrl+C, et link kopeerida.");}
+              return false;
+            });
+          setTimeout(()=>{const v2=document.getElementById("f_link");if(v2)v2.select();},60);
+        })
+        .catch(()=>toast("Linki ei saanud teha. Kontrolli ühendust."));
+      break;}
     case "gra-kuu":{
       if(el.dataset.v==="0"){graKuu=null;kalPaev=null;render();break;}
       const p=graKuu||new Date();

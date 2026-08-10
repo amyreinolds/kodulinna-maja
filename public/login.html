@@ -91,9 +91,18 @@ vorm.addEventListener("submit", async e => {
     } else if (d.postitaTa) {
       /* Majutuses ilma postiteenuseta: linki ei tohi ekraanile panna. */
       teade.className = "teade";
-      teade.innerHTML = "<b>Kirja saatmine ei ole veel seadistatud.</b><br>"
-        + "Palu administraatorilt sisselogimise link — tema saab selle "
-        + "rakendusest teha ja sulle saata.";
+      /* Ilma postiteenuseta ei tohi linki ekraanile panna — muidu
+         piisaks sisenemiseks kellegi e-posti teadmisest. Ütleme siis
+         täpselt, kust link tuleb, ja ka seda, mida teha administraatoril
+         endal, kelle käest küsida ei ole kedagi. */
+      teade.innerHTML = "<b>Kirja saatmine ei ole seadistatud.</b><br>"
+        + "Palu majast kelleltki sisselogimise link — igaüks saab selle "
+        + "rakenduses teha: <i>Kontaktid → sinu nimi → Sisselogimise link</i>.<br><br>"
+        + "<small>Kui sa oled ise administraator ja kedagi küsida ei ole, "
+        + "tee link oma arvutist:<br>"
+        + "<code>node tools/link.js "
+        + document.getElementById("epost").value.trim().replace(/[<>&"]/g, "")
+        + " " + location.origin + "</code></small>";
     } else if (d.arenduseLink) {
       /* Postiteenust ei ole ühendatud — link tuleb otse ekraanile,
          muidu ei saaks keegi sisse. */
