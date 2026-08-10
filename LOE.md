@@ -120,6 +120,17 @@ tund aega ei kasutata, ja ärkab esimese avamisega ~30 sekundiga.
 
 `Dockerfile` on ka olemas, kui eelistad Fly.io-d, Railwayd või muud.
 
+### Kõige lihtsam viis sisse saada
+
+**Topeltklõps failil `Ava rakendus.cmd`.** See teeb sisselogimislingi ja
+avab majutatud lehe kohe brauseris — kopeerima ei pea midagi. Pärast
+sisenemist püsid sees 60 päeva.
+
+Oma arvutis proovides ei ole sisselogimist üldse vaja: pane `.env` faili
+rida `KOHE_SISSE=sinu@epost.ee`, käivita `Käivita.cmd` ja oled kohe sees.
+See kehtib **ainult sinu arvutis** — majutuses ei tööta ta kunagi. Enne
+rakenduse jagamist võta see rida välja.
+
 ### Esimene sisselogimine majutatud lehele
 
 Majutuses ei näidata sisselogimislinki ekraanil ja postiteenust ei pruugi
