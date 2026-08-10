@@ -29,7 +29,7 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
 
 (async () => {
   const server = spawn(process.execPath, ["server.js"],
-    { cwd: JUUR, env: Object.assign({}, process.env, { PORT: String(PORT) }) });
+    { cwd: JUUR, env: Object.assign({}, process.env, { KOHE_SISSE: "", PORT: String(PORT) }) });
   let logi = ""; server.stdout.on("data", d => logi += d); server.stderr.on("data", d => logi += d);
   let vigu = 0;
   const kontrolli = (n, t, l) => { console.log((t ? "  OK   " : "  VIGA ") + n + (l ? "  " + l : "")); if (!t) vigu++; };

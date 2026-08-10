@@ -42,12 +42,35 @@ function loe(vaartus) {
 }
 
 /* Kes on selle päringu taga? Tagastab liikme või null. */
+/* Proovimise ajaks: kui .env failis on KOHE_SISSE=<e-post>, ei pea
+   iga kord linki tegema — server loeb sind kohe sisselogituks.
+
+   See on lahtine uks ja seepärast on tal kolm lukku:
+     * majutuses (NODE_ENV=production) ei tööta ta kunagi;
+     * server ütleb käivitamisel valjusti välja, et ta on sees;
+     * ta kehtib ainult siis, kui rakendus kuulab oma arvutit.
+   Enne kellegagi jagamist võta rida .env failist välja. */
+const KOHE = (process.env.KOHE_SISSE || "").trim().toLowerCase();
+const KOHE_LUBATUD = !!KOHE
+  && process.env.NODE_ENV !== "production"
+  && (process.env.HOST || "127.0.0.1") === "127.0.0.1";
+if (KOHE && !KOHE_LUBATUD)
+  console.log("\n  KOHE_SISSE on seatud, aga ei kehti (majutus või avatud host).\n");
+else if (KOHE_LUBATUD)
+  console.log("\n  PROOVIREŽIIM: sisse logitakse kohe kui " + KOHE
+    + "\n  Võta KOHE_SISSE .env failist välja, enne kui rakendust jagad.\n");
+
 async function kesOn(req) {
   const kupsised = Object.fromEntries((req.headers.cookie || "").split(";")
     .map(x => x.trim().split("="))
     .filter(x => x.length === 2).map(([k, v]) => [k, decodeURIComponent(v)]));
   const id = loe(kupsised[KUPSIS]);
-  if (!id) return null;
+  if (!id) {
+    if (!KOHE_LUBATUD) return null;
+    return await yks(
+      `SELECT id, nimi, roll, epost, amet, administraator FROM liikmed
+       WHERE lower(epost) = $1`, [KOHE]);
+  }
   /* NB: amet peab siin kaasa tulema — kogu õiguste kontroll käib selle
      järgi. Ilma selleta paistab iga sisselogija tavalise liikmena. */
   return await yks(

@@ -39,7 +39,7 @@ const võrguIP = () => {
 
   /* 1. vaikimisi: ainult oma arvuti */
   let s = spawn(process.execPath, ["server.js"],
-    { cwd: JUUR, env: Object.assign({}, process.env, { PORT: String(PORT), HOST: "127.0.0.1" }) });
+    { cwd: JUUR, env: Object.assign({}, process.env, { KOHE_SISSE: "", PORT: String(PORT), HOST: "127.0.0.1" }) });
   s.stdout.on("data", () => { });
   await oota(2500);
 
@@ -57,7 +57,7 @@ const võrguIP = () => {
   /* 2. kui jagamine sisse lülitada, peab võrgust ligi pääsema */
   if (ip) {
     s = spawn(process.execPath, ["server.js"],
-      { cwd: JUUR, env: Object.assign({}, process.env, { PORT: String(PORT), HOST: "0.0.0.0" }) });
+      { cwd: JUUR, env: Object.assign({}, process.env, { KOHE_SISSE: "", PORT: String(PORT), HOST: "0.0.0.0" }) });
     s.stdout.on("data", () => { });
     await oota(2500);
     const jagatud = await proovi(ip);
