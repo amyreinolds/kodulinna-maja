@@ -95,11 +95,16 @@ const vaikeOsad=()=>VAIKE_OSAD.map(o=>({id:o.id,nimi:o.nimi}));
    sama asi: tasuta pilet tuleb ikka ära lugeda, ta lihtsalt ei too raha. */
 /* Kaks maja. Kõik, mis kalendrisse läheb, kuulub ühele neist. */
 const KOHAD=[{id:"km",nimi:"Kodulinna Maja"},{id:"torn",nimi:"Torn"}];
+/* Üritus ei pea olema kummaski majas. „Mujal“ tähendab, et koht on
+   vabalt kirjutatud — „Aegviidu rongijaam“. Töögraafikus seda valikut
+   ei ole: tööl käiakse majas. */
+const MUJAL={id:"mujal",nimi:"Mujal"};
+const YRITUSE_KOHAD=KOHAD.concat([MUJAL]);
 /* Kalendris on ka „Kõik“, et ükski üritus ei jääks kogemata peitu. */
-const KAL_KOHAD=[{id:"koik",nimi:"Kõik"}].concat(KOHAD);
+const KAL_KOHAD=[{id:"koik",nimi:"Kõik"}].concat(YRITUSE_KOHAD);
 const sobibKoht=(x,valik)=>valik==="koik"||kohtOf(x)===valik;
-const kohaNimi=k=>(KOHAD.find(x=>x.id===k)||KOHAD[0]).nimi;
-const kohtOf=x=>(x&&x.koht==="torn")?"torn":"km";
+const kohaNimi=k=>(YRITUSE_KOHAD.find(x=>x.id===k)||KOHAD[0]).nimi;
+const kohtOf=x=>(x&&x.koht==="torn")?"torn":(x&&x.koht==="mujal")?"mujal":"km";
 
 const PILETIOSAD=["o3","o6","o7"];
 const PILETILIIGID=["Täispilet","Sooduspilet","Pensionär","Õpilane","Perepilet"];
@@ -1405,7 +1410,7 @@ function dlgEvent(e){
   const alus=e?kohtOf(e):(kalKoht==="koik"?"km":kalKoht);
   dlg(e?"Muuda üritust":"Uus üritus",
     '<div class="field"><label>Kus?</label><div class="pvalik">'
-    +KOHAD.map(k=>'<button type="button" class="lnupp" data-act="koht-vali" data-v="'+k.id+'"'
+    +YRITUSE_KOHAD.map(k=>'<button type="button" class="lnupp" data-act="koht-vali" data-v="'+k.id+'"'
         +' aria-pressed="'+(alus===k.id)+'">'+esc(k.nimi)+'</button>').join("")
     +'</div><input type="hidden" id="f_koht" value="'+alus+'"></div>'
     +fld("f_title","Pealkiri",e?e.title:"")
@@ -1987,6 +1992,17 @@ function dlgGraafikPaev(mid,koht,i,kuup){
     +    '<input type="date" id="f_alopp" value="'+esc(olemasAra?olemasAra.lopp:kuup)+'"></div>'
     +  '</div>'
     +  '<span class="hint">Ühe päeva puhul jäta mõlemad samaks.</span>'
+    /* Kellaaeg on „muu“ päeva juures: koolitus või arsti juures ei võta
+       tervet päeva. Ilma kellaajata tähendab tervet päeva. */
+    +  '<div id="ala_kell"'+(algneLiik==="muu"?"":" hidden")+'>'
+    +    '<div class="two">'
+    +      '<div class="field"><label for="f_akell1">Kellast</label>'
+    +      kellSelect("f_akell1",olemasAra?olemasAra.kellast:"","Kellast")+'</div>'
+    +      '<div class="field"><label for="f_akell2">Kellani</label>'
+    +      kellSelect("f_akell2",olemasAra?olemasAra.kellani:"","Kellani")+'</div>'
+    +    '</div>'
+    +    '<span class="hint">Jäta tühjaks, kui see võtab terve päeva.</span>'
+    +  '</div>'
     +  fld("f_amark","Märkus",olemasAra?String(olemasAra.markus||"").replace(/^Muu: ?/,""):"",
         "text","Ei ole kohustuslik")
     +'</div>'
@@ -2028,13 +2044,20 @@ function dlgGraafikPaev(mid,koht,i,kuup){
       if(!alg||!lopp){toast("Kuupäevad on täitmata.");return false;}
       if(lopp<alg){toast("Lõpp ei saa olla enne algust.");return false;}
       const markus=fv("f_amark").trim();
+      /* Kellaaeg käib ainult „muu“ juurde; lõpp ilma alguseta ei tähenda
+         midagi. */
+      const kellast=liik==="muu"?fv("f_akell1"):"";
+      const kellani=kellast?fv("f_akell2"):"";
+      if(kellast&&kellani&&kellani<=kellast){
+        toast("Lõpp peab olema algusest hiljem.");return false;}
       const p=puhkused();
       const vana2=araPaeval(mid,kuup);
       const kirje={
         id: vana2?vana2.id:uid(),
         kes: mid, algus: alg, lopp: lopp,
         liik: liik==="muu"?"vaba":liik,
-        markus: liik==="muu"?("Muu"+(markus?": "+markus:"")):markus
+        markus: liik==="muu"?("Muu"+(markus?": "+markus:"")):markus,
+        kellast: kellast, kellani: kellani
       };
       kirje.kes=mid;
       const vana=p.findIndex(x=>x.id===kirje.id);
@@ -2053,9 +2076,11 @@ function dlgGraafikPaev(mid,koht,i,kuup){
 function naitaPaevaAla(liik){
   const too=document.getElementById("ala_too");
   const ara=document.getElementById("ala_ara");
+  const kell=document.getElementById("ala_kell");
   if(!too||!ara)return;
   too.hidden=(liik!=="too");
   ara.hidden=(liik==="too");
+  if(kell)kell.hidden=(liik!=="muu");
 }
 
 function kustutaPuudumine(id){

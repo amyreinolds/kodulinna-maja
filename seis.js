@@ -123,7 +123,8 @@ async function loeSeis(mina) {
       })),
       puhkused: puudumised.map(p => ({
         id: p.id, kes: p.liige_id, algus: dkey(p.algus), lopp: dkey(p.lopp),
-        liik: p.liik, markus: p.markus || ""
+        liik: p.liik, markus: p.markus || "",
+        kellast: kell(p.kellast), kellani: kell(p.kellani)
       }))
     },
     threads: vestlused.filter(v => v.liik === "teema").map(v => ({
@@ -138,7 +139,9 @@ async function loeSeis(mina) {
           .map(s => ({ id: s.id, by: s.autor, at: iso(s.aeg), text: s.tekst }))
       }])),
     events: yritused.map(y => ({
-      id: y.id, koht: y.koht_id, title: y.pealkiri, at: iso(y.loodud),
+      /* Tühi koht tähendab „mujal“ — üritus ei ole kummaski majas ja
+         päris asukoht on asukoha väljal. */
+      id: y.id, koht: y.koht_id || "mujal", title: y.pealkiri, at: iso(y.loodud),
       start: iso(y.algus), end: iso(y.lopp), place: y.asukoht || "",
       by: y.autor, req: y.kinnitus_vaja, desc: y.kirjeldus || "",
       rsvp: Object.fromEntries(osalemine.filter(o => o.yritus_id === y.id)
@@ -357,7 +360,8 @@ async function salvestaSeis(mina, s) {
     for (const e of s.events) {
       const pealkiri = tyhjaks(e.title);
       if (!pealkiri || !e.start) continue;
-      const väärtused = [e.koht === "torn" ? "torn" : "km", pealkiri, e.start,
+      const väärtused = [e.koht === "torn" ? "torn"
+                        : e.koht === "mujal" ? null : "km", pealkiri, e.start,
         e.end || null, tyhjaks(e.place), tyhjaks(e.desc), !!e.req];
       let id = e.id;
       if (onUuid(id) && olemas.some(x => x.id === id)) {
@@ -551,16 +555,20 @@ async function salvestaSeis(mina, s) {
       if (!onUuid(p.kes) || !p.algus || !p.lopp) continue;
       if (!koiki && p.kes !== mina.id) continue;
       const liik = ["puhkus", "haigus", "vaba"].includes(p.liik) ? p.liik : "vaba";
+      /* Kellaaeg on vabatahtlik: ilma selleta on terve päev. Lõpp ilma
+         alguseta ei tähenda midagi, seepärast läheb ta siis tühjaks. */
+      const kellast = tyhjaks(p.kellast);
+      const kellani = kellast ? tyhjaks(p.kellani) : null;
       if (onUuid(p.id) && olemas.some(x => x.id === p.id)) {
         alles.add(p.id);
         await q(`UPDATE puudumised SET liige_id=$2, algus=$3, lopp=$4, liik=$5,
-                   markus=$6 WHERE id=$1`,
-          [p.id, p.kes, p.algus, p.lopp, liik, tyhjaks(p.markus)]);
+                   markus=$6, kellast=$7, kellani=$8 WHERE id=$1`,
+          [p.id, p.kes, p.algus, p.lopp, liik, tyhjaks(p.markus), kellast, kellani]);
       } else {
         const r = await yks(
-          `INSERT INTO puudumised (liige_id, algus, lopp, liik, markus)
-           VALUES ($1,$2,$3,$4,$5) RETURNING id`,
-          [p.kes, p.algus, p.lopp, liik, tyhjaks(p.markus)]);
+          `INSERT INTO puudumised (liige_id, algus, lopp, liik, markus, kellast, kellani)
+           VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+          [p.kes, p.algus, p.lopp, liik, tyhjaks(p.markus), kellast, kellani]);
         alles.add(r.id);
       }
     }
