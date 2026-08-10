@@ -2540,8 +2540,54 @@ function dlgMe(){
     +'</div>',"Valmis",()=>true,true);
 }
 let uudisNimekiri=[];
+
+/* Tulemas: kõik tulevased üritused ja lähipäevade tegemata tööd. See ei
+   ole „mis on muutunud“, vaid „mis ees ootab“ — üritus ei pea olema uus
+   ega kinnitust küsima, et teda oleks vaja teada.
+
+   Üritused võetakse kõik, tööd ainult kolm päeva ette. Korduv töö annab
+   iga päev uue rea ja kataks muidu üritused enda alla — aga just
+   üritused on need, mida on vaja ette teada. */
+function tulemasNimekiri(){
+  const nyyd=new Date();
+  const yritused=[], tood=[];
+
+  for(const e of S.events){
+    const algus=new Date(e.start);
+    if(algus<nyyd)continue;
+    yritused.push({ aeg:algus,
+      tekst:fmtLong(e.start)+" kell "+fmtTime(e.start)+" — "+e.title
+        +" ("+kohaNimi(kohtOf(e))+")",
+      mine:()=>{opened.add(e.id);mineVaade("kalender");} });
+  }
+
+  const nahtud=new Set();
+  for(let o=0;o<3;o++){
+    const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()+o);
+    const k=dkey(d);
+    for(const t of tooPaeval(d)){
+      if(tehtud(t,k))continue;
+      /* Sama nimega töö samal päeval ühes majas on üks asi, ka siis kui
+         teda on kogemata kaks korda sisestatud. */
+      const võti=k+"|"+kohtOf(t)+"|"+String(t.nimi).trim().toLowerCase();
+      if(nahtud.has(võti))continue;
+      nahtud.add(võti);
+      const aeg=tooAeg(t);
+      tood.push({ aeg:new Date(k+"T"+(aeg?aeg.slice(0,5):"23:59")+":00"),
+        tekst:(o===0?"Täna":o===1?"Homme":fmtLong(k+"T12:00:00"))
+          +" — "+t.nimi+(aeg?" kell "+aeg:"")+" ("+kohaNimi(kohtOf(t))+")",
+        mine:()=>{kalPaev=k;mineVaade("kalender");} });
+    }
+  }
+
+  return yritused.sort((a,b)=>a.aeg-b.aeg).slice(0,12)
+    .concat(tood.sort((a,b)=>a.aeg-b.aeg).slice(0,8));
+}
+
+let tulemasLoend=[];
 function dlgUut(){
   uudisNimekiri=uudised();
+  tulemasLoend=tulemasNimekiri();
   const body = uudisNimekiri.length
     ? '<p style="margin:0;font-size:17px;line-height:1.6">Siin on kõik, mis on juurde tulnud sellest ajast, kui sa viimati vaatasid. Vajuta real, et sinna minna.</p>'
       /* Arv on juba lauses sees — eraldi numbrimärk kordaks seda ja
@@ -2553,8 +2599,16 @@ function dlgUut(){
     : '<p style="margin:0;font-size:17px;line-height:1.6"><b>Midagi uut ei ole.</b> Kõik sõnumid on loetud ja miski ei oota sinu kinnitust.</p>'
       +'<p class="hint" style="margin:0">Kui keegi kirjutab teemasse, saadab sulle kirja, lisab ürituse või küsib midagi, ilmub see siia — ja külgribal olevale nupule tuleb number.</p>';
   const loetavaid=uudisNimekiri.filter(x=>!x.kinnitus).length;
+  const tulemasOsa = tulemasLoend.length
+    ? '<hr class="hr"><p style="margin:0 0 8px;font-size:17px;line-height:1.6">'
+      +'<b>Tulemas</b> — kõik üritused ja tegemata tööd, mis ees ootavad.</p>'
+      +'<div class="pick">'+tulemasLoend.map((x,i)=>
+        '<button type="button" data-act="tulemas-mine" data-i="'+i+'">'
+        +'<span>'+esc(x.tekst)+'</span></button>').join("")+'</div>'
+    : '<hr class="hr"><p class="hint" style="margin:0">Ees ei oota ühtegi üritust '
+      +'ega tegemata tööd.</p>';
   dlg("Mis on uut",
-    body+(loetavaid?'<hr class="hr"><div class="tools">'
+    body+tulemasOsa+(loetavaid?'<hr class="hr"><div class="tools">'
       +'<button type="button" class="btn ghost" data-act="koik-loetud">Märgi kõik loetuks</button>'
       +'<span class="hint" style="flex:1;min-width:200px">Kinnitust ootavad read jäävad alles — need ei ole lugemise, vaid tegemise küsimus.</span>'
       +'</div>':""),
@@ -2747,6 +2801,11 @@ document.addEventListener("click",ev=>{
     case "koik-loetud":
       margiKoikLoetuks();save();render();dlgUut();
       toast("Kõik on nüüd loetud.");break;
+    case "tulemas-mine":{
+      const t=tulemasLoend[Number(el.dataset.i)];
+      if(t&&t.mine){t.mine();closeDlg();save();render();}
+      break;
+    }
     case "uut-mine":{
       const x=uudisNimekiri[Number(el.dataset.i)];
       if(x){x.mine();closeDlg();save();render();}
