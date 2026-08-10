@@ -156,7 +156,7 @@ function ico(n){return '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="
 const VIEWS=[
   {id:"vestlus",  label:"Vestlus",   icon:"chat",   add:"Uus teema",
    help:"Ülemine osa on teemad, mida näevad kõik. Alumine osa on kirjad, mida näete ainult teie kahekesi."},
-  {id:"kalender", label:"Kalender",  icon:"cal",    add:"Uus üritus",
+  {id:"kalender", label:"Üritused",  icon:"event",  add:"Uus üritus",
    help:"Kõik üritused ja tööd kuu kaupa. Vajuta kuupäeval, et näha selle päeva oma. Üritused on kalendri all: vajuta „Osalen“ või „Ei osale“ ja küsi julgelt."},
   {id:"info",     label:"Üldinfo",   icon:"info",   add:"Uus infoplokk",
    help:"Tähtis info kõigile liikmetele. Kui plokk küsib kinnitust, loe läbi ja vajuta „Olen tutvunud“."},
@@ -165,8 +165,9 @@ const VIEWS=[
   {id:"myyk",     label:"Müük",      icon:"tag",    add:"Lisa müük",
    help:"Vajuta toote nimel, et näha selle enda statistikat. Müüja nimel vajutades avaneb tema kalender — vajuta kuupäeval ja näed, mida ta sel päeval müüs.",
    help2:"Siin on sinu enda müük. Kogu maja kokkuvõtet näevad administraatorid."},
-  {id:"tootajad", label:"Töö graafik", icon:"kell", add:"Lisa",
-   help:"Kes millal majas on ja kes on puhkusel. Puhkuse lisad alt, tööd näed Kalendris."},
+  {id:"tootajad", label:"Töö graafik", icon:"kell", add:"Lisa graafikusse",
+   help:"Kes millal majas on ja kes on puhkusel. Vajuta lahtril või üleval „Lisa "
+       +"graafikusse“ — sealt käib nii tööaeg kui puhkus. Tööd näed Ürituste all."},
   {id:"kontakt",  label:"Kontaktid", icon:"people", add:"Uus liige",
    help:"Vajuta numbril, et see kopeerida. Vajuta nimel, et näha tema müüki."}
 ];
@@ -1789,7 +1790,7 @@ function vToo(w){
   h+='<div class="card"><div class="kalpais">'
     +'<p class="h3">PUHKUS · HAIGUSLEHT · VABA PÄEV</p>'
     +'<span class="sp"></span>'
-    +'<button class="btn ghost small" data-act="puhkus-uus">+ Lisa</button></div>'
+    +'</div>'
     +(tulevad.length?'<div class="tlist2">'
       + tulevad.map(p=>(tohinTeise(p.kes)
           ? '<button class="trida2 puh" data-act="puhkus-muuda" data-id="'+p.id+'">'
@@ -1889,7 +1890,7 @@ function dlgToo(t){
     +  '<option value="">see, kes sel päeval tööl on</option>'
     +  S.members.map(m=>'<option value="'+m.id+'"'+((t&&t.kes===m.id)?" selected":"")+'>'+esc(m.name)+'</option>').join("")
     +  '<span class="hint">Jäta esimeseks, kui töö teeb graafikujärgne inimene. '
-    +  'Kalendris on siis töö nimi ja pärast kinnitamist tegija nimi.</span></div>'
+    +  'Ürituste kalendris on siis töö nimi ja pärast kinnitamist tegija nimi.</span></div>'
     +fld("f_tmark","Märkus",t?t.markus:"","text","Ei ole kohustuslik")
     +'<label class="check"><input type="checkbox" id="f_tkinn"'+((t&&t.kinnita)?" checked":"")+'>'
     +'<span><b>Vajab kinnitust</b><span>Tegija peab pärast vajutama „Tegin ära“. '
@@ -1970,6 +1971,15 @@ const PAEVA_LIIGID = [
 ];
 
 function dlgGraafikPaev(mid,koht,i,kuup){
+  /* Ilma inimeseta avatakse aken ülevalt „Lisa“ nupust: siis küsime ka,
+     kelle ja mis päeva kohta kirje käib. Lahtrist avades on need juba
+     teada ja neid ei küsita üle. */
+  const vaba=!mid;
+  if(vaba){
+    mid=meId();
+    kuup=kuup||dkey(new Date());
+    i=dowIdx(new Date(kuup+"T12:00:00"));
+  }
   const m=byId(mid); if(!m)return;
   const olemasAra=araPaeval(mid,kuup);
   /* „Muu“ hoiame andmebaasi „vaba“ all, aga märkusega — nii ei pea
@@ -1979,8 +1989,19 @@ function dlgGraafikPaev(mid,koht,i,kuup){
     : "too";
   const v=vahetusYks((graafik(koht)[mid]||[])[i]);
 
-  dlg("Päev — "+m.name,
-    '<div class="paevpais">'+esc(fmtPaev(kuup+"T12:00:00"))+'</div>'
+  dlg(vaba?"Lisa graafikusse":"Päev — "+m.name,
+    (vaba
+      ? '<div class="two">'
+        +'<div class="field"><label for="f_kes2">Kes</label><select id="f_kes2">'
+        + S.members.filter(x=>tohinTeise(x.id))
+            .map(x=>'<option value="'+x.id+'"'+(x.id===mid?" selected":"")+'>'
+              +esc(x.name)+'</option>').join("")
+        +'</select></div>'
+        +'<div class="field"><label for="f_kuup2">Päev</label>'
+        +'<input type="date" id="f_kuup2" value="'+esc(kuup)+'"></div></div>'
+        +(S.haldabTeisi?"":'<span class="hint">Teiste kohta saavad kirja panna '
+          +'ülemus ja administraator.</span>')
+      : '<div class="paevpais">'+esc(fmtPaev(kuup+"T12:00:00"))+'</div>')
     +'<div class="field"><label>Mis sel päeval on</label><div class="pvalik">'
     + PAEVA_LIIGID.map(l=>'<button type="button" class="lnupp" data-act="paev-liik"'
         +' data-v="'+l.id+'" aria-pressed="'+(l.id===algneLiik?"true":"false")+'">'
@@ -2020,11 +2041,19 @@ function dlgGraafikPaev(mid,koht,i,kuup){
       +' data-act="paev-ara-kustuta" data-id="'+olemasAra.id+'">Võta puudumine maha</button></div>':""),
     "Salvesta",()=>{
       const liik=fv("f_liik");
+      if(vaba){
+        mid=fv("f_kes2")||mid;
+        const uusKuup=fv("f_kuup2");
+        if(!uusKuup){toast("Vali päev.");return false;}
+        kuup=uusKuup;
+        i=dowIdx(new Date(kuup+"T12:00:00"));
+      }
 
       if(liik==="too"){
         /* Kui inimene oli sel päeval ära, siis tööle märkimine tähendab,
            et puudumine käib maha — muidu jääks kaks vastuolulist kirjet. */
-        if(olemasAra)kustutaPuudumine(olemasAra.id);
+        const ara2=araPaeval(mid,kuup);
+        if(ara2)kustutaPuudumine(ara2.id);
         const uusKoht=fv("f_koht")||koht;
         const a=fv("f_pa"), l=a?fv("f_pl"):"";
         if(a&&l&&l<=a){toast("Lõpp peab olema algusest hiljem.");return false;}
@@ -2047,12 +2076,14 @@ function dlgGraafikPaev(mid,koht,i,kuup){
       if(lopp<alg){toast("Lõpp ei saa olla enne algust.");return false;}
       const markus=fv("f_amark").trim();
       const p=puhkused();
+      const vana2=araPaeval(mid,kuup);
       const kirje={
-        id: olemasAra?olemasAra.id:uid(),
+        id: vana2?vana2.id:uid(),
         kes: mid, algus: alg, lopp: lopp,
         liik: liik==="muu"?"vaba":liik,
         markus: liik==="muu"?("Muu"+(markus?": "+markus:"")):markus
       };
+      kirje.kes=mid;
       const vana=p.findIndex(x=>x.id===kirje.id);
       if(vana>=0)p[vana]=kirje; else p.push(kirje);
       /* Puudumise päeval ei ole ta ka tööl — tööaeg jääb graafikusse
@@ -2774,7 +2805,7 @@ document.addEventListener("click",ev=>{
       else if(view==="info")dlgInfo(null);
       else if(view==="kontakt")dlgPerson(null);
       else if(view==="myyk")dlgMyyk(null);
-      else if(view==="tootajad")dlgToo(null);
+      else if(view==="tootajad")dlgGraafikPaev(null,graKoht,null,valitudPaevOn());
       else pickFiles();
       break;
     case "kopeeri": {
