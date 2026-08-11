@@ -277,6 +277,7 @@ function uusDm(other){
 const uusEv=e=>uus(e.at||e.start,"view:kalender",e.by);
 const uusKomm=e=>(e.comments||[]).filter(c=>uus(c.at,"view:kalender",c.by)).length;
 const uusInfo=i=>uus(i.at,"view:info",i.by);
+const uusInfoKomm=i=>(i.comments||[]).filter(c=>uus(c.at,"view:info",c.by)).length;
 const uusFail=f=>uus(f.at,"view:failid",f.by);
 const uusMyyk=r=>uus(r.at,"view:myyk",r.kes);
 const ootabKinnitust=()=>
@@ -301,7 +302,12 @@ function uudised(){
     if(k)out.push({n:k,tekst:mitu(k,"uus küsimus","uut küsimust")+" ürituse „"+e.title+"“ all",
       mine:()=>{opened.add(e.id);mineVaade("kalender");}});
   });
-  S.info.filter(uusInfo).forEach(i=>out.push({n:1,tekst:"Üldinfo muutus: „"+i.title+"“",mine:()=>mineVaade("info")}));
+  S.info.forEach(i=>{
+    if(uusInfo(i))out.push({n:1,tekst:"Üldinfo muutus: „"+i.title+"“",mine:()=>mineVaade("info")});
+    const k=uusInfoKomm(i);
+    if(k)out.push({n:k,tekst:mitu(k,"uus küsimus","uut küsimust")+" info „"+i.title+"“ all",
+      mine:()=>{avatudKys.add(i.id);mineVaade("info");}});
+  });
   S.files.filter(uusFail).forEach(f=>out.push({n:1,tekst:"Uus fail: "+f.name,mine:()=>mineVaade("failid")}));
   myygiRead().filter(uusMyyk).forEach(r=>out.push({
     n:1,tekst:"Uus müügirida: "+r.nimetus,mine:()=>{myykOsa=r.osa;mineVaade("myyk");}}));
@@ -341,10 +347,12 @@ const KELLAAJAD=(()=>{
 })();
 /* Vana või mujalt tulnud aeg, mis nimekirja ei mahu, lisatakse eraldi —
    nii ei kustu keegi teise sisestus lihtsalt ära. */
-function kellSelect(id,val,silt){
+/* Tühi valik ütleb sõnadega, mida ta tähendab. Kriips üksi ei ütle
+   midagi ja inimene ei julge teda valida. */
+function kellSelect(id,val,silt,tyhi){
   const v=String(val||"").slice(0,5);
   return '<select id="'+id+'" class="kell"'+(silt?' aria-label="'+esc(silt)+'"':"")+'>'
-    +'<option value="">—</option>'
+    +'<option value="">'+esc(tyhi||"—")+'</option>'
     +(v&&KELLAAJAD.indexOf(v)<0?'<option value="'+esc(v)+'" selected>'+esc(v)+'</option>':"")
     +KELLAAJAD.map(t=>'<option value="'+t+'"'+(t===v?" selected":"")+'>'+t+'</option>').join("")
     +'</select>';
@@ -674,8 +682,8 @@ function chrome(){
     vestlus:S.threads.reduce((n,t)=>n+uusThread(t),0)
            +S.members.filter(m=>m.id!==meId()).reduce((n,m)=>n+uusDm(m.id),0),
     kalender:S.events.filter(uusEv).length+S.events.reduce((n,e)=>n+uusKomm(e),0)+waitEv,
-    kalender:0,
-    info:S.info.filter(uusInfo).length+waitIn,
+    info:S.info.filter(uusInfo).length+waitIn
+        +S.info.reduce((n,i)=>n+uusInfoKomm(i),0),
     kontakt:0,
     failid:S.files.filter(uusFail).length,
     myyk:myygiRead().filter(uusMyyk).length
@@ -1082,6 +1090,29 @@ function vInfo(w){
   if(need.length)h+='<div class="notice">'+ico("info")+'<span><b>'+need.length+' plokk'+(need.length>1?"i":"")+' ootab sinu kinnitust.</b> Loe läbi ja vajuta „Olen tutvunud“.</span></div>';
   w.innerHTML=h+S.info.map(infoCard).join("");
 }
+/* Küsimused ühe kirje all. Ürituse oma on ajalooliselt vanem ja seisab
+   omaette; siit käib üldinfo. Nupp ütleb ise, mida ta teeb — „Küsi
+   midagi selle info kohta“ on selgem kui tühi kõnemulli ikoon. */
+const avatudKys=new Set();
+function kysimustePlokk(i){
+  const cs=i.comments||[],on=avatudKys.has(i.id),uusi=uusInfoKomm(i);
+  let h='<button class="qbtn" data-act="iq" data-id="'+i.id+'">'+ico("ask")
+    +'<span>'+(cs.length?"Küsimused ja kommentaarid":"Küsi midagi selle info kohta")+'</span>'
+    +(uusi?'<span class="uus" style="margin:0 0 0 auto">'+uusi+' UUT</span>':"")
+    +'<span class="n"'+(uusi?' style="margin-left:10px"':"")+'>'
+    +(cs.length?cs.length+(on?" — peida":""):(on?"peida":"kirjuta"))+'</span></button>';
+  if(!on)return h;
+  return h+'<div class="qlist">'
+    +(cs.length?cs.map(c=>
+      '<div class="q"><div class="hd">'+(uus(c.at,"view:info",c.by)?'<span class="uus">UUS</span>':"")
+      +'<b>'+esc(nameOf(c.by))+'</b><span>'+esc(fmtStamp(c.at))+'</span></div>'
+      +'<div class="tx">'+esc(c.text)+'</div></div>').join("")
+      :'<p class="meta">Keegi pole veel midagi küsinud. Küsi julgelt — teised näevad ka vastust.</p>')
+    +'<div class="qform"><textarea id="iq_'+i.id+'" placeholder="Kirjuta oma küsimus või kommentaar…" aria-label="Küsimus selle info kohta"></textarea>'
+    +'<div class="tools"><button class="btn small" data-act="iq-send" data-id="'+i.id+'">Saada küsimus</button>'
+    +'</div></div></div>';
+}
+
 function infoCard(i){
   const acked=!!(i.acks||{})[meId()],miss=noAckIds(i),on=opened.has(i.id);
   let h='<article class="card info" style="display:flex;flex-direction:column;gap:16px">'
@@ -1098,6 +1129,11 @@ function infoCard(i){
     if(on)h+='<div class="who"><div class="wline"><span class="k">Kinnitused</span><span class="v">'
       +esc(ackIds(i).length?ackIds(i).map(x=>nameOf(x)+" ("+fmtStamp(i.acks[x])+")").join("; "):"veel keegi")+'</span></div></div>';
   }
+  /* Ka üldinfo tekitab küsimusi — „kas liikmemaks käib kuus või aastas“.
+     Enne küsiti neid kuskil mujal ja vastust nägi ainult üks inimene.
+     Siin näevad kõik: sama küsimus on tavaliselt mitmel peas. */
+  h+=kysimustePlokk(i,"info");
+
   h+='<hr class="hr"><div class="tools"><span class="meta">'+esc(nameOf(i.by))+' · muudetud '+esc(fmtStamp(i.at))+'</span><span class="sp"></span>'
     +(i.req?'<button class="linkbtn" data-act="q" data-id="'+i.id+'">'+(on?"Peida":"Kes millal kinnitas")+'</button>':"")
     +'<button class="linkbtn mut" data-act="edit-info" data-id="'+i.id+'">Muuda</button>'
@@ -1612,6 +1648,10 @@ const kuskiTööl=(mid,i)=>KOHAD.some(k=>paevalTööl(mid,i,k.id));
 const tood=()=>(S.too&&S.too.tood)||[];
 const puhkused=()=>(S.too&&S.too.puhkused)||[];
 const DOW_P=["esmaspäev","teisipäev","kolmapäev","neljapäev","reede","laupäev","pühapäev"];
+/* „Igal teisipäeval“, aga „igal reedel“ — reede ei käändu nagu teised.
+   Ilma selleta seisis ekraanil „igal reedeal“. */
+const DOW_AL=["esmaspäeval","teisipäeval","kolmapäeval","neljapäeval",
+              "reedel","laupäeval","pühapäeval"];
 const LIIGID=[{id:"puhkus",nimi:"Puhkus"},{id:"haigus",nimi:"Haigusleht"},{id:"vaba",nimi:"Vaba päev"}];
 const liigiNimi=x=>(LIIGID.find(l=>l.id===x)||{nimi:"Ära"}).nimi;
 
@@ -1920,8 +1960,10 @@ function dlgToo(t){
    Puudumine käib kuupäevade, mitte nädalapäeva järgi: puhkus on kindlate
    päevade vahemik, tööaeg kordub igal nädalal. Seepärast küsime puudumise
    puhul ka lõppkuupäeva. */
+/* Nimed vastavad küsimusele „Mis sel päeval on?“ — seepärast „Töö“,
+   mitte „Tööl“. „Mis sel päeval on: Tööl“ ei ole eesti keel. */
 const PAEVA_LIIGID = [
-  { id: "too",     nimi: "Tööl" },
+  { id: "too",     nimi: "Töö" },
   { id: "puhkus",  nimi: "Puhkus" },
   { id: "haigus",  nimi: "Haigusleht" },
   { id: "vaba",    nimi: "Vaba päev" },
@@ -1968,19 +2010,19 @@ function dlgGraafikPaev(mid,koht,i,kuup){
 
     /* Tööl: kummas majas ja mis kellast. Kehtib igal sellel nädalapäeval. */
     +'<div id="ala_too">'
-    +  '<div class="field"><label>Kus</label><div class="pvalik">'
+    +  '<div class="field"><label>Kummas majas</label><div class="pvalik">'
     +  KOHAD.map(x=>'<button type="button" class="lnupp" data-act="paev-koht"'
         +' data-v="'+x.id+'" aria-pressed="'+(x.id===koht?"true":"false")+'">'
         +esc(x.nimi)+'</button>').join("")
     +  '</div><input type="hidden" id="f_koht" value="'+esc(koht)+'"></div>'
     +  '<div class="two">'
-    +    '<div class="field"><label for="f_pa">Algab</label>'
-    +    kellSelect("f_pa",v.a,"Algab")+'</div>'
+    +    '<div class="field"><label for="f_pa">Tööpäev algab</label>'
+    +    kellSelect("f_pa",v.a,"Tööpäev algab","ei ole tööl")+'</div>'
     +    '<div class="field"><label for="f_pl">Lõpeb</label>'
-    +    kellSelect("f_pl",v.l,"Lõpeb")+'</div>'
+    +    kellSelect("f_pl",v.l,"Tööpäev lõpeb","lahtine")+'</div>'
     +  '</div>'
-    +  '<span class="hint">Tööaeg kordub igal '+esc(DOW_P[i])+'al. '
-    +  'Jäta algus tühjaks, et tööaeg ära võtta.</span>'
+    +  '<span class="hint">See tööaeg kordub igal '+esc(DOW_AL[i])+'. '
+    +  'Kui valid alguseks „ei ole tööl“, võetakse tööaeg graafikust ära.</span>'
     +'</div>'
 
     /* Puudumine: kuupäevade vahemik ja märkus. */
@@ -2883,6 +2925,17 @@ document.addEventListener("click",ev=>{
       if(!v){toast("Kirjuta kõigepealt oma küsimus.");break;}
       e.comments=e.comments||[];
       e.comments.push({id:uid(),by:meId(),at:new Date().toISOString(),text:v});
+      save();render();toast("Küsimus lisatud. Kõik liikmed näevad seda.");break;
+    }
+    case "iq": avatudKys.has(id)?avatudKys.delete(id):avatudKys.add(id);render();break;
+    case "iq-send":{
+      const i=S.info.find(x=>x.id===id);if(!i)break;
+      const t=document.getElementById("iq_"+id);
+      const v=t?t.value.trim():"";
+      if(!v){toast("Kirjuta kõigepealt oma küsimus.");break;}
+      i.comments=i.comments||[];
+      i.comments.push({id:uid(),by:meId(),at:new Date().toISOString(),text:v});
+      avatudKys.add(id);
       save();render();toast("Küsimus lisatud. Kõik liikmed näevad seda.");break;
     }
     case "rsvp":{

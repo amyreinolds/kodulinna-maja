@@ -159,7 +159,11 @@ async function loeSeis(mina) {
       req: i.kinnitus_vaja, body: i.sisu || "",
       acks: Object.fromEntries(kinnitused
         .filter(k => k.tyyp === "info" && k.kirje_id === i.id)
-        .map(k => [k.liige_id, iso(k.aeg)]))
+        .map(k => [k.liige_id, iso(k.aeg)])),
+      /* Üldinfo tekitab samamoodi küsimusi nagu üritus. Vastus on
+         kõigile näha — sama küsimus on tavaliselt mitmel peas. */
+      comments: kommentaarid.filter(k => k.info_id === i.id)
+        .map(k => ({ id: k.id, by: k.autor, at: iso(k.aeg), text: k.tekst }))
     })),
     myyk: {
       v: 5, hv: 2,
@@ -403,6 +407,7 @@ async function salvestaSeis(mina, s) {
       }
       alles.add(id);
       await syncKinnitused("info", id, i.acks, oma);
+      await syncKommentaarid("info_id", id, i.comments, mina, oma);
     }
     for (const x of olemas) if (!alles.has(x.id))
       await q("DELETE FROM info WHERE id=$1", [x.id]);
@@ -611,21 +616,7 @@ async function syncLapsed(yId, e, mina, oma) {
       [yId, liige, vastus]);
   await syncKinnitused("yritus", yId, e.acks, oma);
 
-  const kom = Array.isArray(e.comments) ? e.comments : [];
-  const olemasK = await q("SELECT id FROM kommentaarid WHERE yritus_id=$1", [yId]);
-  const allesK = new Set();
-  for (const k of kom) {
-    const tekst = tyhjaks(k.text);
-    if (!tekst) continue;
-    if (onUuid(k.id) && olemasK.some(x => x.id === k.id)) { allesK.add(k.id); continue; }
-    const r = await yks(
-      `INSERT INTO kommentaarid (yritus_id, autor, tekst, aeg)
-       VALUES ($1,$2,$3, coalesce($4::timestamptz, now())) RETURNING id`,
-      [yId, onUuid(k.by) ? k.by : null, tekst, k.at || null]);
-    allesK.add(r.id);
-  }
-  for (const x of olemasK) if (!allesK.has(x.id))
-    await q("DELETE FROM kommentaarid WHERE id=$1", [x.id]);
+  await syncKommentaarid("yritus_id", yId, e.comments, mina, oma);
 
   const ules = Array.isArray(e.tasks) ? e.tasks : [];
   const olemasU = await q("SELECT id, votja_id FROM ulesanded WHERE yritus_id=$1", [yId]);
@@ -674,6 +665,33 @@ async function syncKinnitused(tyyp, kirjeId, acks, oma) {
       `INSERT INTO kinnitused (tyyp, kirje_id, liige_id, aeg)
        VALUES ($1,$2,$3, coalesce($4::timestamptz, now()))`,
       [tyyp, kirjeId, liige, aeg]);
+}
+
+/* Küsimused ürituse või üldinfo all. Sama tabel, sama töö — vahe on
+   ainult veerus, mille külge nad käivad.
+
+   Küsimust ei muudeta tagantjärele: ta kas on või teda ei ole. Ja
+   kustutada saab igaüks ainult oma oma — kui ekraan mõne küsimuse
+   tagasi ei saatnud, ei tähenda see, et teise inimese küsimus tuleb
+   maha võtta. */
+async function syncKommentaarid(veerg, kirjeId, list, mina, oma) {
+  const kom = Array.isArray(list) ? list : [];
+  const olemas = await q(
+    "SELECT id, autor FROM kommentaarid WHERE " + veerg + "=$1", [kirjeId]);
+  const alles = new Set();
+  for (const k of kom) {
+    const tekst = tyhjaks(k.text);
+    if (!tekst) continue;
+    if (onUuid(k.id) && olemas.some(x => x.id === k.id)) { alles.add(k.id); continue; }
+    const r = await yks(
+      `INSERT INTO kommentaarid (` + veerg + `, autor, tekst, aeg)
+       VALUES ($1,$2,$3, coalesce($4::timestamptz, now())) RETURNING id`,
+      [kirjeId, onUuid(k.by) ? k.by : mina.id, tekst, k.at || null]);
+    alles.add(r.id);
+  }
+  for (const x of olemas)
+    if (!alles.has(x.id) && oma(x.autor))
+      await q("DELETE FROM kommentaarid WHERE id=$1", [x.id]);
 }
 
 /* Sõnumeid ei muudeta tagantjärele — ainult lisandub ja kaob. */
