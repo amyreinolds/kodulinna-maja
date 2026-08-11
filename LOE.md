@@ -131,6 +131,19 @@ rida `KOHE_SISSE=sinu@epost.ee`, käivita `Käivita.cmd` ja oled kohe sees.
 See kehtib **ainult sinu arvutis** — majutuses ei tööta ta kunagi. Enne
 rakenduse jagamist võta see rida välja.
 
+**Kelle nime all sa proovides sees oled**, vahetab `Kes olen.cmd`
+(topeltklõps näitab valikuid) või:
+
+```
+node tools/kesolen.js                          nimekiri
+node tools/kesolen.js proovija@...             tavaline liige
+node tools/kesolen.js ailexica@proton.me       administraator
+node tools/kesolen.js valja                    proovirežiim maha
+```
+
+Nii saab sama rakendust vaadata mõlema silmadega, ilma et peaks kaks
+brauserit lahti hoidma. Pärast vahetust käivita server uuesti.
+
 ### Esimene sisselogimine majutatud lehele
 
 Majutuses ei näidata sisselogimislinki ekraanil ja postiteenust ei pruugi
