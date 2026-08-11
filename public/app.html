@@ -171,8 +171,9 @@ const VIEWS=[
    help:"Vajuta toote nimel, et näha selle enda statistikat. Müüja nimel vajutades avaneb tema kalender — vajuta kuupäeval ja näed, mida ta sel päeval müüs.",
    help2:"Siin on sinu enda müük. Kogu maja kokkuvõtet näevad administraatorid."},
   {id:"tootajad", label:"Töö graafik", icon:"kell", add:"Lisa graafikusse",
-   help:"Kes millal majas on ja kes on puhkusel. Vajuta lahtril või üleval „Lisa "
-       +"graafikusse“ — sealt käib nii tööaeg kui puhkus. Tööd näed Ürituste all."},
+   help:"Kes millal majas on, kes on puhkusel ja mis tööd on sel päeval teha. "
+       +"Vajuta lahtril või üleval „Lisa graafikusse“ — sealt käib nii tööaeg "
+       +"kui puhkus. Üritused on Ürituste all, need on eri asi."},
   {id:"kontakt",  label:"Kontaktid", icon:"people", add:"Uus liige",
    help:"Vajuta numbril, et see kopeerida. Vajuta nimel, et näha tema müüki."}
 ];
@@ -932,15 +933,14 @@ function vCal(w){
 /* Ühe päeva plokk kalendri all: mis sel päeval toimub ja kes on majas.
    Varem oli see eraldi Töö graafiku all ja näitas ainult tänast. Nüüd on
    kõik ühe kalendri all: vajuta kuupäeval ja näed selle päeva kohta kõike. */
-function paevaPlokk(k, tooga){
+function paevaPlokk(k){
   const d=new Date(k+"T12:00:00");
   const i=dowIdx(d);
   const onTana=k===dkey(new Date());
   const millal=onTana?"täna":"sel päeval";
 
-  const yritused=S.events.filter(e=>sobibKoht(e,kalKoht)&&dkey(new Date(e.start))===k)
-    .sort((a,b)=>new Date(a.start)-new Date(b.start));
-  const tl=tooPaeval(d).filter(t=>sobibKoht(t,kalKoht));
+  /* Töö graafiku päev järgib graafiku maja valikut, mitte kalendri oma. */
+  const tl=tooPaeval(d).filter(t=>sobibKoht(t,graKoht));
 
   const majasHtml=KOHAD.filter(x=>kalKoht==="koik"||x.id===kalKoht).map(x=>{
     const read=S.members.filter(m=>paevalTööl(m.id,i,x.id)&&!araPaeval(m.id,k));
@@ -953,37 +953,37 @@ function paevaPlokk(k, tooga){
   }).join("");
   const ara=puhkused().filter(x=>x.algus<=k&&x.lopp>=k);
 
-  /* Kes majas on ja kes ära — see on tööinfo ja seda näidatakse ainult
-     Töö graafiku all. Kalendris on üritused ja tööd. */
+  /* Üritused ja töö graafik on kaks eri asja ja neid ei panda ühte
+     ritta. Töö graafiku päev vastab küsimusele „kes on majas ja mis
+     tööd on teha“; üritused on Ürituste all, oma kalendriga. */
+  const tooRida =
+    '<div class="tanariba">'
+    + '<div><span class="sild">Majas</span>'
+    +  (majasHtml||'<span class="tyhi">Graafikus ei ole '+millal+' kedagi.</span>')+'</div>'
+    + '<div><span class="sild">Ära</span>'
+    +  (ara.length?ara.map(x=>'<span class="isik">'+avaHtml(byId(x.kes)||{name:"?"})
+         +esc(nameOf(x.kes))+'<span class="kes3">'+esc(liigiNimi(x.liik))+'</span></span>').join("")
+       :'<span class="tyhi">Keegi ei ole '+millal+' ära.</span>')+'</div>'
+    +'</div>';
+
+  const toodeRida =
+    '<div class="tanariba" style="margin-top:16px">'
+    + '<div><span class="sild">Tööd</span>'
+    +  (tl.length?tl.map(t=>{
+         const teht=tehtud(t,k), ootab=vajabKinnitust(t,k), aeg=tooAeg(t);
+         return '<button class="pill too2'+(teht?" tehtud":(ootab?" ootab":""))+'"'
+           +' data-act="too-paev" data-id="'+t.id+'" data-k="'+k+'">'
+           +'<b>'+(t.kinnita?'<i class="mark">'+(teht?"✓":"○")+'</i>':"")+esc(t.nimi)+'</b>'
+           +(aeg?'<span>'+esc(aeg)+'</span>':"")+'</button>';
+       }).join("")
+      :'<span class="tyhi">Sel päeval ei ole töid.</span>')+'</div>'
+    +'<div></div></div>';
+
   return '<div class="card"><div class="kalpais">'
     +'<p class="h3">'+(onTana?"TÄNA":"PÄEV")+' — '+esc(DOW_P[i])+'</p>'
     +'<span class="kuunimi">'+d.getDate()+'. '+MON[d.getMonth()]+' '+d.getFullYear()+'</span>'
     +'</div>'
-    +(tooga
-      ? '<div class="tanariba">'
-        + '<div><span class="sild">Majas</span>'
-        +  (majasHtml||'<span class="tyhi">Graafikus ei ole '+millal+' kedagi.</span>')+'</div>'
-        + '<div><span class="sild">Ära</span>'
-        +  (ara.length?ara.map(x=>'<span class="isik">'+avaHtml(byId(x.kes)||{name:"?"})
-             +esc(nameOf(x.kes))+'<span class="kes3">'+esc(liigiNimi(x.liik))+'</span></span>').join("")
-           :'<span class="tyhi">Keegi ei ole '+millal+' ära.</span>')+'</div>'
-        +'</div>'
-      : "")
-    +'<div class="tanariba"'+(tooga?' style="margin-top:16px"':'')+'>'
-    +  '<div><span class="sild">Üritused</span>'
-    +   (yritused.length?yritused.map(e=>'<button class="pill" data-act="goto-ev" data-id="'
-          +e.id+'">'+fmtTime(e.start)+' '+esc(e.title)+'</button>').join("")
-        :'<span class="tyhi">Üritusi ei ole.</span>')+'</div>'
-    +  '<div><span class="sild">Tööd</span>'
-    +   (tl.length?tl.map(t=>{
-          const teht=tehtud(t,k), ootab=vajabKinnitust(t,k), aeg=tooAeg(t);
-          return '<button class="pill too2'+(teht?" tehtud":(ootab?" ootab":""))+'"'
-            +' data-act="too-paev" data-id="'+t.id+'" data-k="'+k+'">'
-            +'<b>'+(t.kinnita?'<i class="mark">'+(teht?"✓":"○")+'</i>':"")+esc(t.nimi)+'</b>'
-            +(aeg?'<span>'+esc(aeg)+'</span>':"")+'</button>';
-        }).join("")
-        :'<span class="tyhi">Töid ei ole.</span>')+'</div>'
-    +'</div></div>';
+    +tooRida+toodeRida+'</div>';
 }
 
 /* ═══ Vestlus ═══ */
@@ -1685,7 +1685,7 @@ function vToo(w){
   /* Kõige üleval on see päev, mida parasjagu vaadatakse: kes on majas,
      kes on ära, mis sel päeval toimub. Sama plokk on ka Kalendris ja
      mõlemad näitavad sama valitud päeva. */
-  let h=paevaPlokk(valitudPaevOn(), true);
+  let h=paevaPlokk(valitudPaevOn());
 
   /* Üks tabel korraga, maja valik peal — sama muster mis Kalendris. */
   const g2=graafik(graKoht);
