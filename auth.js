@@ -51,11 +51,23 @@ function loe(vaartus) {
      * ta kehtib ainult siis, kui rakendus kuulab oma arvutit.
    Enne kellegagi jagamist võta rida .env failist välja. */
 const KOHE = (process.env.KOHE_SISSE || "").trim().toLowerCase();
+
+/* Neljas lukk on tahtlik erand: kuni majutatud aadressil ei ole veel
+   päris andmeid, tahab omanik seda ilma sisselogimiseta proovida. See
+   nõuab eraldi rida AVALIK_PROOVIREZIIM=jah, mille peab Renderis ise
+   sisse kirjutama — kogemata ta sinna ei satu. Niipea kui majja tulevad
+   päris nimed, telefonid ja kassa, tuleb see rida ära võtta. */
+const AVALIK = (process.env.AVALIK_PROOVIREZIIM || "").trim().toLowerCase() === "jah";
 const KOHE_LUBATUD = !!KOHE
-  && process.env.NODE_ENV !== "production"
-  && (process.env.HOST || "127.0.0.1") === "127.0.0.1";
+  && (AVALIK
+    || (process.env.NODE_ENV !== "production"
+      && (process.env.HOST || "127.0.0.1") === "127.0.0.1"));
 if (KOHE && !KOHE_LUBATUD)
   console.log("\n  KOHE_SISSE on seatud, aga ei kehti (majutus või avatud host).\n");
+else if (KOHE_LUBATUD && AVALIK)
+  console.log("\n  AVALIK PROOVIREŽIIM: leht on KÕIGILE lahti, sisse logitakse kui " + KOHE
+    + "\n  Ära pane siia päris andmeid. Võta AVALIK_PROOVIREZIIM ära, enne kui\n"
+    + "  majja tulevad päris nimed, telefonid ja kassa.\n");
 else if (KOHE_LUBATUD)
   console.log("\n  PROOVIREŽIIM: sisse logitakse kohe kui " + KOHE
     + "\n  Võta KOHE_SISSE .env failist välja, enne kui rakendust jagad.\n");
@@ -168,4 +180,5 @@ async function sisene(mark) {
 
 const valjaKupsis = KUPSIS + "=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0";
 
-module.exports = { kesOn, kysiLink, sisene, teeKutse, valjaKupsis };
+module.exports = { kesOn, kysiLink, sisene, teeKutse, valjaKupsis,
+  avalikProovirezim: () => KOHE_LUBATUD && AVALIK };

@@ -22,7 +22,7 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
 const kaivita = async (port, lisa) => {
   const s = spawn(process.execPath, ["server.js"],
     { cwd: JUUR, env: Object.assign({}, process.env,
-      { KOHE_SISSE: "", PORT: String(port) }, lisa) });
+      { KOHE_SISSE: "", AVALIK_PROOVIREZIIM: "", PORT: String(port) }, lisa) });
   let logi = ""; s.stdout.on("data", d => logi += d); s.stderr.on("data", d => logi += d);
   for (let i = 0; i < 40; i++) {
     await oota(250);
@@ -76,6 +76,36 @@ const kaivita = async (port, lisa) => {
     serverid.push(e.s);
     const m5 = await paring(3195, "/api/mina");
     kontrolli("tundmatu aadressiga ei ole keegi sees", m5.json.mina === null);
+
+    /* 6. tahtlik erand: majutuses koos AVALIK_PROOVIREZIIM=jah.
+       Nii saab omanik lehte proovida, kuni seal ei ole päris andmeid.
+       Ekraanil peab siis olema punane riba — ilma selleta ununeks uks
+       lahti. */
+    const f = await kaivita(3196, { KOHE_SISSE: "proovi.juht@proov.invalid",
+      NODE_ENV: "production", HOST: "0.0.0.0", AVALIK_PROOVIREZIIM: "jah" });
+    serverid.push(f.s);
+    const m6 = await paring(3196, "/api/mina");
+    kontrolli("avaliku loaga pääseb majutuses ilma sisselogimata sisse",
+      m6.json.mina && m6.json.mina.nimi === "Proovi Juht",
+      m6.json.mina && m6.json.mina.nimi);
+    kontrolli("server ütleb valjusti, et leht on lahti",
+      /AVALIK PROOVIREŽIIM/.test(f.logi()));
+    kontrolli("rakendus saab teada, et tuleb hoiatusriba näidata",
+      m6.json.avalikProovirezim === true, String(m6.json.avalikProovirezim));
+
+    /* 7. ainult luba, ilma KOHE_SISSE-ta, ei ava midagi */
+    const g = await kaivita(3197, { NODE_ENV: "production", HOST: "0.0.0.0",
+      AVALIK_PROOVIREZIIM: "jah" });
+    serverid.push(g.s);
+    const m7 = await paring(3197, "/api/mina");
+    kontrolli("ilma KOHE_SISSE-ta ei ava luba üksi midagi", m7.json.mina === null);
+    kontrolli("siis ei ole ka hoiatusriba", m7.json.avalikProovirezim === false,
+      String(m7.json.avalikProovirezim));
+
+    /* 8. tavaline majutus näitab riba ainult siis, kui uks on lahti */
+    const m3b = await paring(3193, "/api/mina");
+    kontrolli("suletud majutuses ei ole hoiatusriba",
+      m3b.json.avalikProovirezim === false, String(m3b.json.avalikProovirezim));
 
   } catch (e) { console.log("  VIGA  " + e.message); vigu++; }
 

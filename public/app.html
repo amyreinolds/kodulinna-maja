@@ -3199,10 +3199,27 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"&&$("#dlg").classList
 
 /* Seis tuleb serverist. Kes ma olen, otsustab sisselogimine — ekraanil
    seda valida ei saa, sest siis näeks igaüks teise kassat. */
+/* Lahtine uks peab paistma. Kui leht on avalikus proovirežiimis, käib
+   üle ekraani riba — nii ei juhtu, et sinna hakatakse vaikselt päris
+   nimesid ja kassat kirjutama. */
+function proovirezimiRiba(){
+  if(document.getElementById("proovriba"))return;
+  const d=document.createElement("div");
+  d.id="proovriba";
+  d.style.cssText="position:fixed;left:0;right:0;top:0;z-index:9999;"
+    +"background:#b42318;color:#fff;font:600 13px/1.5 inherit;"
+    +"padding:7px 16px;text-align:center;letter-spacing:.2px";
+  d.textContent="PROOVIREŽIIM — see leht on lahti kõigile, kes aadressi teavad. "
+    +"Ära pane siia päris nimesid, telefone ega kassat.";
+  document.body.appendChild(d);
+  document.body.style.paddingTop="32px";
+}
+
 async function kaivita(){
   try{
     const m=await (await fetch("/api/mina")).json();
     if(!m||!m.mina){location.href="/";return;}
+    if(m.avalikProovirezim)proovirezimiRiba();
     const r=await fetch("/api/seis");
     if(r.status===401){location.href="/";return;}
     S=await r.json();

@@ -94,7 +94,10 @@ const server = http.createServer(async (req, res) => {
         naebKassat: naebKassat(mina), annabOigusi: annabOigusi(mina),
         haldabLiikmeid: haldabLiikmeid(mina)
       }),
-      ametid: AMETID
+      ametid: AMETID,
+      /* Kui leht on avalikult lahti, peab seda ekraanil näha olema —
+         muidu ununeb ta sinna ja päris andmed lähevad lahtise ukse taha. */
+      avalikProovirezim: auth.avalikProovirezim()
     });
 
     /* Edasi ei lasta ilma sisselogimiseta. */

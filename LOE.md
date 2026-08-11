@@ -144,6 +144,28 @@ node tools/kesolen.js valja                    proovirežiim maha
 Nii saab sama rakendust vaadata mõlema silmadega, ilma et peaks kaks
 brauserit lahti hoidma. Pärast vahetust käivita server uuesti.
 
+### Majutatud leht ilma sisselogimiseta (ainult proovimise ajaks)
+
+Kuni `https://kodulinna-maja.onrender.com` peal ei ole päris andmeid, saab
+sisselogimise sealt hoopis ära võtta. Renderis **Environment** all lisa
+kaks rida:
+
+| Nimi | Väärtus |
+|---|---|
+| `KOHE_SISSE` | `ailexica@proton.me` (või `proovija@kodulinnamaja.test`) |
+| `AVALIK_PROOVIREZIIM` | `jah` |
+
+Salvesta — Render käivitab teenuse ise uuesti. Pärast seda avaneb aadress
+kohe sisse logituna. Kelle nime all, otsustab `KOHE_SISSE` rida: sama
+moodi saab seal administraatori ja tavakasutaja vahel vahetada.
+
+Ekraani ülaservas käib siis **punane riba**: „PROOVIREŽIIM — see leht on
+lahti kõigile, kes aadressi teavad." Riba on meelega tüütu.
+
+**Enne kui majja tulevad päris nimed, telefonid ja kassa, kustuta mõlemad
+read Renderist ära.** Ilma nendeta küsib leht jälle sisselogimist. Üks
+rida üksi midagi ei ava — mõlemad peavad korraga olema.
+
 ### Esimene sisselogimine majutatud lehele
 
 Majutuses ei näidata sisselogimislinki ekraanil ja postiteenust ei pruugi

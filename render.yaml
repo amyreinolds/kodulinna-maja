@@ -7,6 +7,14 @@
 #   DATABASE_URL       .env failist
 #   SESSIOONI_SALADUS  .env failist
 #   ESIMENE_SISSELOGIJA  ainult siis, kui pead esimest kontot tegema
+#
+# Proovimise ajaks, kuni lehel ei ole päris andmeid, saab sisselogimise
+# hoopis ära võtta. Selleks on Renderis vaja KAHTE rida:
+#   KOHE_SISSE           kelle nime all lehte avatakse, nt sinu e-post
+#   AVALIK_PROOVIREZIIM  jah
+# Siis on leht lahti kõigile, kes aadressi teavad, ja ekraanil käib
+# punane hoiatusriba. Enne kui majja tulevad päris nimed, telefonid ja
+# kassa, kustuta mõlemad read Renderist ära.
 
 services:
   - type: web
