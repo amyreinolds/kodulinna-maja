@@ -565,6 +565,24 @@ hr.hr{border:none;border-top:1px solid var(--line-2);margin:0}
 /* „+ Uus grupp“ seisab gruppide nimekirja lõpus. Ta ei ole vestlus,
    seega ei näe ta ka vestluse moodi välja — kirjasuurus väiksem ja
    värv sinine, et teda mitte kogemata avada. */
+/* Otsikast seisab nimekirja kohal ja jääb kerimisel paigale — pikas
+   tulemuste loendis tahab inimene otsingut muuta ilma üles kerimata. */
+.otsikast{position:sticky;top:-10px;z-index:2;margin:-10px -10px 0;
+  background:var(--card);border-bottom:1px solid var(--line-2);
+  padding:10px;display:flex;gap:6px;align-items:center}
+.otsikast input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;
+  background:var(--card);padding:9px 12px;font-size:16px;font-family:inherit;outline:none}
+.otsikast input:focus{border-color:var(--accent-ink)}
+/* Brauseri oma tühjendusristike jääks minu oma kõrvale teiseks samaks
+   nupuks. Kaks risti kõrvuti ei ütle, kumb kumba teeb. */
+.otsikast input::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none}
+.otsikast button{flex:none;width:34px;height:34px;border-radius:9px;color:var(--ink-3);font-size:15px}
+.otsikast button:hover{background:var(--soft);color:var(--ink)}
+.tlist mark{background:var(--accent-soft);color:var(--accent-ink);
+  font-weight:700;border-radius:3px;padding:0 2px}
+.otsityhi{padding:26px 16px;text-align:center;color:var(--ink-3);font-size:16px}
+.otsityhi span{display:block;font-size:14px;margin-top:6px}
+
 .tlist .uusgrupp{font-size:15px;font-weight:650;color:var(--accent-ink);padding:9px 14px}
 
 .convo{

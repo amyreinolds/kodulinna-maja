@@ -608,7 +608,14 @@ async function save(){
       headers:{"Content-Type":"application/json"},body:JSON.stringify(S)});
     if(r.status===401){location.href="/";return;}
     const uus=await r.json();
-    if(uus&&Array.isArray(uus.members)){S=uus;leiaOotav();render();}
+    /* Kui salvestamise ajal jõuti midagi veel muuta, siis serveri vastus
+       on juba vana: ta ei tea sellest muudatusest. Vana seisu peale
+       võtmine kustutaks selle ära — kirjutatud sõnum või kustutatud
+       teema hüppaks tagasi. Sel juhul jätame oma seisu alles ja järgmine
+       salvestus viib ta ära. */
+    if(uus&&Array.isArray(uus.members)){
+      if(!salvestusOotel){S=uus;leiaOotav();render();}
+    }
     else if(uus&&uus.viga)toast(uus.viga);
   }catch(e){toast("Ei saanud salvestada. Kontrolli ühendust.");}
   finally{
@@ -1018,6 +1025,64 @@ function paevaPlokk(k){
 }
 
 /* ═══ Vestlus ═══ */
+
+/* Otsing käib läbi kõik vestlused, mida sa näed — teemad, sinu grupid
+   ja sinu kirjad. Mida sa muidu ei näe, seda ei leia ka otsinguga: seis
+   ise ei sisalda võõraid kirju. */
+let vestluseOts="";
+
+function koikVestlused(){
+  const out=[];
+  S.threads.forEach(t=>out.push({type:"teema",id:t.id,nimi:t.title,box:t}));
+  grupid().forEach(g=>out.push({type:"grupp",id:g.id,nimi:g.title,box:g}));
+  S.members.filter(m=>m.id!==meId()).forEach(m=>{
+    const d=S.dms[dmKey(meId(),m.id)];
+    if(d&&d.messages&&d.messages.length)
+      out.push({type:"kiri",id:m.id,nimi:m.name,box:d});
+  });
+  return out;
+}
+
+function otsinguTulemused(){
+  const o=vestluseOts.toLowerCase();
+  const nimed=[],read=[];
+  for(const v of koikVestlused()){
+    if(v.nimi.toLowerCase().includes(o))
+      nimed.push('<button data-act="ava" data-type="'+v.type+'" data-id="'+v.id+'">'
+        +'<span class="t">'+esc(v.nimi)+'</span>'
+        +'<span class="m">'+esc(LIIGI_NIMI[v.type])+'</span></button>');
+    for(const m of (v.box.messages||[])){
+      if(!m.text.toLowerCase().includes(o))continue;
+      read.push({at:m.at,html:
+        '<button data-act="ava" data-type="'+v.type+'" data-id="'+v.id+'">'
+        +'<span class="t">'+esc(v.nimi)+'</span>'
+        +'<span class="m">'+esc(first(nameOf(m.by)))+": "+tostaEsile(m.text,vestluseOts)
+        +' · '+esc(fmtStamp(m.at))+'</span></button>'});
+    }
+  }
+  read.sort((a,b)=>new Date(b.at)-new Date(a.at));
+  if(!nimed.length&&!read.length)
+    return '<div class="otsityhi">Ei leidnud midagi.<span>Otsitakse vestluste nimedest '
+      +'ja sõnumite tekstist.</span></div>';
+  return (nimed.length?'<div class="grp">VESTLUSED</div>'+nimed.join(""):"")
+    +(read.length?'<div class="grp"'+(nimed.length?' style="margin-top:8px"':"")+'>'
+      +'SÕNUMID<small>'+mitu(read.length,"leid","leidu")+'</small></div>'
+      +read.slice(0,40).map(x=>x.html).join(""):"");
+}
+
+const LIIGI_NIMI={teema:"Teema — näevad kõik",grupp:"Grupp",kiri:"Kiri"};
+
+/* Näitame leitud sõna ümbrust, mitte kogu sõnumit — pikk jutt ei mahu
+   nimekirja ja otsitud koht jääks nägemata. */
+function tostaEsile(tekst,ots){
+  const i=tekst.toLowerCase().indexOf(ots.toLowerCase());
+  if(i<0)return esc(tekst.slice(0,60));
+  const a=Math.max(0,i-24), b=Math.min(tekst.length,i+ots.length+34);
+  return (a?"…":"")+esc(tekst.slice(a,i))
+    +'<mark>'+esc(tekst.slice(i,i+ots.length))+'</mark>'
+    +esc(tekst.slice(i+ots.length,b))+(b<tekst.length?"…":"");
+}
+
 function vChat(w){
   if(!chat){
     chat=S.threads[0]?{type:"teema",id:S.threads[0].id}:null;
@@ -1061,10 +1126,18 @@ function vChat(w){
       +'</span></button>';
   }).join("");
 
-  const list='<div class="grp">TEEMAD<small>Näevad kõik liikmed</small></div>'+teemad
-    +'<div class="grp" style="margin-top:8px">GRUPID<small>Näevad ainult valitud inimesed</small></div>'
-    +gr+'<button class="uusgrupp" data-act="uus-grupp">+ Uus grupp</button>'
-    +'<div class="grp" style="margin-top:8px">KIRJAD<small>Näete ainult teie kahekesi</small></div>'+kirjad;
+  const otsikast='<div class="otsikast">'
+    +'<input type="search" id="vestlusOts" placeholder="Otsi vestlustest…"'
+    +' aria-label="Otsi vestlustest" value="'+esc(vestluseOts)+'">'
+    +(vestluseOts?'<button data-act="ots-tyhi" aria-label="Tühjenda otsing">✕</button>':"")
+    +'</div>';
+
+  const list=otsikast+(vestluseOts
+    ? otsinguTulemused()
+    : '<div class="grp">TEEMAD<small>Näevad kõik liikmed</small></div>'+teemad
+      +'<div class="grp" style="margin-top:8px">GRUPID<small>Näevad ainult valitud inimesed</small></div>'
+      +gr+'<button class="uusgrupp" data-act="uus-grupp">+ Uus grupp</button>'
+      +'<div class="grp" style="margin-top:8px">KIRJAD<small>Näete ainult teie kahekesi</small></div>'+kirjad);
 
   let convo='<div class="convo"><div class="msgs"><div class="empty"><b>Vali vasakult teema või inimene.</b></div></div></div>';
   if(chat){
@@ -1080,6 +1153,8 @@ function vChat(w){
       +'<div class="cvhead"><div class="cvnimi"><b>'+esc(title)+'</b>'
       +'<span>'+esc(note)+'</span></div>'
       +(isGr?'<button class="linkbtn" data-act="muuda-grupp" data-id="'+box.id+'">Muuda gruppi</button>':"")
+      +'<button class="linkbtn mut" data-act="vestlus-kustuta" data-type="'+chat.type
+      +'" data-id="'+chat.id+'">Kustuta</button>'
       +'</div>'
       +'<div class="msgs" id="msgs">'
       +(box.messages.length?msgideHtml(box.messages,
@@ -1098,6 +1173,7 @@ function vChat(w){
   w.innerHTML='<div class="chat" data-open="'+(chat?1:0)+'"><div class="tlist">'+list+'</div>'+convo+'</div>';
   const b=$("#msgs");if(b)b.scrollTop=b.scrollHeight;
   wireComposer();
+  wireOtsing();
   function lastAt(x){const l=x.messages[x.messages.length-1];return new Date(l?l.at:x.at);}
 }
 /* Joon näitab, kust sinu jaoks uued sõnumid algavad. Ilma selleta peaks
@@ -1146,6 +1222,23 @@ function msgHTML(m){
       +' aria-label="Võta see sõnum tagasi" title="Võta tagasi">✕</button>':"")
     +'</div></div>';
 }
+/* Otsikast joonistatakse iga tähe järel uuesti. Ilma kursorit tagasi
+   panemata hüppaks kirjutamine pärast esimest tähte välja. */
+let otsFookus=false;
+function wireOtsing(){
+  const i=$("#vestlusOts");if(!i)return;
+  i.addEventListener("input",()=>{
+    vestluseOts=i.value.trim();
+    otsFookus=true;
+    render();
+  });
+  if(otsFookus){
+    i.focus();
+    i.setSelectionRange(i.value.length,i.value.length);
+    otsFookus=false;
+  }
+}
+
 /* Praegu lahti olev vestlus — teema, grupp või kiri. */
 function avatudVestlus(){
   if(!chat)return null;
@@ -3063,6 +3156,38 @@ document.addEventListener("click",ev=>{
       chat={type:t,id};snap={};
       markSeen(t==="kiri"?"dm:"+dmKey(meId(),id):t==="grupp"?"grupp:"+id:"thread:"+id);
       save();render();break;
+    }
+    case "ots-tyhi": vestluseOts="";otsFookus=true;render();break;
+    /* Kolm eri asja, mis vajavad kolme eri lauset. Teema kaob kõigi
+       jaoks; grupp kaob nendel, keda välja võetakse; kirjast kaovad
+       ainult sinu enda sõnumid, sest teise inimese omad ei ole sinu
+       kustutada. Nii ütlemegi. */
+    case "vestlus-kustuta":{
+      const t=el.dataset.type;
+      if(t==="teema"){
+        const x=S.threads.find(y=>y.id===id);if(!x)break;
+        if(!confirm("Kustutan teema „"+x.title+"“ ja kõik selle sõnumid.\n\n"
+          +"See kaob kõigi liikmete jaoks ära. Seda ei saa tagasi võtta."))break;
+        S.threads=S.threads.filter(y=>y.id!==id);
+        chat=null;save();render();toast("Teema kustutatud.");
+      }else if(t==="grupp"){
+        const g=grupid().find(y=>y.id===id);if(!g)break;
+        if(!confirm("Kustutan grupi „"+g.title+"“ ja kogu selle jutu.\n\n"
+          +"See kaob kõigi "+(g.who||[]).length+" inimese jaoks ära, mitte ainult sinu oma. "
+          +"Kui tahad ainult ise välja astuda, vajuta „Muuda gruppi“ ja sealt "
+          +"„Astun grupist välja“."))break;
+        g.who=[];
+        chat=null;save();render();toast("Grupp kustutatud.");
+      }else{
+        const d=dmOf(id), minu=d.messages.filter(m=>m.by===meId()).length;
+        if(!minu){toast("Sul ei ole selles kirjavahetuses ühtegi oma sõnumit.");break;}
+        if(!confirm("Kustutan siit oma "+mitu(minu,"sõnumi","sõnumit")+".\n\n"
+          +esc(nameOf(id))+" enda kirjutatu jääb alles — teise inimese sõnumid "
+          +"ei ole sinu kustutada."))break;
+        d.messages=d.messages.filter(m=>m.by!==meId());
+        save();render();toast("Sinu sõnumid on kustutatud.");
+      }
+      break;
     }
     case "uus-grupp": dlgGrupp(null);break;
     case "muuda-grupp": dlgGrupp(grupid().find(g=>g.id===id));break;
