@@ -2961,10 +2961,10 @@ function dlgSeaded(){
       +'<span class="sw"><i></i><i></i><i></i></span><span>'+esc(t.nimi)+'</span></button>').join("")
     +'</div><span class="hint">'
     +esc(TEEMAD.map(t=>t.nimi+" — "+t.selgitus).join(" · ")+".")
-    +' Muudatus on kohe näha ja jääb meelde.</span></div>'
-    +'<hr class="hr">'
-    +'<div class="tools">'
-    +  '<button type="button" class="btn ghost" data-act="valja">Logi va koopia</button></div>',
+    +' Muudatus on kohe näha ja jääb meelde.</span></div>',
+    /* Väljalogimine on külgriba all ja seda ei ole vaja siin korrata.
+       Vana nupp oli pooleldi prototüübist üle jäänud („Logi va koopia“)
+       ja kaks eri asja ühes sildis ei ütle kummastki midagi. */
     "Valmis",()=>true,true);
 }
 function dlgData(){
