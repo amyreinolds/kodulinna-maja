@@ -365,8 +365,12 @@ async function salvestaSeis(mina, s) {
       koik ? [] : [mina.id]);
     const alles = new Set();
     for (const r of s.myyk.read) {
-      /* Ilma kassaõiguseta saad kirja panna ainult enda müüki. */
-      const kes = koik ? (r.kes || mina.id) : mina.id;
+      /* Kelle nime alla müük läheb, otsustab ülemus või administraator.
+         Kõik teised — ka raamatupidaja, kes kogu kassat näeb — saavad
+         kirja panna ainult enda müüki. Müük on tõend selle kohta, kes
+         mida tegi; teise nime alla kirjutamine ei ole raamatupidamine,
+         vaid tema töö ümberkirjutamine. */
+      const kes = teised ? (r.kes || mina.id) : mina.id;
       const nimetus = tyhjaks(r.nimetus);
       /* Ekraan võib kanda kogust real või müügikordade nimekirjas. */
       const kogus = Number(Array.isArray(r.myygid) && r.myygid.length

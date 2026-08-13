@@ -83,8 +83,14 @@ ja sisselogimislinke. **Ühiskassa on erand.**
 | | Liige | Raamatupidaja | Ülemus | Administraator |
 |---|---|---|---|---|
 | Kogu maja kassa ja aruanne | ei (ainult oma müük) | jah | jah | jah |
+| Müügi lisamine teise nime alla | ei | ei | jah | jah |
 | Kõik muu | jah | jah | jah | jah |
 | Ameti muutmine | ei | ei | ei | **jah** |
+
+Müügi kirjapanek käib alati enda nime alla — teistel ei ole aknas müüja
+valikut. Ka raamatupidaja ei kirjuta teise nime alla, kuigi ta kogu kassat
+näeb: müük on tõend selle kohta, kes mida tegi, ja teise nime alla
+kirjutamine ei ole raamatupidamine, vaid tema töö ümberkirjutamine.
 
 **Kirjad ja grupid on erand teistpidi:** neid ei näe ka administraator, kui
 ta ise sees ei ole. Kahe inimese kiri ja valitud seltskonna jutt ei tule

@@ -1728,9 +1728,20 @@ function dlgMyyk(r){
         +fld("f_kogus","Mitu tükki praegu müüdi","1","text")
         +fld("f_hind","Hind ühe tüki eest","","text","Näiteks 12,50")
         +'</div>')
-    +'<div class="field"><label for="f_kes">Kes müüs</label><select id="f_kes">'
-    +S.members.map(m=>'<option value="'+m.id+'"'+((r?r.kes===m.id:m.id===meId())?" selected":"")+'>'+esc(m.name)+'</option>').join("")
-    +'</select></div>'
+    /* Kelle müük see on, saab valida ainult ülemus ja administraator.
+       Teistel ei ole siin valikut: müük läheb nende enda nime alla ja
+       aken ütleb selle välja, et keegi ei otsiks puuduvat rida. */
+    +(S.haldabTeisi
+      ? '<div class="field"><label for="f_kes">Kes müüs</label><select id="f_kes">'
+        +S.members.map(m=>'<option value="'+m.id+'"'
+          +((r?r.kes===m.id:m.id===meId())?" selected":"")+'>'+esc(m.name)+'</option>').join("")
+        +'</select></div>'
+      : '<input type="hidden" id="f_kes" value="'+esc(r?r.kes:meId())+'">'
+        +(r&&r.kes!==meId()
+          ? '<span class="hint">See on '+esc(nameOf(r.kes))+" müük. Müüja nime saavad "
+            +'muuta ülemus ja administraator.</span>'
+          : '<span class="hint">Müük läheb sinu nime alla. Teise inimese müüki saavad '
+            +'kirja panna ülemus ja administraator.</span>'))
     +(r?"":'<div class="field"><label for="f_kuup">Millal müüdi</label>'
         +'<input type="date" id="f_kuup" value="'+dkey(new Date())+'" max="'+dkey(new Date())+'">'
         +'<span class="hint">Vaikimisi tänane päev. Vajuta väljal, et avada kalender — '
