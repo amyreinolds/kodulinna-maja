@@ -35,7 +35,8 @@ async function loeSeis(mina) {
   const koik = naebKassat(mina);
 
   const [liikmed, grupp, osad, hinnad, myygid, yritused, osalemine, kinnitused,
-         kommentaarid, ulesanded, infod, failid, vestlused, vestluseLiikmed, sonumid,
+         kommentaarid, ulesanded, infod, failid, vestlused, vestluseLiikmed,
+         sonumid, sonumiMargid,
          graafik, puudumised, tood, tooPaevad, tooTehtud, loetud] = await Promise.all([
     q(`SELECT id, nimi, roll, telefon, epost, administraator, pilt, amet FROM liikmed ORDER BY nimi`),
     yks("SELECT * FROM grupp WHERE id"),
@@ -53,6 +54,7 @@ async function loeSeis(mina) {
     q("SELECT * FROM vestlused"),
     q("SELECT * FROM vestluse_liikmed"),
     q("SELECT * FROM sonumid ORDER BY aeg"),
+    q("SELECT * FROM sonumi_margid"),
     q("SELECT * FROM graafik ORDER BY paev, algus NULLS LAST"),
     q("SELECT * FROM puudumised"),
     q("SELECT * FROM tood"),
@@ -80,6 +82,22 @@ async function loeSeis(mina) {
   }
   for (const l of liikmed)
     seen[l.id] = seen[l.id] || { __baas: "2000-01-01T00:00:00.000Z" };
+
+  /* Märgid sõnumite juures: „👍“ → kes ta panid. Tühja välja ei saada —
+     enamikul sõnumitel ei ole ühtegi märki ja iga tühi objekt sõidaks
+     muidu üle juhtme kaasa. */
+  const margidKaupa = new Map();
+  for (const r of sonumiMargid) {
+    let m = margidKaupa.get(r.sonum_id);
+    if (!m) margidKaupa.set(r.sonum_id, m = {});
+    (m[r.marge] = m[r.marge] || []).push(r.liige_id);
+  }
+  const sonumiks = s => {
+    const o = { id: s.id, by: s.autor, at: iso(s.aeg), text: s.tekst };
+    const m = margidKaupa.get(s.id);
+    if (m) o.re = m;
+    return o;
+  };
 
   const kaart = (read, võti) => {
     const o = {};
@@ -131,7 +149,7 @@ async function loeSeis(mina) {
     threads: vestlused.filter(v => v.liik === "teema").map(v => ({
       id: v.id, title: v.pealkiri || "", by: v.autor, at: iso(v.loodud),
       messages: sonumid.filter(s => s.vestlus_id === v.id)
-        .map(s => ({ id: s.id, by: s.autor, at: iso(s.aeg), text: s.tekst }))
+        .map(sonumiks)
     })),
     /* Kiri on kahe inimese oma ja ekraan lubab, et „näete ainult teie
        kahekesi“. Seda lubadust peab pidama server, mitte ekraan: teiste
@@ -142,7 +160,7 @@ async function loeSeis(mina) {
         [dmKey(v.a_id, v.b_id), {
           id: v.id,
           messages: sonumid.filter(s => s.vestlus_id === v.id)
-            .map(s => ({ id: s.id, by: s.autor, at: iso(s.aeg), text: s.tekst }))
+            .map(sonumiks)
         }])),
     /* Grupp on püsiv vestlus valitud inimeste vahel. Sama reegel: kes
        grupis ei ole, see teda ega tema juttu ei näe. */
@@ -153,7 +171,7 @@ async function loeSeis(mina) {
         id: v.id, title: v.pealkiri || "", by: v.autor, at: iso(v.loodud),
         who: vestluseLiikmed.filter(x => x.vestlus_id === v.id).map(x => x.liige_id),
         messages: sonumid.filter(s => s.vestlus_id === v.id)
-          .map(s => ({ id: s.id, by: s.autor, at: iso(s.aeg), text: s.tekst }))
+          .map(sonumiks)
       })),
     events: yritused.map(y => ({
       /* Tühi koht tähendab „mujal“ — üritus ei ole kummaski majas ja
@@ -782,20 +800,49 @@ async function syncKommentaarid(veerg, kirjeId, list, mina, oma) {
 /* Sõnumeid ei muudeta tagantjärele — ainult lisandub ja kaob. */
 async function syncSonumid(vId, sonumid, mina) {
   if (!Array.isArray(sonumid)) return;
-  const olemas = await q("SELECT id FROM sonumid WHERE vestlus_id=$1", [vId]);
+  const olemas = await q("SELECT id, autor FROM sonumid WHERE vestlus_id=$1", [vId]);
   const alles = new Set();
   for (const m of sonumid) {
     const tekst = tyhjaks(m.text);
     if (!tekst) continue;
-    if (onUuid(m.id) && olemas.some(x => x.id === m.id)) { alles.add(m.id); continue; }
+    if (onUuid(m.id) && olemas.some(x => x.id === m.id)) {
+      alles.add(m.id);
+      await syncMargid(m.id, m.re, mina);
+      continue;
+    }
     const r = await yks(
       `INSERT INTO sonumid (vestlus_id, autor, tekst, aeg)
        VALUES ($1,$2,$3, coalesce($4::timestamptz, now())) RETURNING id`,
       [vId, onUuid(m.by) ? m.by : mina.id, tekst, m.at || null]);
     alles.add(r.id);
+    await syncMargid(r.id, m.re, mina);
   }
-  for (const x of olemas) if (!alles.has(x.id))
-    await q("DELETE FROM sonumid WHERE id=$1", [x.id]);
+  /* Oma sõnumi saab tagasi võtta, teise oma mitte. Enne kustus iga
+     sõnum, mida saadetud seis ei sisaldanud — ka kellegi teise oma. */
+  for (const x of olemas)
+    if (!alles.has(x.id) && x.autor === mina.id)
+      await q("DELETE FROM sonumid WHERE id=$1", [x.id]);
+}
+
+/* Märk sõnumi juures on isiklik: sinu pöial on sinu oma. Teise inimese
+   märki ei saa ei panna ega ära võtta — täpselt nagu „Olen tutvunud“. */
+const MARGID_LUBATUD = ["👍", "❤️", "😊", "😮", "🙏", "✅"];
+async function syncMargid(sonumId, re, mina) {
+  if (!re || typeof re !== "object") return;
+  const soovitud = new Set();
+  for (const [marge, kes] of Object.entries(re)) {
+    if (!MARGID_LUBATUD.includes(marge)) continue;
+    if (Array.isArray(kes) && kes.includes(mina.id)) soovitud.add(marge);
+  }
+  const vanad = await q(
+    "SELECT marge FROM sonumi_margid WHERE sonum_id=$1 AND liige_id=$2",
+    [sonumId, mina.id]);
+  for (const v of vanad) if (!soovitud.has(v.marge))
+    await q("DELETE FROM sonumi_margid WHERE sonum_id=$1 AND liige_id=$2 AND marge=$3",
+      [sonumId, mina.id, v.marge]);
+  for (const m of soovitud) if (!vanad.some(v => v.marge === m))
+    await q(`INSERT INTO sonumi_margid (sonum_id, liige_id, marge) VALUES ($1,$2,$3)
+             ON CONFLICT DO NOTHING`, [sonumId, mina.id, m]);
 }
 
 module.exports = { loeSeis, salvestaSeis, margi, dmKey };

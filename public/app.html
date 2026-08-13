@@ -1086,8 +1086,14 @@ function vChat(w){
         isDm?"dm:"+dmKey(meId(),chat.id):isGr?"grupp:"+chat.id:"thread:"+chat.id)
         :'<div class="empty"><b>Siin ei ole veel ühtegi sõnumit.</b>Kirjuta esimene allolevasse kasti.</div>')
       +'</div><div class="composer"><div class="cbox">'
+      +'<button class="emonupp" id="emo" type="button" aria-label="Lisa emotsioon"'
+      +' title="Lisa emotsioon">☺</button>'
       +'<textarea id="ci" rows="2" placeholder="Kirjuta siia…" aria-label="Sinu sõnum"></textarea>'
-      +'<button class="btn" id="csend" data-act="send" disabled>Saada</button></div></div></div>';
+      +'<button class="btn" id="csend" data-act="send" disabled>Saada</button></div>'
+      +'<div class="emorida" id="emorida" hidden>'
+      +EMOTSIOONID.map(e=>'<button type="button" data-act="emo" data-v="'+e+'"'
+        +' aria-label="'+esc(e)+'">'+e+'</button>').join("")
+      +'</div></div></div>';
   }
   w.innerHTML='<div class="chat" data-open="'+(chat?1:0)+'"><div class="tlist">'+list+'</div>'+convo+'</div>';
   const b=$("#msgs");if(b)b.scrollTop=b.scrollHeight;
@@ -1107,24 +1113,68 @@ function msgideHtml(list,key){
   }
   return h;
 }
+/* Märgid, mille saab sõnumi juurde panna. Rohkem ei ole vaja: pikk
+   valik teeb otsustamise raskeks ja pool neist ei tähenda tööasjades
+   midagi. */
+const MARGID=["👍","❤️","😊","😮","🙏","✅"];
+
+/* Kirjutamise juurde käiv valik on pikem: siin on nad osa lausest, mitte
+   vastus. Kaks rida on parasjagu — pikem nimekiri nõuab kerimist ja
+   kerimine väikeste piltide seas on tüütu. */
+const EMOTSIOONID=["🙂","😀","😄","😉","😊","🥰","😍","😘",
+  "👍","👏","🙏","💪","🎉","❤️","🌸","☀️",
+  "😢","😮","😅","🤔","😴","🍰","☕","🚗"];
+
 function msgHTML(m){
-  return '<div class="msg'+(m.by===meId()?" mine":"")+'">'
+  const minu=m.by===meId();
+  const re=m.re||{};
+  const olemas=MARGID.filter(x=>(re[x]||[]).length);
+  return '<div class="msg'+(minu?" mine":"")+'" data-mid="'+esc(m.id)+'">'
     +'<div class="hd"><b>'+esc(nameOf(m.by))+'</b><span>'+esc(fmtStamp(m.at))+'</span></div>'
-    +'<div class="tx">'+esc(m.text)+'</div></div>';
+    +'<div class="tx">'+esc(m.text)+'</div>'
+    +'<div class="mtools">'
+    +  olemas.map(x=>{
+         const kes=re[x]||[], minuOma=kes.includes(meId());
+         return '<button class="marge'+(minuOma?" minu":"")+'" data-act="marge"'
+           +' data-mid="'+esc(m.id)+'" data-v="'+x+'"'
+           +' title="'+esc(kes.map(nameOf).join(", "))+'"'
+           +' aria-pressed="'+minuOma+'">'+x+'<span>'+kes.length+'</span></button>';
+       }).join("")
+    +  '<button class="margelisa" data-act="marge-vali" data-mid="'+esc(m.id)+'"'
+    +  ' aria-label="Pane märk selle sõnumi juurde" title="Pane märk">☺</button>'
+    +  (minu?'<button class="margelisa" data-act="sonum-kustuta" data-mid="'+esc(m.id)+'"'
+      +' aria-label="Võta see sõnum tagasi" title="Võta tagasi">✕</button>':"")
+    +'</div></div>';
 }
+/* Praegu lahti olev vestlus — teema, grupp või kiri. */
+function avatudVestlus(){
+  if(!chat)return null;
+  return chat.type==="kiri"?dmOf(chat.id)
+    :chat.type==="grupp"?grupid().find(g=>g.id===chat.id)
+    :S.threads.find(t=>t.id===chat.id);
+}
+function sonumById(id){
+  const b=avatudVestlus();
+  return b?b.messages.find(m=>m.id===id):null;
+}
+
 function wireComposer(){
   const ta=$("#ci"),b=$("#csend");if(!ta)return;
   const sync=()=>{b.disabled=!ta.value.trim();ta.style.height="auto";ta.style.height=Math.min(ta.scrollHeight,150)+"px";};
   ta.addEventListener("input",sync);
   ta.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMsg();}});
+  const emo=$("#emo"),rida=$("#emorida");
+  if(emo&&rida)emo.addEventListener("click",()=>{
+    rida.hidden=!rida.hidden;
+    emo.setAttribute("aria-pressed",String(!rida.hidden));
+    if(!rida.hidden)rida.scrollTop=0;
+  });
   sync();
 }
 function sendMsg(){
   const ta=$("#ci");if(!ta||!chat)return;
   const text=ta.value.trim();if(!text)return;
-  const box=chat.type==="kiri"?dmOf(chat.id)
-    :chat.type==="grupp"?grupid().find(g=>g.id===chat.id)
-    :S.threads.find(t=>t.id===chat.id);
+  const box=avatudVestlus();
   if(!box)return;
   box.messages.push({id:uid(),by:meId(),at:new Date().toISOString(),text});
   save();render();
@@ -3037,6 +3087,47 @@ document.addEventListener("click",ev=>{
       view="vestlus";chat={type:"kiri",id};snap={};
       markSeen("dm:"+dmKey(meId(),id));save();render();break;
     case "send": sendMsg();break;
+    case "emo":{
+      /* Emotsioon läheb sinna, kuhu kursor jäi — mitte alati lõppu. */
+      const ta=$("#ci");if(!ta)break;
+      const v=el.dataset.v, a=ta.selectionStart||ta.value.length;
+      ta.value=ta.value.slice(0,a)+v+ta.value.slice(ta.selectionEnd||a);
+      ta.focus();ta.selectionStart=ta.selectionEnd=a+v.length;
+      ta.dispatchEvent(new Event("input"));break;
+    }
+    case "marge-vali":{
+      const m=sonumById(el.dataset.mid);if(!m)break;
+      dlg("Pane märk",
+        '<p class="hint" style="margin:0 0 12px">'+esc(nameOf(m.by))+": „"
+        +esc(m.text.slice(0,90))+(m.text.length>90?"…":"")+'“</p>'
+        +'<div class="margevalik">'+MARGID.map(x=>{
+          const minu=((m.re||{})[x]||[]).includes(meId());
+          return '<button type="button" data-act="marge" data-mid="'+esc(m.id)+'"'
+            +' data-v="'+x+'" data-sulge="1" aria-pressed="'+minu+'">'+x+'</button>';
+        }).join("")+'</div>'
+        +'<span class="hint">Vajuta uuesti, et oma märk ära võtta.</span>',
+        "Valmis",()=>true,true);
+      break;
+    }
+    case "marge":{
+      const m=sonumById(el.dataset.mid);if(!m)break;
+      const v=el.dataset.v;
+      m.re=m.re||{};
+      const kes=m.re[v]=(m.re[v]||[]).slice();
+      const i=kes.indexOf(meId());
+      if(i<0)kes.push(meId()); else kes.splice(i,1);
+      if(!kes.length)delete m.re[v];
+      if(el.dataset.sulge)closeDlg();
+      save();render();break;
+    }
+    case "sonum-kustuta":{
+      const m=sonumById(el.dataset.mid);if(!m)break;
+      if(m.by!==meId()){toast("Tagasi saab võtta ainult oma sõnumi.");break;}
+      if(!confirm("Võtan selle sõnumi tagasi. Teised ei näe seda enam."))break;
+      const box=avatudVestlus();if(!box)break;
+      box.messages=box.messages.filter(x=>x.id!==m.id);
+      save();render();toast("Sõnum võetud tagasi.");break;
+    }
     case "q": opened.has(id)?opened.delete(id):opened.add(id);render();break;
     case "q-send":{
       const e=S.events.find(x=>x.id===id);if(!e)break;

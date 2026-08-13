@@ -592,7 +592,38 @@ hr.hr{border:none;border-top:1px solid var(--line-2);margin:0}
 .msg.mine{margin-left:auto}
 .msg.mine .tx{background:var(--accent-soft);border-color:var(--accent-line)}
 
+/* Märgid sõnumi all. Nad on nähtaval ainult siis, kui neid on — tühi
+   nuppude rida iga sõnumi all teeks vestluse rahutuks. Märgi panemise
+   ja tagasivõtmise nupp tuleb nähtavale, kui sõnumi peale minna; puute-
+   ekraanil (kus hiirt ei ole) on nad kogu aeg näha. */
+.msg .mtools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
+.msg.mine .mtools{justify-content:flex-end}
+.msg .marge{display:inline-flex;align-items:center;gap:5px;font-size:15px;
+  padding:3px 9px;border-radius:20px;border:1px solid var(--line);background:var(--card);line-height:1.4}
+.msg .marge span{font-size:13px;font-weight:700;color:var(--ink-3)}
+.msg .marge.minu{background:var(--accent-soft);border-color:var(--accent-line)}
+.msg .marge.minu span{color:var(--accent-ink)}
+.msg .marge:hover{border-color:var(--accent-ink)}
+.msg .margelisa{font-size:15px;line-height:1;padding:4px 8px;border-radius:20px;
+  color:var(--ink-3);opacity:0;transition:opacity .12s}
+.msg:hover .margelisa,.msg .margelisa:focus-visible{opacity:1}
+.msg .margelisa:hover{background:var(--soft);color:var(--ink)}
+@media (hover:none){.msg .margelisa{opacity:1}}
+
+/* Aknas olev valik on suurem — seal vaadatakse teda otsa, mitte möödaminnes. */
+.margevalik{display:flex;flex-wrap:wrap;gap:8px}
+.margevalik button{font-size:26px;line-height:1;padding:10px 12px;border-radius:12px;
+  border:1.5px solid var(--line);background:var(--card)}
+.margevalik button[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent-ink)}
+.margevalik button:hover{border-color:var(--accent-ink)}
+
 .composer{flex:none;border-top:1px solid var(--line);background:var(--card);padding:14px 26px 18px}
+.emonupp{flex:none;font-size:22px;line-height:1;width:44px;height:44px;border-radius:12px;
+  border:1.5px solid var(--line);background:var(--card);color:var(--ink-2)}
+.emonupp:hover{border-color:var(--accent-ink);background:var(--soft)}
+.emorida{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px;max-height:104px;overflow-y:auto}
+.emorida button{font-size:24px;line-height:1;padding:7px 9px;border-radius:10px}
+.emorida button:hover{background:var(--soft)}
 .cbox{display:flex;gap:12px;align-items:flex-end}
 .cbox textarea{flex:1;border:1.5px solid var(--line);border-radius:12px;background:var(--card);resize:none;outline:none;font-size:17px;line-height:1.5;padding:12px 15px;max-height:150px;font-family:inherit}
 .cbox textarea:focus{border-color:var(--accent-ink)}
