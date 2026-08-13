@@ -61,6 +61,7 @@ brauseri sisse meelde.
 | Vaade | Mida teeb |
 |---|---|
 | **Müük** | vali kogus, klõpsa tootel. Oma müük on kohe all näha. Allpool toodete kaupa kokkuvõte ja — kassaõigusega — müüjate kaupa. Vajuta müüja nimel, tema alla tuleb kalender; vajuta kuupäeval ja näed, mida ta sel päeval müüs |
+| **Vestlus** | kolm asja: **teemat** näevad kõik liikmed; **gruppi** ainult need, kelle sa ise valid („Torni tiim“); **kirja** näete kahekesi. Grupp on püsiv — nime saab muuta, inimesi lisada ja välja jätta, ja igaüks saab ise välja astuda |
 | **Üritused** | nimekiri suure kuupäevaga: „Osalen“ / „Ei osale“, „Olen tutvunud“, ülesanded („kes toob koogi“) ja küsimused iga ürituse all |
 | **Üldinfo** | tähtis info kõigile. Kinnitust nõudva ploki all on „Olen tutvunud“ ja kes on juba tutvunud |
 | **Failid** | dokumendid, mida teistel vaja läheb. Üks fail kuni 5 MB, hoitakse andmebaasis — eraldi failihoidlat ei ole vaja |
@@ -84,6 +85,11 @@ ja sisselogimislinke. **Ühiskassa on erand.**
 | Kogu maja kassa ja aruanne | ei (ainult oma müük) | jah | jah | jah |
 | Kõik muu | jah | jah | jah | jah |
 | Ameti muutmine | ei | ei | ei | **jah** |
+
+**Kirjad ja grupid on erand teistpidi:** neid ei näe ka administraator, kui
+ta ise sees ei ole. Kahe inimese kiri ja valitud seltskonna jutt ei tule
+serverist üldse välja kellelegi, kes sinna ei kuulu — see ei ole ekraani
+peal peidetud, vaid päriselt saatmata.
 
 Ameti muutmine on ainult administraatoril, sest amet otsustab, kes kassat
 näeb. Kui igaüks saaks ametit muuta, annaks igaüks endale kassaõiguse ja

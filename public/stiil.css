@@ -562,13 +562,19 @@ hr.hr{border:none;border-top:1px solid var(--line-2);margin:0}
 .tlist button[aria-current="true"] .t{color:var(--accent-ink)}
 .tlist .m{display:block;font-size:14px;color:var(--ink-3);line-height:1.35}
 .tlist .dot{display:inline-block;width:9px;height:9px;border-radius:5px;background:var(--accent);margin-left:6px;vertical-align:middle}
+/* „+ Uus grupp“ seisab gruppide nimekirja lõpus. Ta ei ole vestlus,
+   seega ei näe ta ka vestluse moodi välja — kirjasuurus väiksem ja
+   värv sinine, et teda mitte kogemata avada. */
+.tlist .uusgrupp{font-size:15px;font-weight:650;color:var(--accent-ink);padding:9px 14px}
 
 .convo{
   display:flex;flex-direction:column;min-height:0;min-width:0;
   background:color-mix(in srgb, var(--kaart) 88%, transparent);
   backdrop-filter:blur(30px) saturate(180%);-webkit-backdrop-filter:blur(30px) saturate(180%);
 }
-.cvhead{flex:none;padding:14px 26px;border-bottom:1px solid var(--line);background:var(--card)}
+.cvhead{flex:none;padding:14px 26px;border-bottom:1px solid var(--line);background:var(--card);
+  display:flex;align-items:center;gap:16px}
+.cvhead .cvnimi{min-width:0;flex:1}
 .cvhead b{font-family:var(--display);font-size:20px;font-weight:750;letter-spacing:-.02em}
 .cvhead span{display:block;font-size:15px;color:var(--ink-3);margin-top:2px}
 .msgs{flex:1;overflow-y:auto;padding:20px 26px;display:flex;flex-direction:column;gap:18px}

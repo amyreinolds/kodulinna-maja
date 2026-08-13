@@ -35,7 +35,7 @@ async function loeSeis(mina) {
   const koik = naebKassat(mina);
 
   const [liikmed, grupp, osad, hinnad, myygid, yritused, osalemine, kinnitused,
-         kommentaarid, ulesanded, infod, failid, vestlused, sonumid,
+         kommentaarid, ulesanded, infod, failid, vestlused, vestluseLiikmed, sonumid,
          graafik, puudumised, tood, tooPaevad, tooTehtud, loetud] = await Promise.all([
     q(`SELECT id, nimi, roll, telefon, epost, administraator, pilt, amet FROM liikmed ORDER BY nimi`),
     yks("SELECT * FROM grupp WHERE id"),
@@ -51,6 +51,7 @@ async function loeSeis(mina) {
     q("SELECT * FROM info ORDER BY muudetud"),
     q("SELECT id, nimi, kirjeldus, suurus_baiti, lisaja, aeg FROM failid ORDER BY aeg"),
     q("SELECT * FROM vestlused"),
+    q("SELECT * FROM vestluse_liikmed"),
     q("SELECT * FROM sonumid ORDER BY aeg"),
     q("SELECT * FROM graafik ORDER BY paev, algus NULLS LAST"),
     q("SELECT * FROM puudumised"),
@@ -132,12 +133,28 @@ async function loeSeis(mina) {
       messages: sonumid.filter(s => s.vestlus_id === v.id)
         .map(s => ({ id: s.id, by: s.autor, at: iso(s.aeg), text: s.tekst }))
     })),
-    dms: Object.fromEntries(vestlused.filter(v => v.liik === "kiri").map(v =>
-      [dmKey(v.a_id, v.b_id), {
-        id: v.id,
+    /* Kiri on kahe inimese oma ja ekraan lubab, et „näete ainult teie
+       kahekesi“. Seda lubadust peab pidama server, mitte ekraan: teiste
+       inimeste kirju ei panda üldse siia sisse. */
+    dms: Object.fromEntries(vestlused
+      .filter(v => v.liik === "kiri" && (v.a_id === mina.id || v.b_id === mina.id))
+      .map(v =>
+        [dmKey(v.a_id, v.b_id), {
+          id: v.id,
+          messages: sonumid.filter(s => s.vestlus_id === v.id)
+            .map(s => ({ id: s.id, by: s.autor, at: iso(s.aeg), text: s.tekst }))
+        }])),
+    /* Grupp on püsiv vestlus valitud inimeste vahel. Sama reegel: kes
+       grupis ei ole, see teda ega tema juttu ei näe. */
+    groups: vestlused
+      .filter(v => v.liik === "grupp"
+        && vestluseLiikmed.some(x => x.vestlus_id === v.id && x.liige_id === mina.id))
+      .map(v => ({
+        id: v.id, title: v.pealkiri || "", by: v.autor, at: iso(v.loodud),
+        who: vestluseLiikmed.filter(x => x.vestlus_id === v.id).map(x => x.liige_id),
         messages: sonumid.filter(s => s.vestlus_id === v.id)
           .map(s => ({ id: s.id, by: s.autor, at: iso(s.aeg), text: s.tekst }))
-      }])),
+      })),
     events: yritused.map(y => ({
       /* Tühi koht tähendab „mujal“ — üritus ei ole kummaski majas ja
          päris asukoht on asukoha väljal. */
@@ -197,7 +214,7 @@ function margi(s) {
     members: sorm(s.members), group: sorm(s.group),
     osad: sorm(s.myyk.osad), hinnad: sorm(s.myyk.hinnad), read: sorm(s.myyk.read),
     events: sorm(s.events), info: sorm(s.info), files: sorm(s.files),
-    threads: sorm(s.threads), dms: sorm(s.dms),
+    threads: sorm(s.threads), dms: sorm(s.dms), groups: sorm(s.groups),
     graafik: sorm(s.too.graafik), tood: sorm(s.too.tood),
     puhkused: sorm(s.too.puhkused), seen: sorm(s.seen)
   };
@@ -475,6 +492,74 @@ async function salvestaSeis(mina, s) {
          RETURNING id`, [a, b, mina.id]);
       await syncSonumid(v.id, vestlus && vestlus.messages, mina);
     }
+  }
+
+  /* ── grupivestlused ──────────────────────────────────────────────
+     Grupp kuulub oma liikmetele. Sellest tuleb kolm reeglit, mida ei
+     saa ekraani peal hoida:
+
+       * gruppi, kus sa ei ole, sa ei näe ega saa muuta;
+       * grupp, mida sa ei näe, ei tohi kaduda ka siis, kui sinu ekraan
+         teda tagasi ei saatnud;
+       * kui grupist kaob viimane inimene, kaob grupp ise — muidu jääks
+         andmebaasi jutt, mida keegi enam kunagi ei ava.
+
+     Kes grupis on, otsustavad selle grupi liikmed ise. Uue inimese saab
+     sisse võtta ja välja jätta igaüks, kes ise sees on — kaheksa inimese
+     majas ei ole eraldi grupijuhti vaja. */
+  if (Array.isArray(s.groups) && muutus("groups", s.groups)) {
+    const olemas = await q(
+      `SELECT v.id FROM vestlused v
+       JOIN vestluse_liikmed l ON l.vestlus_id = v.id AND l.liige_id = $1
+       WHERE v.liik = 'grupp'`, [mina.id]);
+    const alles = new Set();
+    for (const g of s.groups) {
+      const pealkiri = tyhjaks(g.title);
+      if (!pealkiri) continue;
+      /* Kes tegelikult on liikmed: ainult olemasolevad inimesed, ja
+         tegija ise on alati sees — muidu teeks keegi grupi, mida ta ise
+         ei näe. */
+      const majas = new Set((await q("SELECT id FROM liikmed")).map(x => x.id));
+      const who = new Set((Array.isArray(g.who) ? g.who : [])
+        .filter(x => onUuid(x) && majas.has(x)));
+
+      let id = g.id;
+      const minuOma = onUuid(id) && olemas.some(x => x.id === id);
+      if (minuOma) {
+        await q("UPDATE vestlused SET pealkiri=$2 WHERE id=$1", [id, pealkiri]);
+      } else if (!onUuid(id) || !(await yks(
+          "SELECT id FROM vestlused WHERE id=$1 AND liik='grupp'", [id]))) {
+        who.add(mina.id);
+        const r = await yks(
+          `INSERT INTO vestlused (liik, pealkiri, autor) VALUES ('grupp',$1,$2)
+           RETURNING id`, [pealkiri, mina.id]);
+        id = r.id;
+      } else {
+        /* Olemasolev grupp, kuhu ma ei kuulu — ei puutu. */
+        continue;
+      }
+      alles.add(id);
+
+      const vanad = await q(
+        "SELECT liige_id FROM vestluse_liikmed WHERE vestlus_id=$1", [id]);
+      for (const x of vanad) if (!who.has(x.liige_id))
+        await q("DELETE FROM vestluse_liikmed WHERE vestlus_id=$1 AND liige_id=$2",
+          [id, x.liige_id]);
+      for (const w of who) if (!vanad.some(x => x.liige_id === w))
+        await q(
+          `INSERT INTO vestluse_liikmed (vestlus_id, liige_id) VALUES ($1,$2)
+           ON CONFLICT DO NOTHING`, [id, w]);
+
+      /* Sõnumeid tohib puutuda ainult see, kes grupis on. Kui ma just
+         ise välja astusin, siis enam ei tohi. */
+      if (who.has(mina.id)) await syncSonumid(id, g.messages, mina);
+
+      if (!who.size) await q("DELETE FROM vestlused WHERE id=$1", [id]);
+    }
+    /* Kustub ainult see, mida ma ise näen ja mida ekraan tagasi ei
+       saatnud. Teiste inimeste gruppe siin ei ole. */
+    for (const x of olemas) if (!alles.has(x.id))
+      await q("DELETE FROM vestlused WHERE id=$1", [x.id]);
   }
 
   /* ── graafik, tööd, puhkused ─────────────────────────────────── */

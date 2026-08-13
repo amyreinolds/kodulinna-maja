@@ -160,7 +160,7 @@ function ico(n){return '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="
 
 const VIEWS=[
   {id:"vestlus",  label:"Vestlus",   icon:"chat",   add:"Uus teema",
-   help:"Ülemine osa on teemad, mida näevad kõik. Alumine osa on kirjad, mida näete ainult teie kahekesi."},
+   help:"Kolm asja: teemat näevad kõik liikmed, gruppi ainult need, kelle sa ise valid, ja kirja näete kahekesi."},
   {id:"kalender", label:"Üritused",  icon:"event",  add:"Uus üritus",
    help:"Kõik üritused ja tööd kuu kaupa. Vajuta kuupäeval, et näha selle päeva oma. Üritused on kalendri all: vajuta „Osalen“ või „Ei osale“ ja küsi julgelt."},
   {id:"info",     label:"Üldinfo",   icon:"info",   add:"Uus infoplokk",
@@ -270,6 +270,8 @@ function uus(iso,k,by){
 }
 /* uued sõnumid ühes teemas või kirjavahetuses */
 const uusThread=t=>t.messages.filter(m=>uus(m.at,"thread:"+t.id,m.by)).length;
+const grupid=()=>Array.isArray(S.groups)?S.groups:[];
+const uusGrupp=g=>g.messages.filter(m=>uus(m.at,"grupp:"+g.id,m.by)).length;
 function uusDm(other){
   const d=S.dms[dmKey(S.me,other)];
   return d?d.messages.filter(m=>uus(m.at,"dm:"+dmKey(S.me,other),m.by)).length:0;
@@ -293,6 +295,9 @@ function uudised(){
   S.threads.forEach(t=>{const n=uusThread(t);if(n)out.push({
     n, tekst:mitu(n,"uus sõnum","uut sõnumit")+" teemas „"+t.title+"“",
     mine:()=>{view="vestlus";chat={type:"teema",id:t.id};snap={};markSeen("thread:"+t.id);}});});
+  grupid().forEach(g=>{const n=uusGrupp(g);if(n)out.push({
+    n, tekst:mitu(n,"uus sõnum","uut sõnumit")+" grupis „"+g.title+"“",
+    mine:()=>{view="vestlus";chat={type:"grupp",id:g.id};snap={};markSeen("grupp:"+g.id);}});});
   S.members.filter(m=>m.id!==S.me).forEach(m=>{const n=uusDm(m.id);if(n)out.push({
     n, tekst:mitu(n,"uus kiri","uut kirja")+" — "+m.name,
     mine:()=>{view="vestlus";chat={type:"kiri",id:m.id};snap={};markSeen("dm:"+dmKey(S.me,m.id));}});});
@@ -579,6 +584,22 @@ function load(){
       Nii saavad ekraanil tehtud read serveri päris numbrid ja järgmine
       salvestus ei tee neist duplikaate. */
 let salvestusKaib=false, salvestusOotel=false;
+/* Uus teema või grupp saab lõpliku numbri alles andmebaasis. Ekraanil
+   tehtud ajutine number kaob salvestamisel ära ja äsja avatud vestlus
+   jääks tühja koha peale — seepärast otsime ta pealkirja järgi üles ja
+   avame uuesti. */
+let ootavAvamine=null;
+function leiaOotav(){
+  if(!ootavAvamine)return;
+  const {type,title}=ootavAvamine;
+  const x=(type==="grupp"?(S.groups||[]):(S.threads||[])).find(y=>y.title===title);
+  if(x){
+    chat={type,id:x.id};snap={};
+    markSeen((type==="grupp"?"grupp:":"thread:")+x.id);
+  }
+  ootavAvamine=null;
+}
+
 async function save(){
   if(salvestusKaib){salvestusOotel=true;return;}
   salvestusKaib=true;
@@ -587,7 +608,7 @@ async function save(){
       headers:{"Content-Type":"application/json"},body:JSON.stringify(S)});
     if(r.status===401){location.href="/";return;}
     const uus=await r.json();
-    if(uus&&Array.isArray(uus.members)){S=uus;render();}
+    if(uus&&Array.isArray(uus.members)){S=uus;leiaOotav();render();}
     else if(uus&&uus.viga)toast(uus.viga);
   }catch(e){toast("Ei saanud salvestada. Kontrolli ühendust.");}
   finally{
@@ -680,7 +701,8 @@ function chrome(){
   /* Märk tähendab alati ühte asja: nii mitu asja siin sind ootab. */
   const badges={
     vestlus:S.threads.reduce((n,t)=>n+uusThread(t),0)
-           +S.members.filter(m=>m.id!==meId()).reduce((n,m)=>n+uusDm(m.id),0),
+           +S.members.filter(m=>m.id!==meId()).reduce((n,m)=>n+uusDm(m.id),0)
+           +grupid().reduce((n,g)=>n+uusGrupp(g),0),
     kalender:S.events.filter(uusEv).length+S.events.reduce((n,e)=>n+uusKomm(e),0)+waitEv,
     info:S.info.filter(uusInfo).length+waitIn
         +S.info.reduce((n,i)=>n+uusInfoKomm(i),0),
@@ -714,7 +736,8 @@ function chrome(){
     sub=up?up+" üritust tulemas":"midagi tulemas ei ole";
     if(waitEv)sub+=" · "+waitEv+" ootab kinnitust";
   }
-  else if(view==="vestlus")sub=S.threads.length+" teemat";
+  else if(view==="vestlus")sub=mitu(S.threads.length,"teema","teemat")
+    +(grupid().length?" · "+mitu(grupid().length,"grupp","gruppi"):"");
   else if(view==="kontakt")sub=S.members.length+" liiget";
   else if(view==="failid")sub=S.files.length+" faili";
   else if(view==="myyk"&&!naebKogumyyki()){
@@ -1002,6 +1025,9 @@ function vChat(w){
   }
   if(chat&&chat.type==="teema"&&!S.threads.some(t=>t.id===chat.id))chat=S.threads[0]?{type:"teema",id:S.threads[0].id}:null;
   if(chat&&chat.type==="kiri"&&!byId(chat.id))chat=null;
+  /* Kui keegi võttis sind grupist välja, ei tohi lahtine aken jääda
+     tühja kohta näitama. */
+  if(chat&&chat.type==="grupp"&&!grupid().some(g=>g.id===chat.id))chat=null;
 
   const teemad=S.threads.slice().sort((a,b)=>lastAt(b)-lastAt(a)).map(x=>{
     const l=x.messages[x.messages.length-1];
@@ -1022,19 +1048,42 @@ function vChat(w){
       +'<span class="m">'+(l?esc(first(nameOf(l.by)))+": "+esc(l.text.slice(0,42))+(l.text.length>42?"…":""):"kirjuta esimesena")+'</span></button>';
   }).join("");
 
+  /* Grupp on teema ja kirja vahepeal: valid ise, kes teda näevad.
+     Seepärast seisab ta ka nimekirjas nende kahe vahel. */
+  const gr=grupid().slice().sort((a,b)=>lastAt(b)-lastAt(a)).map(x=>{
+    const l=x.messages[x.messages.length-1];
+    const on=chat&&chat.type==="grupp"&&chat.id===x.id;
+    const n=uusGrupp(x);
+    return '<button data-act="ava" data-type="grupp" data-id="'+x.id+'" aria-current="'+on+'">'
+      +'<span class="t">'+esc(x.title)+(n?'<span class="uus">'+(n===1?"1 UUS":n+" UUT")+'</span>':"")+'</span>'
+      +'<span class="m">'+(x.who||[]).length+' inimest'
+      +(l?' · '+esc(first(nameOf(l.by)))+": "+esc(l.text.slice(0,32))+(l.text.length>32?"…":""):" · kirjuta esimesena")
+      +'</span></button>';
+  }).join("");
+
   const list='<div class="grp">TEEMAD<small>Näevad kõik liikmed</small></div>'+teemad
+    +'<div class="grp" style="margin-top:8px">GRUPID<small>Näevad ainult valitud inimesed</small></div>'
+    +gr+'<button class="uusgrupp" data-act="uus-grupp">+ Uus grupp</button>'
     +'<div class="grp" style="margin-top:8px">KIRJAD<small>Näete ainult teie kahekesi</small></div>'+kirjad;
 
   let convo='<div class="convo"><div class="msgs"><div class="empty"><b>Vali vasakult teema või inimene.</b></div></div></div>';
   if(chat){
-    const isDm=chat.type==="kiri";
-    const box=isDm?dmOf(chat.id):S.threads.find(t=>t.id===chat.id);
+    const isDm=chat.type==="kiri", isGr=chat.type==="grupp";
+    const box=isDm?dmOf(chat.id)
+      :isGr?grupid().find(g=>g.id===chat.id)
+      :S.threads.find(t=>t.id===chat.id);
     const title=isDm?nameOf(chat.id):box.title;
-    const note=isDm?"Kiri kahe vahel — teised liikmed seda ei näe":"Teema — kõik liikmed näevad";
+    const note=isDm?"Kiri kahe vahel — teised liikmed seda ei näe"
+      :isGr?"Grupp — näevad "+((box.who||[]).map(x=>first(nameOf(x))).join(", ")||"ainult sina")
+      :"Teema — kõik liikmed näevad";
     convo='<div class="convo">'
-      +'<div class="cvhead"><b>'+esc(title)+'</b><span>'+esc(note)+'</span></div>'
+      +'<div class="cvhead"><div class="cvnimi"><b>'+esc(title)+'</b>'
+      +'<span>'+esc(note)+'</span></div>'
+      +(isGr?'<button class="linkbtn" data-act="muuda-grupp" data-id="'+box.id+'">Muuda gruppi</button>':"")
+      +'</div>'
       +'<div class="msgs" id="msgs">'
-      +(box.messages.length?msgideHtml(box.messages,isDm?"dm:"+dmKey(meId(),chat.id):"thread:"+chat.id)
+      +(box.messages.length?msgideHtml(box.messages,
+        isDm?"dm:"+dmKey(meId(),chat.id):isGr?"grupp:"+chat.id:"thread:"+chat.id)
         :'<div class="empty"><b>Siin ei ole veel ühtegi sõnumit.</b>Kirjuta esimene allolevasse kasti.</div>')
       +'</div><div class="composer"><div class="cbox">'
       +'<textarea id="ci" rows="2" placeholder="Kirjuta siia…" aria-label="Sinu sõnum"></textarea>'
@@ -1073,7 +1122,9 @@ function wireComposer(){
 function sendMsg(){
   const ta=$("#ci");if(!ta||!chat)return;
   const text=ta.value.trim();if(!text)return;
-  const box=chat.type==="kiri"?dmOf(chat.id):S.threads.find(t=>t.id===chat.id);
+  const box=chat.type==="kiri"?dmOf(chat.id)
+    :chat.type==="grupp"?grupid().find(g=>g.id===chat.id)
+    :S.threads.find(t=>t.id===chat.id);
   if(!box)return;
   box.messages.push({id:uid(),by:meId(),at:new Date().toISOString(),text});
   save();render();
@@ -2594,10 +2645,58 @@ function dlgThread(){
       const t={id:uid(),title,by:meId(),at:new Date().toISOString(),messages:[]};
       const f=fv("f_first");
       if(f)t.messages.push({id:uid(),by:meId(),at:new Date().toISOString(),text:f});
-      S.threads.push(t);chat={type:"teema",id:t.id};view="vestlus";snap={};markSeen("thread:"+t.id);
+      S.threads.push(t);view="vestlus";snap={};
+      ootavAvamine={type:"teema",title};
       save();render();toast("Teema avatud.");return true;
     });
 }
+/* Grupp: vestlus, mille nägijad sa ise valid.
+
+   Sina ise oled alati sees ja sinu enda rida on kinni — grupp, mida
+   tegija ise ei näe, oleks mõttetu. Välja astumiseks on eraldi nupp,
+   mis ütleb ka välja, mida ta teeb. */
+function dlgGrupp(g){
+  const uus=!g;
+  const valitud=new Set(uus?[meId()]:(g.who||[]));
+  valitud.add(meId());
+  const rida=m=>'<button type="button" data-act="grupp-kes" data-id="'+m.id+'"'
+    +' aria-pressed="'+valitud.has(m.id)+'"'+(m.id===meId()?' disabled':'')+'>'
+    +'<span>'+esc(m.name)+(m.id===meId()?" — sina":"")+'</span>'
+    +'<span class="tick"'+(valitud.has(m.id)?"":' style="visibility:hidden"')+'>valitud</span></button>';
+
+  dlg(uus?"Uus grupp":"Grupp — "+g.title,
+    fld("f_gnimi","Grupi nimi",uus?"":g.title,"text","Näiteks „Torni tiim“")
+    +'<div class="field"><label>Kes gruppi kuuluvad</label>'
+    +'<div class="pick" id="gkes">'+S.members.map(rida).join("")+'</div>'
+    +'<span class="hint">Vajuta nimel, et ta sisse võtta või välja jätta. '
+    +'Ainult need inimesed näevad selle grupi juttu.</span></div>'
+    +(uus?tar("f_gfirst","Esimene sõnum","","Ei ole kohustuslik")
+      :'<div class="tools"><button type="button" class="btn danger"'
+        +' data-act="grupp-lahku" data-id="'+g.id+'">Astun grupist välja</button></div>'),
+    uus?"Tee grupp":"Salvesta",()=>{
+      const nimi=fv("f_gnimi");
+      if(!nimi){toast("Grupil peab olema nimi.");return false;}
+      const kes=Array.from(document.querySelectorAll('#gkes button'))
+        .filter(b=>b.getAttribute("aria-pressed")==="true").map(b=>b.dataset.id);
+      if(kes.length<2){toast("Vali vähemalt üks inimene peale enda.");return false;}
+      if(uus){
+        S.groups=grupid();
+        const uusG={id:uid(),title:nimi,by:meId(),at:new Date().toISOString(),
+          who:kes,messages:[]};
+        const f=fv("f_gfirst");
+        if(f)uusG.messages.push({id:uid(),by:meId(),at:new Date().toISOString(),text:f});
+        S.groups.push(uusG);
+        view="vestlus";snap={};
+        ootavAvamine={type:"grupp",title:nimi};
+        save();render();toast("Grupp tehtud. Ainult valitud inimesed näevad seda.");
+      }else{
+        g.title=nimi;g.who=kes;
+        save();render();toast("Grupp salvestatud.");
+      }
+      return true;
+    });
+}
+
 function dlgMe(){
   dlg("Kes sa oled?",
     '<p class="hint" style="margin:0">Siin ei ole parooli ega sisselogimist. Vali nimekirjast enda nimi — kõik, mida sa lisad, läheb selle nime alla.</p>'
@@ -2909,10 +3008,31 @@ document.addEventListener("click",ev=>{
     case "size": seaded.suurus=el.dataset.v;saveSeaded();applySeaded();dlgSeaded();break;
     case "teema": seaded.teema=el.dataset.v;saveSeaded();applySeaded();dlgSeaded();break;
 
-    case "ava":
-      chat={type:el.dataset.type,id};snap={};
-      markSeen(el.dataset.type==="kiri"?"dm:"+dmKey(meId(),id):"thread:"+id);
+    case "ava":{
+      const t=el.dataset.type;
+      chat={type:t,id};snap={};
+      markSeen(t==="kiri"?"dm:"+dmKey(meId(),id):t==="grupp"?"grupp:"+id:"thread:"+id);
       save();render();break;
+    }
+    case "uus-grupp": dlgGrupp(null);break;
+    case "muuda-grupp": dlgGrupp(grupid().find(g=>g.id===id));break;
+    case "grupp-kes":{
+      /* Aken on veel lahti — muudame ainult nupu olekut, päris grupp
+         salvestub alles „Salvesta“ peale. */
+      const on=el.getAttribute("aria-pressed")==="true";
+      el.setAttribute("aria-pressed",String(!on));
+      const t=el.querySelector(".tick");
+      if(t)t.style.visibility=on?"hidden":"visible";
+      break;
+    }
+    case "grupp-lahku":{
+      const g=grupid().find(x=>x.id===id);if(!g)break;
+      if(!confirm("Astud grupist „"+g.title+"“ välja. Sa ei näe enam selle "
+        +"grupi juttu ja tagasi saad ainult siis, kui keegi sind uuesti sisse võtab."))break;
+      g.who=(g.who||[]).filter(x=>x!==meId());
+      chat=null;closeDlg();
+      save();render();toast("Oled grupist väljas.");break;
+    }
     case "kirjuta":
       view="vestlus";chat={type:"kiri",id};snap={};
       markSeen("dm:"+dmKey(meId(),id));save();render();break;
