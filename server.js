@@ -16,6 +16,10 @@ const seis = require("./seis");
    SQL ja õigused ei läheks kunagi lahku. */
 const ANDJAD = AMETID.filter(a => a.annab).map(a => a.id);
 
+/* Sama lause kõikjal, kus keegi proovib teise inimese asja puutuda.
+   Üks tekst, sest see on üks reegel. */
+const EI_TEISE = "Teise inimese kohta saavad seda teha ülemus ja administraator.";
+
 const PORT = Number(process.env.PORT || 3000);
 const AVALIK = path.join(__dirname, "public");
 
@@ -182,7 +186,11 @@ const server = http.createServer(async (req, res) => {
       const b = await keha(req);
       const oma = await yks("SELECT myyja_id FROM myygid WHERE id = $1", [b.id]);
       if (!oma) return json(res, 404, { viga: "Sellist müüki ei ole." });
-      if (oma.myyja_id !== mina.id && !naebKassat(mina))
+      /* Kassa nägemine ja teise müügi kustutamine on kaks eri asja.
+         Raamatupidaja näeb kogu kassat, aga kustutada saab ta ainult oma
+         rida — muidu saaks ta teise müügi maha võtta ja enda nime all
+         uuesti sisse panna. Sama reegel on seis.js-is. */
+      if (oma.myyja_id !== mina.id && !haldabTeisi(mina))
         return json(res, 403, { viga: "Kustutada saad ainult oma müüki." });
       await q("DELETE FROM myygid WHERE id = $1", [b.id]);
       return json(res, 200, { ok: true });
@@ -387,6 +395,13 @@ const server = http.createServer(async (req, res) => {
 
     if (tee === "/api/tood/tehtud" && req.method === "DELETE") {
       const b = await keha(req);
+      /* „Tehtud“ märk on selle inimese oma, kes töö ära tegi. Teise
+         märki ei võta maha keegi peale ülemuse ja administraatori. */
+      const rida = await yks(
+        "SELECT kes_id FROM too_tehtud WHERE too_id = $1 AND kuup = $2", [b.id, b.kuup]);
+      if (!rida) return json(res, 404, { viga: "Sellist märget ei ole." });
+      if (rida.kes_id !== mina.id && !haldabTeisi(mina))
+        return json(res, 403, { viga: EI_TEISE });
       await q("DELETE FROM too_tehtud WHERE too_id = $1 AND kuup = $2", [b.id, b.kuup]);
       return json(res, 200, { ok: true });
     }
@@ -414,6 +429,8 @@ const server = http.createServer(async (req, res) => {
         return json(res, 400, { viga: "Vali nädalapäev." });
       if (!await onMaja(b.koht_id)) return json(res, 400, { viga: "Vali maja." });
       if (!b.liige_id) return json(res, 400, { viga: "Vali inimene." });
+      if (b.liige_id !== mina.id && !haldabTeisi(mina))
+        return json(res, 403, { viga: EI_TEISE });
       if (b.algus && b.lopp && String(b.lopp) <= String(b.algus))
         return json(res, 400, { viga: "Lõpp peab olema pärast algust." });
       const r = await yks(
@@ -425,6 +442,10 @@ const server = http.createServer(async (req, res) => {
 
     if (tee === "/api/graafik" && req.method === "DELETE") {
       const b = await keha(req);
+      const rida = await yks("SELECT liige_id FROM graafik WHERE id = $1", [b.id]);
+      if (!rida) return json(res, 404, { viga: "Sellist rida ei ole." });
+      if (rida.liige_id !== mina.id && !haldabTeisi(mina))
+        return json(res, 403, { viga: EI_TEISE });
       await q("DELETE FROM graafik WHERE id = $1", [b.id]);
       return json(res, 200, { ok: true });
     }
@@ -433,6 +454,8 @@ const server = http.createServer(async (req, res) => {
     if (tee === "/api/puudumised" && req.method === "POST") {
       const b = await keha(req);
       if (!b.liige_id) return json(res, 400, { viga: "Vali inimene." });
+      if (b.liige_id !== mina.id && !haldabTeisi(mina))
+        return json(res, 403, { viga: EI_TEISE });
       if (!b.algus || !b.lopp) return json(res, 400, { viga: "Vali algus ja lõpp." });
       if (String(b.lopp) < String(b.algus))
         return json(res, 400, { viga: "Lõpp ei saa olla enne algust." });
@@ -447,6 +470,10 @@ const server = http.createServer(async (req, res) => {
 
     if (tee === "/api/puudumised" && req.method === "DELETE") {
       const b = await keha(req);
+      const rida = await yks("SELECT liige_id FROM puudumised WHERE id = $1", [b.id]);
+      if (!rida) return json(res, 404, { viga: "Sellist rida ei ole." });
+      if (rida.liige_id !== mina.id && !haldabTeisi(mina))
+        return json(res, 403, { viga: EI_TEISE });
       await q("DELETE FROM puudumised WHERE id = $1", [b.id]);
       return json(res, 200, { ok: true });
     }
@@ -931,6 +958,13 @@ const server = http.createServer(async (req, res) => {
       const b = await keha(req);
       if (b.id === mina.id)
         return json(res, 400, { viga: "Iseennast ei saa majast välja võtta." });
+      /* Majast välja võtmine viib kaasa kogu inimese jälje peale müügi.
+         Seda ei tee tavaline liige — ekraan seda ei pakkunudki, aga
+         otspunkt lubas. */
+      if (!haldabTeisi(mina))
+        return json(res, 403, {
+          viga: "Liikmeid võtavad majast välja ülemus ja administraator."
+        });
       const kes = await yks("SELECT id, amet FROM liikmed WHERE id = $1", [b.id]);
       if (!kes) return json(res, 404, { viga: "Sellist liiget ei ole." });
       /* Administraatorit puutub ainult administraator. Maja ei jää seeläbi

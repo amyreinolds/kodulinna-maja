@@ -254,6 +254,18 @@ function margi(s) {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const onUuid = x => typeof x === "string" && UUID.test(x);
 
+/* Kelle nime alla uus rida läheb.
+
+   Ekraan saadab autori kaasa, sest ta joonistab rea kohe ära, enne kui
+   server vastab. Aga saadetut ei tohi uskuda: teise nime alla kirjutamine
+   on kõige lihtsam viis panna keegi ütlema seda, mida ta ei öelnud.
+
+   Seepärast: sinu enda id läheb läbi, ülemuse ja administraatori oma
+   samuti (nemad haldavad teiste asju), kõik muu asendatakse sinu endaga.
+   Vana kood võttis iga UUID-i vastu. */
+const autor = (by, mina, oma) =>
+  (onUuid(by) && oma(by)) ? by : mina.id;
+
 async function salvestaSeis(mina, s) {
   if (!s || typeof s !== "object") return { viga: "Seis on tühi." };
   const koik = naebKassat(mina);
@@ -421,7 +433,7 @@ async function salvestaSeis(mina, s) {
           `INSERT INTO yritused (koht_id, pealkiri, algus, lopp, asukoht, kirjeldus,
                                  kinnitus_vaja, autor)
            VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
-          väärtused.concat([onUuid(e.by) ? e.by : mina.id]));
+          väärtused.concat([autor(e.by, mina, oma)]));
         id = r.id;
       }
       alles.add(id);
@@ -446,7 +458,7 @@ async function salvestaSeis(mina, s) {
         const r = await yks(
           `INSERT INTO info (pealkiri, sisu, kinnitus_vaja, autor)
            VALUES ($1,$2,$3,$4) RETURNING id`,
-          [pealkiri, String(i.body || ""), !!i.req, onUuid(i.by) ? i.by : mina.id]);
+          [pealkiri, String(i.body || ""), !!i.req, autor(i.by, mina, oma)]);
         id = r.id;
       }
       alles.add(id);
@@ -476,7 +488,7 @@ async function salvestaSeis(mina, s) {
         `INSERT INTO failid (nimi, kirjeldus, suurus_baiti, tyyp, viit, lisaja)
          VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
         [nimi, tyhjaks(f.note), Number(f.size) || (viit ? viit.length : 0),
-         null, viit, onUuid(f.by) ? f.by : mina.id]);
+         null, viit, autor(f.by, mina, oma)]);
       alles.add(r.id);
     }
     for (const x of olemas) if (!alles.has(x.id))
@@ -496,11 +508,11 @@ async function salvestaSeis(mina, s) {
       } else {
         const r = await yks(
           `INSERT INTO vestlused (liik, pealkiri, autor) VALUES ('teema',$1,$2)
-           RETURNING id`, [pealkiri, onUuid(t.by) ? t.by : mina.id]);
+           RETURNING id`, [pealkiri, autor(t.by, mina, oma)]);
         id = r.id;
       }
       alles.add(id);
-      await syncSonumid(id, t.messages, mina);
+      await syncSonumid(id, t.messages, mina, oma);
     }
     for (const x of olemas) if (!alles.has(x.id))
       await q("DELETE FROM vestlused WHERE id=$1", [x.id]);
@@ -517,7 +529,7 @@ async function salvestaSeis(mina, s) {
       if (!v) v = await yks(
         `INSERT INTO vestlused (liik, a_id, b_id, autor) VALUES ('kiri',$1,$2,$3)
          RETURNING id`, [a, b, mina.id]);
-      await syncSonumid(v.id, vestlus && vestlus.messages, mina);
+      await syncSonumid(v.id, vestlus && vestlus.messages, mina, oma);
     }
   }
 
@@ -579,7 +591,7 @@ async function salvestaSeis(mina, s) {
 
       /* Sõnumeid tohib puutuda ainult see, kes grupis on. Kui ma just
          ise välja astusin, siis enam ei tohi. */
-      if (who.has(mina.id)) await syncSonumid(id, g.messages, mina);
+      if (who.has(mina.id)) await syncSonumid(id, g.messages, mina, oma);
 
       if (!who.size) await q("DELETE FROM vestlused WHERE id=$1", [id]);
     }
@@ -798,7 +810,7 @@ async function syncKommentaarid(veerg, kirjeId, list, mina, oma) {
     const r = await yks(
       `INSERT INTO kommentaarid (` + veerg + `, autor, tekst, aeg)
        VALUES ($1,$2,$3, coalesce($4::timestamptz, now())) RETURNING id`,
-      [kirjeId, onUuid(k.by) ? k.by : mina.id, tekst, k.at || null]);
+      [kirjeId, autor(k.by, mina, oma), tekst, k.at || null]);
     alles.add(r.id);
   }
   for (const x of olemas)
@@ -807,7 +819,7 @@ async function syncKommentaarid(veerg, kirjeId, list, mina, oma) {
 }
 
 /* Sõnumeid ei muudeta tagantjärele — ainult lisandub ja kaob. */
-async function syncSonumid(vId, sonumid, mina) {
+async function syncSonumid(vId, sonumid, mina, oma) {
   if (!Array.isArray(sonumid)) return;
   const olemas = await q("SELECT id, autor FROM sonumid WHERE vestlus_id=$1", [vId]);
   const alles = new Set();
@@ -822,7 +834,7 @@ async function syncSonumid(vId, sonumid, mina) {
     const r = await yks(
       `INSERT INTO sonumid (vestlus_id, autor, tekst, aeg)
        VALUES ($1,$2,$3, coalesce($4::timestamptz, now())) RETURNING id`,
-      [vId, onUuid(m.by) ? m.by : mina.id, tekst, m.at || null]);
+      [vId, autor(m.by, mina, oma), tekst, m.at || null]);
     alles.add(r.id);
     await syncMargid(r.id, m.re, mina);
   }

@@ -137,9 +137,17 @@ const isoks = d => d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.get
       keha: { id: juht.id } });
     kontrolli("liige ei võta administraatorit välja", admKeeld.kood === 403, admKeeld.json.viga);
 
-    const valja = await paring("/api/liikmed", { meetod: "DELETE", kupsis: kA,
+    /* Liige ei võta kedagi majast välja — see on ülemuse ja
+       administraatori asi. Varem lubas otspunkt seda igaühele. */
+    const liigeKeeld = await paring("/api/liikmed", { meetod: "DELETE", kupsis: kA,
       keha: { id: peeter.id } });
-    kontrolli("liikme saab majast välja võtta", valja.kood === 200, "kood " + valja.kood);
+    kontrolli("liige ei võta teist liiget välja", liigeKeeld.kood === 403,
+      "kood " + liigeKeeld.kood);
+
+    const valja = await paring("/api/liikmed", { meetod: "DELETE", kupsis: kJ,
+      keha: { id: peeter.id } });
+    kontrolli("administraator saab liikme majast välja võtta", valja.kood === 200,
+      "kood " + valja.kood);
     kontrolli("öeldakse, mitu müüki jääb nimeta", valja.json.myyke === 1, valja.json.myyke);
     const parast = await q("SELECT count(*)::int AS n FROM myygid");
     kontrolli("tema müügid jäid kassasse alles", parast[0].n === enne[0].n,

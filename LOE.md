@@ -87,6 +87,10 @@ ja sisselogimislinke. **Ühiskassa on erand.**
 | Teise müügi kustutamine | ei | ei | jah | jah |
 | Teise nime, telefoni, pildi muutmine | ei | ei | jah | jah |
 | Sisselogimislingi tegemine teisele | ei | ei | jah | jah |
+| Teise puhkus, haigusleht, tööaeg | ei | ei | jah | jah |
+| Teise „tehtud“ märgi mahavõtmine | ei | ei | jah | jah |
+| Liikme majast välja võtmine | ei | ei | jah | jah |
+| Teise nime alla kirjutamine | ei | ei | jah | jah |
 | Kõik muu | jah | jah | jah | jah |
 | Ameti muutmine | ei | ei | ei | **jah** |
 
@@ -223,8 +227,26 @@ tegema, lisa ajutiselt `ESIMENE_SISSELOGIJA=lubatud` ja võta pärast ära.
 
 ## Andmebaas
 
-Neon, projekt `kodulinna-maja` (`frosty-cell-73142129`), haru `main`.
-Skeem on prototüübi kaustas failis `skeem.sql`, 22 tabelit.
+Neon, projekt `kodulinna-maja` (`frosty-cell-73142129`), haru `main`. 26 tabelit.
+
+Kogu kuju on kaustas `andmebaas/`, nummerdatud failidena. `001-alus.sql` on
+terve andmebaas ühes failis — sellega saab tühjast baasist maja üles seada.
+Iga hilisem muudatus on eraldi fail.
+
+```
+npm run andmebaas             teeb tegemata muudatused
+node tools/andmebaas.js --vaata    näitab, mis on tegemata
+node tools/andmebaas.js --tehtud   märgib tehtuks, midagi tegemata
+```
+
+Andmebaas peab ise arvet: tabel `migratsioonid` ütleb, mis on juba tehtud.
+Iga fail käib ühe tehinguna — pooleli jäänud muudatust ei jää alles.
+
+**`001-alus.sql` on masina kirjutatud** (`npm run skeem`) ja kirjeldab seda,
+mis andmebaasis päriselt on. Käsitsi sinna midagi juurde ei kirjutata: uus
+muudatus tuleb uue nummerdatud failina. Fail on kontrollitud päris tühja
+andmebaasi peal — 26 tabelit, 142 veergu ja 82 piirangut tulevad täpselt
+samad, mis päris baasis.
 
 ## Proovimine
 
