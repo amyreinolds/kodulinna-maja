@@ -41,4 +41,4 @@ async function q(sql, params) {
 }
 const yks = async (sql, params) => (await q(sql, params))[0] || null;
 
-module.exports = { q, yks, pool };
+module.exports = { q, yks };

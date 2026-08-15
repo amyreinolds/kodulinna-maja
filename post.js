@@ -59,4 +59,4 @@ async function saadaLink(epost, nimi, link) {
   }
 }
 
-module.exports = { saadaLink, seadistatud };
+module.exports = { saadaLink };
