@@ -40,7 +40,7 @@ const isoks = d => d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.get
   const orbeEnne = (await q(
     "SELECT count(*)::int AS n FROM myygid WHERE myyja_id IS NULL"))[0].n;
   const täna = isoks(new Date());
-  let yId = null;
+  let yId = null, myykId = null;
 
   const sisse = async epost => {
     const k = await paring("/api/logi-sisse", { meetod: "POST", keha: { epost } });
@@ -128,8 +128,9 @@ const isoks = d => d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.get
     kontrolli("iseennast välja ei võta", ise.kood === 400, ise.json.viga);
 
     const [toode] = await q("SELECT id FROM tooted LIMIT 1");
-    await paring("/api/myyk", { meetod: "POST", kupsis: kP,
+    const myyk = await paring("/api/myyk", { meetod: "POST", kupsis: kP,
       keha: { toode_id: toode.id, kogus: 2 } });
+    myykId = myyk.json && myyk.json.id;
     const [peeter] = await q("SELECT id FROM liikmed WHERE epost='inim.peeter@proov.invalid'");
     const enne = await q("SELECT count(*)::int AS n FROM myygid");
 
@@ -178,6 +179,11 @@ const isoks = d => d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.get
     if (yId) await q("DELETE FROM yritused WHERE id = $1", [yId]);
     await q(`DELETE FROM myygid WHERE myyja_id IN
                (SELECT id FROM liikmed WHERE epost LIKE 'inim.%@proov.invalid')`);
+    /* Test võtab Peetri majast välja ja tema müügirida jääb meelega
+       alles, müüja nimi tühjaks. See on õige käitumine, aga koristada
+       tuleb ta ikkagi ise — muidu kasvab müüjata müükide arv iga
+       testikäiguga ja järgmine kontroll süüdistab valet asja. */
+    if (myykId) await q("DELETE FROM myygid WHERE id = $1", [myykId]);
     const n = await q("DELETE FROM liikmed WHERE epost LIKE 'inim.%@proov.invalid' RETURNING id");
     await q("DELETE FROM liikmed WHERE nimi = 'Ajutine Abi'");
     console.log("  OK   koristatud (" + n.length + " liiget)");

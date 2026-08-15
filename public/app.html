@@ -1,4 +1,4 @@
-<title>Ring — grupileht</title>
+<title>Kodulinna Maja</title>
 
 <link rel="stylesheet" href="/stiil.css">
 
@@ -403,7 +403,11 @@ const myygid=r=>Array.isArray(r.myygid)?r.myygid:[];
 /* Kogu maja müüki näeb administraator. Ülejäänud näevad oma müüki —
    nemad vastutavad oma kassa eest, mitte teiste omade eest.
    NB: ilma sisselogimiseta on see kokkulepe, mitte lukk. */
-const naebKogumyyki=()=>{const m=byId(meId());return !!(m&&m.helper);};
+/* Kes näeb kogu maja kassat, otsustab server ameti järgi ja ütleb selle
+   seisus välja. Ekraan küsis seda varem vanast „administraator“ tõeväärtus-
+   väljast — seetõttu ei näinud raamatupidaja ega ülemus aruannet, kuigi
+   server saatis neile kõik read. Kaks eri tõde ühe asja kohta. */
+const naebKogumyyki=()=>!!S.naebKassat;
 
 /* Iga müügikord eraldi sündmusena: millal, mida, kui palju, kes. */
 function myygiSyndmused(){
@@ -479,13 +483,13 @@ function chrome(){
   let sub="";
   if(view==="kalender"){
     const up=S.events.filter(e=>new Date(e.start)>=new Date()).length;
-    sub=up?up+" üritust tulemas":"midagi tulemas ei ole";
+    sub=up?mitu(up,"üritus","üritust")+" tulemas":"midagi tulemas ei ole";
     if(waitEv)sub+=" · "+waitEv+" ootab kinnitust";
   }
   else if(view==="vestlus")sub=mitu(S.threads.length,"teema","teemat")
     +(grupid().length?" · "+mitu(grupid().length,"grupp","gruppi"):"");
-  else if(view==="kontakt")sub=S.members.length+" liiget";
-  else if(view==="failid")sub=S.files.length+" faili";
+  else if(view==="kontakt")sub=mitu(S.members.length,"liige","liiget");
+  else if(view==="failid")sub=mitu(S.files.length,"fail","faili");
   else if(view==="myyk"&&!naebKogumyyki()){
     const x=myyjaStat().find(y=>y.kes===meId());
     sub=x?mitu(x.kordi,"müügikord","müügikorda")+" · "+mitu(x.tk,"tükk","tükki")
@@ -497,7 +501,7 @@ function chrome(){
       :v2.kokku?o2.length+" osa · "+k2.length+" rida · "+raha(summa(k2))
       :v2.nimi+" · "+r2.length+" rida · "+raha(summa(r2));
   }
-  else if(view==="info")sub=waitIn?waitIn+" ootab kinnitust":S.info.length+" plokki";
+  else if(view==="info")sub=waitIn?waitIn+" ootab kinnitust":mitu(S.info.length,"plokk","plokki");
   else if(view==="tootajad"){
     const t=dkey(new Date());
     const majas=S.members.filter(m=>kuskiTööl(m.id,dowIdx(new Date()))&&!araPaeval(m.id,t)).length;
@@ -592,7 +596,7 @@ function evCard(e){
     +  (sp.s.length?'<i class="v" style="flex:'+sp.s.length+'"></i>':"")
     +'</div>'
     +'<div class="who">'
-    +wl("yes","Osaleb ("+sp.y.length+")",sp.y.length?names(sp.y):"veel keegi")
+    +wl("yes","Osaleb ("+sp.y.length+")",sp.y.length?names(sp.y):"veel ei ole kedagi")
     +(sp.n.length?wl("no","Ei osale ("+sp.n.length+")",names(sp.n)):"")
     +(sp.s.length?wl("non","Pole vastanud ("+sp.s.length+")",names(sp.s)):"");
   if(e.req){
@@ -610,7 +614,7 @@ function evCard(e){
 
   h+='<button class="qbtn" data-act="q" data-id="'+e.id+'">'+ico("ask")
     +'<span>'+(cs.length?"Küsimused ja kommentaarid":"Küsi midagi selle ürituse kohta")+'</span>'
-    +(uusKomm(e)?'<span class="uus" style="margin:0 0 0 auto">'+uusKomm(e)+' UUT</span>':"")
+    +(uusKomm(e)?'<span class="uus" style="margin:0 0 0 auto">'+(uusKomm(e)===1?'1 UUS':uusKomm(e)+' UUT')+'</span>':"")
     +'<span class="n"'+(uusKomm(e)?' style="margin-left:10px"':"")+'>'+(cs.length?cs.length+(on?" — peida":""):(on?"peida":"kirjuta"))+'</span></button>';
 
   if(on){
@@ -839,7 +843,7 @@ function vChat(w){
     const n=uusThread(x);
     return '<button data-act="ava" data-type="teema" data-id="'+x.id+'" aria-current="'+on+'">'
       +'<span class="t">'+esc(x.title)+(n?'<span class="uus">'+(n===1?"1 UUS":n+" UUT")+'</span>':"")+'</span>'
-      +'<span class="m">'+x.messages.length+' sõnumit'+(l?' · '+esc(fmtStamp(l.at)):"")+'</span></button>';
+      +'<span class="m">'+mitu(x.messages.length,"sõnum","sõnumit")+(l?' · '+esc(fmtStamp(l.at)):"")+'</span></button>';
   }).join("");
 
   const kirjad=S.members.filter(m=>m.id!==meId()).map(m=>{
@@ -860,7 +864,7 @@ function vChat(w){
     const n=uusGrupp(x);
     return '<button data-act="ava" data-type="grupp" data-id="'+x.id+'" aria-current="'+on+'">'
       +'<span class="t">'+esc(x.title)+(n?'<span class="uus">'+(n===1?"1 UUS":n+" UUT")+'</span>':"")+'</span>'
-      +'<span class="m">'+(x.who||[]).length+' inimest'
+      +'<span class="m">'+mitu((x.who||[]).length,"inimene","inimest")
       +(l?' · '+esc(first(nameOf(l.by)))+": "+esc(l.text.slice(0,32))+(l.text.length>32?"…":""):" · kirjuta esimesena")
       +'</span></button>';
   }).join("");
@@ -1031,7 +1035,7 @@ function kysimustePlokk(i){
   const cs=i.comments||[],on=avatudKys.has(i.id),uusi=uusInfoKomm(i);
   let h='<button class="qbtn" data-act="iq" data-id="'+i.id+'">'+ico("ask")
     +'<span>'+(cs.length?"Küsimused ja kommentaarid":"Küsi midagi selle info kohta")+'</span>'
-    +(uusi?'<span class="uus" style="margin:0 0 0 auto">'+uusi+' UUT</span>':"")
+    +(uusi?'<span class="uus" style="margin:0 0 0 auto">'+(uusi===1?'1 UUS':uusi+' UUT')+'</span>':"")
     +'<span class="n"'+(uusi?' style="margin-left:10px"':"")+'>'
     +(cs.length?cs.length+(on?" — peida":""):(on?"peida":"kirjuta"))+'</span></button>';
   if(!on)return h;
@@ -1060,7 +1064,7 @@ function infoCard(i){
       +(miss.length?"Pole veel lugenud":"Kõik on lugenud")+'</span>'
       +'<span class="v'+(miss.length?" non":"")+'">'+esc(miss.length?names(miss):"—")+'</span></div></div>';
     if(on)h+='<div class="who"><div class="wline"><span class="k">Kinnitused</span><span class="v">'
-      +esc(ackIds(i).length?ackIds(i).map(x=>nameOf(x)+" ("+fmtStamp(i.acks[x])+")").join("; "):"veel keegi")+'</span></div></div>';
+      +esc(ackIds(i).length?ackIds(i).map(x=>nameOf(x)+" ("+fmtStamp(i.acks[x])+")").join("; "):"veel ei ole kedagi")+'</span></div></div>';
   }
   /* Ka üldinfo tekitab küsimusi — „kas liikmemaks käib kuus või aastas“.
      Enne küsiti neid kuskil mujal ja vastust nägi ainult üks inimene.
@@ -1088,7 +1092,7 @@ function vPeople(w){
       +(m.phone?'<button class="tel" data-act="kopeeri" data-v="'+esc(m.phone)+'">'
         +esc(m.phone)+'</button>':"")
       +(m.email?'<a href="mailto:'+esc(m.email)+'">'+esc(m.email)+'</a>':"")
-      +'<p class="meta" style="margin:10px 0 0">'+t+' ülesannet võetud</p>'
+      +'<p class="meta" style="margin:10px 0 0">'+mitu(t,'ülesanne','ülesannet')+' võetud</p>'
       +(()=>{const x=myyjaStat().find(y=>y.kes===m.id);
              return '<button class="myygirida" data-act="myyja" data-id="'+m.id+'">'
                +(x?'Müünud '+x.tk+' tk · '+esc(raha(x.eur)):'Müüki ei ole')+'</button>';})()
@@ -1110,7 +1114,14 @@ function vPeople(w){
       +((m.id===meId()||!S.haldabTeisi)?"":'<button class="linkbtn mut" data-act="del" data-kind="members" data-id="'+m.id+'">Eemalda</button>')
       +'</div></article>';
   }).join("")+'</div>'
-  +'<p class="meta" style="margin-top:6px;max-width:60ch;line-height:1.6">Ühelgi liikmel ei ole teistest rohkem õigusi. Igaüks saab kõike lisada, muuta ja kustutada. Kustutamise saab kohe tagasi võtta.</p>';
+  /* Vana tekst ütles, et kellelgi ei ole teistest rohkem õigusi. See ei
+     ole tõsi ja ta seisis samal lehel vastupidiste lausete kõrval. */
+  +'<p class="meta" style="margin-top:6px;max-width:60ch;line-height:1.6">'
+  +'Igaüks lisab ja muudab kõike, mis puudutab maja: üritusi, infot, faile, '
+  +'töid. Enda kohta käivat — telefon, tööaeg, puhkus — muudab igaüks ise. '
+  +'Teiste oma muudavad ülemus ja administraator. Kogu maja kassat näevad '
+  +'raamatupidaja, ülemus ja administraator; ameteid muudab ainult '
+  +'administraator.</p>';
 }
 
 /* ═══ Müük ═══ */
@@ -1426,24 +1437,73 @@ function dlgInfo(i){
       save();render();toast("Salvestatud.");return true;
     });
 }
+/* Ametite nimekiri tuleb serverilt (/api/mina), et ekraan ja server ei
+   räägiks eri asjadest. */
+let AMETID=[];
+const ametiNimi=id=>{const a=AMETID.find(x=>x.id===id);return a?a.nimi:(id||"liige");};
+
+/* Ameti muutmine käib eraldi otspunktist: seal on kontroll, et ainult
+   administraator tohib, ja kaitse, et maja ei jääks ilma administraatorita. */
+function muudaAmet(m,amet){
+  fetch("/api/liikmed",{method:"PATCH",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({id:m.id,nimi:m.name,roll:m.role,amet})})
+    .then(r=>r.json()).then(v=>{
+      if(v.viga){toast(v.viga);return;}
+      m.amet=amet;
+      save();render();
+      toast(esc(m.name)+" amet on nüüd „"+ametiNimi(amet)+"“.");
+    })
+    .catch(()=>toast("Ameti muutmine ei õnnestunud. Kontrolli ühendust."));
+}
+
 function dlgPerson(m){
   dlg(m?"Muuda liiget":"Uus liige",
     '<div class="field"><label>Pilt</label>'
     +'<input type="hidden" id="f_pilt" value="'+esc(m&&m.pilt?m.pilt:"")+'">'
     +'<div class="piltala" id="piltala">'+piltAlaHtml(m&&m.pilt?m.pilt:"",m?m.name:"")+'</div>'
-    +'<span class="hint">Pilt jääb ainult sellesse arvutisse, nagu kogu muu sisu.</span></div>'
+    +'<span class="hint">Pilti näevad kõik liikmed Kontaktide all. '
+    +'Ta tehakse väikeseks, nii et suur fail ei ole probleem.</span></div>'
     +fld("f_name","Nimi",m?m.name:"")
-    +fld("f_role","Roll ringis",m?m.role:"","text","Näiteks matkajuht. Roll ei anna lisaõigusi.")
-    +'<div class="two">'+fld("f_phone","Telefon",m?m.phone:"","tel")+fld("f_email","E-post",m?m.email:"","email")+'</div>'
-    +'<label class="check"><input type="checkbox" id="f_help"'+(m&&m.helper?" checked":"")+'>'
-    +'<span><b>Administraator</b><span>Näeb kogu maja müüki, müüjate tabelit ja aruannet. '
-    +'Teised näevad ainult oma müüki.</span></span></label>',
+    +fld("f_role","Roll majas",m?m.role:"","text","Näiteks matkajuht. Roll ei anna lisaõigusi.")
+    +'<div class="two">'+fld("f_phone","Telefon",m?m.phone:"","tel")
+    +fld("f_email","E-post",m?m.email:"","email")+'</div>'
+    /* Amet otsustab, kes kassat näeb — seepärast muudab teda ainult
+       administraator. Varem oli siin märkeruut „Administraator“, mida
+       ei salvestatud kuhugi: linnuke läks peale, teade ütles
+       „Salvestatud“, ja järgmisel laadimisel oli ta jälle maas. */
+    +(m&&S.annabOigusi
+      ? '<div class="field"><label for="f_amet">Amet</label><select id="f_amet">'
+        +AMETID.map(a=>'<option value="'+esc(a.id)+'"'+(m.amet===a.id?" selected":"")+'>'
+          +esc(a.nimi)+'</option>').join("")
+        +'</select><span class="hint">'
+        +esc(AMETID.map(a=>a.nimi+" — "+a.selgitus).join(" · "))
+        +'</span></div>'
+      : m
+        ? '<div class="field"><label>Amet</label>'
+          +'<p class="meta" style="margin:0">'+esc(ametiNimi(m.amet))
+          +' — ameteid muudab ainult administraator.</p></div>'
+        : '<span class="hint">Uus inimene tuleb majja tavalise liikmena. '
+          +'Ameti saab administraator pärast anda.</span>'),
     m?"Salvesta":"Lisa liige",()=>{
       const name=fv("f_name");if(!name){toast("Nimi on täitmata.");return false;}
-      const d={name,role:fv("f_role"),phone:fv("f_phone"),email:fv("f_email"),
-               helper:fc("f_help"),pilt:fv("f_pilt")};
-      if(m)Object.assign(m,d);else{const nid=uid();S.members.push(Object.assign({id:nid},d));S.seen=S.seen||{};S.seen[nid]=baas();}
-      save();render();toast("Salvestatud.");return true;
+      const epost=fv("f_email");
+      if(epost&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(epost)){
+        toast("Kirjuta korrektne e-posti aadress või jäta väli tühjaks.");return false;}
+      const d={name,role:fv("f_role"),phone:fv("f_phone"),email:epost,
+               pilt:fv("f_pilt")};
+      if(m){
+        Object.assign(m,d);
+        /* Amet käib eraldi otspunktist, kus on ka viimase administraatori
+           kaitse — seda ei tohi terve seisu salvestus üle sõita. */
+        const uusAmet=m&&S.annabOigusi?fv("f_amet"):null;
+        if(uusAmet&&uusAmet!==m.amet)muudaAmet(m,uusAmet);
+        else{save();render();toast("Salvestatud.");}
+      }else{
+        const nid=uid();S.members.push(Object.assign({id:nid},d));
+        S.seen=S.seen||{};S.seen[nid]=baas();
+        save();render();toast("Salvestatud.");
+      }
+      return true;
     });
 }
 function dlgMyyk(r){
@@ -1628,6 +1688,10 @@ const araJaetud=(t,k)=>!!(t.ara||{})[k];
 const tooSelPaeval=(t,d)=>{
   const k=dkey(d);
   if(araJaetud(t,k))return false;
+  /* Korduv töö algab sellest päevast, mil ta kirja pandi. Ilma selleta
+     ilmus täna tehtud töö ka igasse möödunud kolmapäeva „tegemata“
+     tööna ja ootas kinnitust asjade eest, mida keegi teinud ei ole. */
+  if(t.algab&&k<t.algab)return false;
   return t.kuup?t.kuup===k:(t.paevad||[]).indexOf(dowIdx(d))>=0;
 };
 const tooAeg=t=>aegTekst(tooAlgus(t),t.lopp||"");
@@ -2374,19 +2438,49 @@ function aruCSV(){
   return "\ufeff"+L.map(csvRida).join("\r\n")+"\r\n";
 }
 
+/* Aruande salvestamine failina.
+
+   Vana kood kutsus siin funktsiooni showRaw, mida ei ole kunagi olemas
+   olnud — tavalises brauseris viskas nupp vea, aken sulgus ja midagi ei
+   salvestunud. Raamatupidaja väljavõte jäi lihtsalt saamata, ilma et
+   keegi oleks aru saanud, miks.
+
+   Nüüd teeb salvestamise brauser ise (Blob + allalaadimislink). Kui ka
+   see ei õnnestu, ei jää inimene tühjade kätega: tekst tuleb ekraanile,
+   kust saab ta kopeerida. */
 async function aruSalvesta(){
   const data=aruCSV();
   const fn="Kodulinna_Maja_myygiaruanne_"+aruA+"_"+aruB+".csv";
-  if(window.claude&&window.claude.downloads){
-    try{await window.claude.downloads.save({filename:fn,data});
-        toast("Aruanne salvestatud.");}
-    catch(err){
-      const c=err&&err.code;
-      if(c==="declined")toast("Salvestamine jäi katki.");
-      else if(c==="rate_limited")toast("Üks salvestusaken on juba lahti.");
-      else showRaw(data);
-    }
-  }else showRaw(data);
+  try{
+    /* BOM on Eesti Exceli jaoks: ilma selleta lähevad täpitähed katki. */
+    const blob=new Blob(["﻿"+data],{type:"text/csv;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;a.download=fn;
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+    toast("Aruanne salvestatud kausta „Allalaaditud failid“.");
+  }catch(err){
+    aruEkraanile(data,fn);
+  }
+}
+
+/* Varutee: kui brauser faili salvestada ei lase, anname teksti ette. */
+function aruEkraanile(data,fn){
+  dlg("Aruanne — "+fn,
+    '<p class="hint" style="margin:0 0 10px">Brauser ei lasknud faili salvestada. '
+    +'Vajuta „Kopeeri“ ja kleebi tekst Excelisse või e-kirja.</p>'
+    +'<div class="field"><textarea id="f_csv" readonly rows="12" '
+    +'style="font-family:ui-monospace,monospace;font-size:13px">'+esc(data)+'</textarea></div>',
+    "Kopeeri",()=>{
+      const v=document.getElementById("f_csv");
+      if(v){v.select();}
+      if(navigator.clipboard&&navigator.clipboard.writeText)
+        navigator.clipboard.writeText(data).then(()=>toast("Kopeeritud."),
+          ()=>toast("Kopeerimine ei õnnestunud — vali tekst ja vajuta Ctrl+C."));
+      else toast("Vali tekst ja vajuta Ctrl+C.");
+      return false;
+    });
 }
 
 /* Ühe müüja statistika: kokkuvõte, mida ta müüs ja tema oma kalender.
@@ -2511,7 +2605,7 @@ function dlgToode(r){
 function dlgOsad(){
   const osad=S.myyk.osad||[];
   dlg("Müügi osad",
-    '<p class="hint" style="margin:0">Muuda nime, kustuta või lisa juurde. Osa kustutamisel ei kao selle read ära — need koonduvad alla „Ilma osata“ alla, kust saab neile uue osa anda.</p>'
+    '<p class="hint" style="margin:0">Muuda nime, kustuta või lisa juurde. Osa kustutamisel ei kao selle read ära — need koonduvad „Ilma osata“ alla, kust saab neile uue osa anda.</p>'
     +'<div class="field"><div class="rowlist" id="rows">'
     +osad.map(o=>'<div class="r" data-tid="'+esc(o.id)+'"><input type="text" value="'+esc(o.nimi)+'">'
       +'<button type="button" data-act="row-rm" aria-label="Kustuta osa">'
@@ -2767,10 +2861,46 @@ function toast(msg,undo){
   if(undo){el.querySelector(".undo").addEventListener("click",()=>{undo();kill();});setTimeout(kill,14000);}
   else setTimeout(kill,4200);
 }
+/* Kustutamine küsib enne üle ja ütleb välja, mis kaob ja kelle jaoks.
+
+   Varem käis kõik kohe ära ja ainus tagasitee oli teade, mis kadus 14
+   sekundiga. Vanem inimene ei jõua seda tabada — ja liikme puhul ei
+   toonud „Võta tagasi“ niikuinii midagi tagasi: tema graafik, puhkused,
+   kinnitused ja kirjavahetused olid andmebaasist läinud. */
+const KUSTUTUSE_TEKST={
+  events:  x=>['Kustutan ürituse „'+x.title+'“.',
+    'Koos temaga kaovad selle ürituse ülesanded, küsimused ja vastused. '
+    +'See kaob kõigi liikmete jaoks.'],
+  info:    x=>['Kustutan infoploki „'+x.title+'“.',
+    'Koos temaga kaovad selle all olevad küsimused ja märge, kes on tutvunud. '
+    +'See kaob kõigi liikmete jaoks.'],
+  files:   x=>['Kustutan faili „'+x.name+'“.',
+    'Fail kaob kõigi liikmete jaoks ja teda ei saa enam alla laadida.'],
+  members: x=>['Võtan '+x.name+' majast välja.', liikmeHoiatus(x)]
+};
+
+function liikmeHoiatus(m){
+  const my=myygiSyndmused().filter(x=>x.kes===m.id);
+  const eur=my.reduce((a,b)=>a+b.eur,0);
+  return (my.length
+      ? 'Tema '+mitu(my.length,"müük","müüki")+' ('+raha(eur)+') jäävad kassasse '
+        +'alles, aga müüja nimi kaob nende pealt ära. '
+      : '')
+    +'Tema tööaeg, puhkused, kinnitused ja kirjavahetused kaovad päriselt. '
+    +'Seda ei saa tagasi võtta.';
+}
+
 function del(kind,id){
   const arr=S[kind],i=arr.findIndex(x=>x.id===id);if(i<0)return;
-  const item=arr[i];arr.splice(i,1);save();render();
-  toast('„'+(item.title||item.name||"Kirje")+'“ on kustutatud.',()=>{arr.splice(i,0,item);save();render();toast("Tagasi toodud.");});
+  const item=arr[i];
+  const tekst=KUSTUTUSE_TEKST[kind];
+  if(tekst){
+    const [mis,mida]=tekst(item);
+    if(!confirm(mis+"\n\n"+mida))return;
+  }
+  arr.splice(i,1);save();render();
+  toast('„'+(item.title||item.name||"Kirje")+'“ on kustutatud.',
+    ()=>{arr.splice(i,0,item);save();render();toast("Tagasi toodud.");});
 }
 
 
@@ -3156,7 +3286,12 @@ document.addEventListener("click",ev=>{
     case "del-myyk":{
       const arr=S.myyk.read,i=arr.findIndex(x=>x.id===id);
       if(i<0)break;
-      const item=arr[i];arr.splice(i,1);save();render();
+      const item=arr[i];
+      /* Müük on raha. Enne kustutamist ütleme, kui palju kassast kaob. */
+      if(!confirm('Kustutan müügi „'+item.nimetus+'“.\n\n'
+        +item.kogus+' tk · '+raha(item.kogus*item.hind)
+        +' kaob kassast ja aruandest ära. Seda ei saa hiljem üles leida.'))break;
+      arr.splice(i,1);save();render();
       toast('„'+item.nimetus+'“ on kustutatud.',()=>{arr.splice(i,0,item);save();render();toast("Tagasi toodud.");});
       break;
     }
@@ -3263,6 +3398,7 @@ async function kaivita(){
   try{
     const m=await (await fetch("/api/mina")).json();
     if(!m||!m.mina){location.href="/";return;}
+    if(Array.isArray(m.ametid))AMETID=m.ametid;
     if(m.avalikProovirezim)proovirezimiRiba();
     const r=await fetch("/api/seis");
     if(r.status===401){location.href="/";return;}

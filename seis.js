@@ -37,7 +37,7 @@ async function loeSeis(mina) {
   const [liikmed, grupp, osad, hinnad, myygid, yritused, osalemine, kinnitused,
          kommentaarid, ulesanded, infod, failid, vestlused, vestluseLiikmed,
          sonumid, sonumiMargid,
-         graafik, puudumised, tood, tooPaevad, tooTehtud, loetud] = await Promise.all([
+         graafik, puudumised, tood, tooPaevad, tooTehtud, tooVahele, loetud] = await Promise.all([
     q(`SELECT id, nimi, roll, telefon, epost, administraator, pilt, amet FROM liikmed ORDER BY nimi`),
     yks("SELECT * FROM grupp WHERE id"),
     q("SELECT id, nimi FROM myyk_osad ORDER BY jrk, nimi"),
@@ -60,6 +60,7 @@ async function loeSeis(mina) {
     q("SELECT * FROM tood"),
     q("SELECT * FROM too_paevad"),
     q("SELECT * FROM too_tehtud"),
+    q("SELECT * FROM too_vahele"),
     q("SELECT * FROM loetud")
   ]);
 
@@ -137,8 +138,17 @@ async function loeSeis(mina) {
         algus: kell(t.algus), lopp: kell(t.lopp), kuup: dkey(t.kuup),
         algab: dkey(t.algab), kes: t.kes_id || "", kinnita: t.kinnita,
         markus: t.markus || "",
+        /* Ekraan ootab siin objekti {kes, at} ja näitab „Tehtud — Mari ·
+           15. august kell 14:20“. Varem saatsime paljast id-d, mille
+           pealt ekraan luges `teht.kes` ja `teht.at` — mõlemad puudusid,
+           ja pärast lehe värskendamist seisis seal „keegi · NaN“. */
         tehtud: Object.fromEntries(tooTehtud.filter(h => h.too_id === t.id)
-          .map(h => [dkey(h.kuup), h.kes_id || true]))
+          .map(h => [dkey(h.kuup), { kes: h.kes_id, at: iso(h.aeg) }])),
+        /* Ärajäetud üksikud korrad. Ekraan pani need kirja („Kustuta see
+           päev“), aga siia nad ei jõudnud ega tulnud tagasi — päev ilmus
+           lehe värskendamisel uuesti välja ja ootas endiselt kinnitust. */
+        ara: Object.fromEntries(tooVahele.filter(v => v.too_id === t.id)
+          .map(v => [dkey(v.kuup), true]))
       })),
       puhkused: puudumised.map(p => ({
         id: p.id, kes: p.liige_id, algus: dkey(p.algus), lopp: dkey(p.lopp),
@@ -266,6 +276,17 @@ const onUuid = x => typeof x === "string" && UUID.test(x);
 const autor = (by, mina, oma) =>
   (onUuid(by) && oma(by)) ? by : mina.id;
 
+/* E-post oli ekraanil väli, mida keegi ei salvestanud: liikme aken küsis
+   aadressi, ütles „Salvestatud“ ja viskas selle ära. Uus inimene ei
+   saanud siis oma aadressiga sisse ja keegi ei mõistnud, miks.
+
+   Tühi väli tähendab „ära puutu“, mitte „kustuta“ — muidu pühiks iga
+   salvestus aadressi ära nendel, kelle aken oli tühjalt lahti. */
+const epostiks = v => {
+  const e = String(v == null ? "" : v).trim().toLowerCase();
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) ? e : null;
+};
+
 async function salvestaSeis(mina, s) {
   if (!s || typeof s !== "object") return { viga: "Seis on tühi." };
   const koik = naebKassat(mina);
@@ -304,13 +325,16 @@ async function salvestaSeis(mina, s) {
         alles.add(m.id);
         /* Nime, telefoni ja pilti muudab igaüks enda kohta. */
         if (oma(m.id)) await q(
-          `UPDATE liikmed SET nimi=$2, roll=$3, telefon=$4, pilt=$5 WHERE id=$1`,
-          [m.id, nimi, tyhjaks(m.role), tyhjaks(m.phone), tyhjaks(m.pilt)]);
+          `UPDATE liikmed SET nimi=$2, roll=$3, telefon=$4, pilt=$5,
+                  epost = coalesce($6, epost) WHERE id=$1`,
+          [m.id, nimi, tyhjaks(m.role), tyhjaks(m.phone), tyhjaks(m.pilt),
+           epostiks(m.email)]);
       } else {
         const r = await yks(
-          `INSERT INTO liikmed (nimi, roll, telefon, pilt, amet)
-           VALUES ($1,$2,$3,$4,'liige') RETURNING id`,
-          [nimi, tyhjaks(m.role), tyhjaks(m.phone), tyhjaks(m.pilt)]);
+          `INSERT INTO liikmed (nimi, roll, telefon, pilt, epost, amet)
+           VALUES ($1,$2,$3,$4,$5,'liige') RETURNING id`,
+          [nimi, tyhjaks(m.role), tyhjaks(m.phone), tyhjaks(m.pilt),
+           epostiks(m.email)]);
         alles.add(r.id);
       }
     }
@@ -376,9 +400,19 @@ async function salvestaSeis(mina, s) {
        kassat (koik), aga puutuda saab ta ainult oma ridu — muidu saaks
        ta teise inimese müügi ära kustutada ja enda nime all uuesti
        sisse panna, ja müüja nime reeglist poleks kasu. */
-    const olemas = await q(
-      `SELECT id, myyja_id FROM myygid` + (teised ? "" : " WHERE myyja_id = $1"),
-      teised ? [] : [mina.id]);
+    /* Kõik read, mitte ainult minu omad.
+
+       Varem oli see päring minu õiguste järgi kitsendatud ja see tegi
+       kaks viga korraga. Kui ekraan saatis tagasi rea, mida päring ei
+       näinud, ei saanud server aru, et rida on juba olemas: ta tegi
+       sellest KOOPIA saatja nime alla. Raamatupidaja, kes näeb kogu
+       kassat, paljundas nii iga salvestusega kõigi teiste müügid enda
+       nimele ja kassa summa kasvas ise.
+
+       Nägemine, muutmine ja kustutamine on kolm eri asja: nimekirja
+       loeme tervikuna, aga puutuda tohib ainult oma rida. */
+    const olemas = await q("SELECT id, myyja_id, kogus, hind FROM myygid");
+    const minuOma = x => teised || x.myyja_id === mina.id;
     const alles = new Set();
     for (const r of s.myyk.read) {
       /* Kelle nime alla müük läheb, otsustab ülemus või administraator.
@@ -394,7 +428,24 @@ async function salvestaSeis(mina, s) {
       if (!nimetus || !Number.isInteger(kogus) || kogus < 1) continue;
       const hind = Number(r.hind) >= 0 ? Number(r.hind) : 0;
 
-      if (onUuid(r.id) && olemas.some(x => x.id === r.id)) { alles.add(r.id); continue; }
+      /* Olemasolev rida: kogus ja hind võivad olla muutunud.
+
+         Ekraan liidab sama toote uue müügi olemasolevale reale („50
+         raamatut jääb 50 reaks, mitte 500 tehinguks“) ja tõstab koguse.
+         Varem jäeti see rida siin lihtsalt vahele — ekraan näitas uut
+         kogust, andmebaas hoidis vana, ja järgmisel laadimisel kadus
+         müük ära nii, nagu poleks teda olnudki. Päris raha kadus. */
+      const vana = onUuid(r.id) ? olemas.find(x => x.id === r.id) : null;
+      if (vana) {
+        alles.add(r.id);
+        if (minuOma(vana)
+            && (Number(vana.kogus) !== kogus || Number(vana.hind) !== hind))
+          await q(
+            `UPDATE myygid SET kogus = $2, hind = $3,
+                    aeg = coalesce($4::timestamptz, aeg) WHERE id = $1`,
+            [r.id, kogus, hind, r.at || null]);
+        continue;
+      }
 
       let toode = await yks(
         `SELECT id FROM tooted WHERE nimetus = $1
@@ -408,8 +459,11 @@ async function salvestaSeis(mina, s) {
         [toode.id, kogus, hind, kes, r.at || null]);
       alles.add(uus.id);
     }
+    /* Kustub ainult see, mis on sinu oma ja mida ekraan tagasi ei
+       saatnud. Teiste read ei ole sinu nimekirjas ja ei tohi sellest
+       järeldada, et nad on kustutatud. */
     for (const x of olemas)
-      if (!alles.has(x.id) && (teised || x.myyja_id === mina.id))
+      if (!alles.has(x.id) && minuOma(x))
         await q("DELETE FROM myygid WHERE id=$1", [x.id]);
   }
 
@@ -656,16 +710,42 @@ async function salvestaSeis(mina, s) {
       for (const p of paevad)
         await q("INSERT INTO too_paevad (too_id, paev) VALUES ($1,$2)", [id, p]);
 
-      /* tehtud: päev → tegija */
+      /* tehtud: päev → {kes, at}
+
+         „Tegin ära“ on isiklik märge, nagu „Olen tutvunud“. Teise märget
+         ei saa panna ega maha võtta — ja mis kõige tähtsam, ta jääb alles
+         ka siis, kui sinu ekraan teda tagasi ei saatnud. Varem kustutati
+         kõik märked ja pandi uuesti, nii et iga salvestus kirjutas
+         kolleegi eilse töö sinu nimele. */
       const tehtud = t.tehtud && typeof t.tehtud === "object" ? t.tehtud : {};
+      const vanad = await q(
+        "SELECT kuup, kes_id, aeg FROM too_tehtud WHERE too_id=$1", [id]);
       await q("DELETE FROM too_tehtud WHERE too_id=$1", [id]);
-      for (const [kuup, kes] of Object.entries(tehtud)) {
+      const uued = new Map();
+      for (const v of vanad)
+        if (!oma(v.kes_id)) uued.set(dkey(v.kuup), { kes: v.kes_id, at: iso(v.aeg) });
+      for (const [kuup, v] of Object.entries(tehtud)) {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(kuup)) continue;
-        /* Töö tegija on see, kes vajutas. Teise inimese nime ei saa
-           tehtud-märkesse panna — muidu saaks kellegi eest kinnitada. */
-        const tegija = onUuid(kes) && oma(kes) ? kes : mina.id;
-        await q(`INSERT INTO too_tehtud (too_id, kuup, kes_id) VALUES ($1,$2,$3)`,
-          [id, kuup, tegija]);
+        const kes = v && typeof v === "object" ? v.kes : v;
+        if (!onUuid(kes) || !oma(kes)) continue;
+        uued.set(kuup, { kes, at: (v && v.at) || null });
+      }
+      for (const [kuup, v] of uued)
+        await q(
+          `INSERT INTO too_tehtud (too_id, kuup, kes_id, aeg)
+           VALUES ($1,$2,$3, coalesce($4::timestamptz, now()))`,
+          [id, kuup, v.kes, v.at]);
+
+      /* Ärajäetud korrad. Korduvast tööst saab ühe päeva välja jätta,
+         ilma et kogu kordumine kaoks — see on kogu maja otsus, nagu töö
+         isegi, seega siin isiklikku omandit ei ole. */
+      const ara = t.ara && typeof t.ara === "object" ? t.ara : {};
+      await q("DELETE FROM too_vahele WHERE too_id=$1", [id]);
+      for (const kuup of Object.keys(ara)) {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(kuup) || !ara[kuup]) continue;
+        await q(
+          `INSERT INTO too_vahele (too_id, kuup) VALUES ($1,$2)
+           ON CONFLICT DO NOTHING`, [id, kuup]);
       }
     }
     for (const x of olemas) if (!alles.has(x.id))
