@@ -54,29 +54,37 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
       ('Proov Ulemus','ulemus@proov.invalid','ulemus',true),
       ('Proov Admin','admin@proov.invalid','administraator',true)`);
     const [liige] = await q("SELECT id FROM liikmed WHERE epost='liige@proov.invalid'");
+    /* Kutse sihiks votame kellegi teise kui sisselogija ise —
+       iseendale tohib link teha igauks. */
+    const [voor] = await q("SELECT id FROM liikmed WHERE epost='raamat@proov.invalid'");
 
     /* Maja reegel: kõik haldavad kõike. Ainult kassa on lukus ja
        ameteid — mis kassa lahti teevad — jagab ainult administraator. */
+    /* teised = kas ta tohib teise inimese asju puutuda. Sisselogimislink
+       annab konto katte, seega teisele inimesele teevad seda ainult
+       ulemus ja administraator. */
     const ootus = {
-      "liige@proov.invalid":  { kassa: false, annab: false },
-      "raamat@proov.invalid": { kassa: true,  annab: false },
-      "ulemus@proov.invalid": { kassa: true,  annab: false },
-      "admin@proov.invalid":  { kassa: true,  annab: true }
+      "liige@proov.invalid":  { kassa: false, annab: false, teised: false },
+      "raamat@proov.invalid": { kassa: true,  annab: false, teised: false },
+      "ulemus@proov.invalid": { kassa: true,  annab: false, teised: true  },
+      "admin@proov.invalid":  { kassa: true,  annab: true,  teised: true  }
     };
 
     for (const [epost, o] of Object.entries(ootus)) {
       const m = await sisse(epost);
       const myyk = await paring("/api/myyk");
-      const kutse = await paring("/api/kutse", { meetod: "POST", keha: { liige_id: liige.id } });
+      const siht = m.epost === "raamat@proov.invalid" ? liige.id : voor.id;
+      const kutse = await paring("/api/kutse", { meetod: "POST", keha: { liige_id: siht } });
       const lisa = await paring("/api/liikmed", { meetod: "POST", keha: { nimi: "Ei tohi" } });
 
       const nimi = (m.amet + "        ").slice(0, 15);
       kontrolli(nimi + "näeb kogu kassat: " + (o.kassa ? "jah" : "ei"),
         myyk.json.koikNahtav === o.kassa && m.naebKassat === o.kassa,
         "ridu: " + myyk.json.read.length);
-      kontrolli(nimi + "haldab liikmeid : jah",
-        kutse.kood === 200 && lisa.kood === 200,
-        "kutse " + kutse.kood + ", lisa " + lisa.kood);
+      kontrolli(nimi + "lisab liikmeid  : jah", lisa.kood === 200,
+        "lisa " + lisa.kood);
+      kontrolli(nimi + "link teisele    : " + (o.teised ? "jah" : "ei"),
+        (kutse.kood === 200) === o.teised, "kutse " + kutse.kood);
       kontrolli(nimi + "jagab ameteid   : " + (o.annab ? "jah" : "ei"),
         m.annabOigusi === o.annab);
 

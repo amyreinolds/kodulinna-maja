@@ -32,6 +32,12 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
   let vigu = 0;
   const kontrolli = (n, t, l) => { console.log((t ? "  OK   " : "  VIGA ") + n + (l ? "  " + l : "")); if (!t) vigu++; };
   const { q } = require("../db");
+
+  /* Müüjata müük ei ole viga: lahkunud liikme müük jääb kassasse alles
+     ja müüja väli läheb tühjaks. Küsime seepärast, kas SEE test tekitas
+     neid juurde, mitte kas neid üldse on. */
+  const orbeEnne = (await q(
+    "SELECT count(*)::int AS n FROM myygid WHERE myyja_id IS NULL"))[0].n;
   let vanaGrupp = null;
 
   const sisse = async epost => {
@@ -179,7 +185,8 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
     for (const [nimi, sql] of [
       ["testi kontosid", "SELECT count(*)::int AS n FROM liikmed WHERE epost LIKE '%proov.invalid'"],
       ["proovimüüke", "SELECT count(*)::int AS n FROM tooted WHERE nimetus IN ('Proovimüük','Võlts')"],
-      ["müüjata müüke", "SELECT count(*)::int AS n FROM myygid WHERE myyja_id IS NULL"]
+      ["müüjata müüke juurde",
+       "SELECT count(*)::int - " + orbeEnne + " AS n FROM myygid WHERE myyja_id IS NULL"]
     ]) kontrolli("andmebaasi ei jäänud " + nimi, (await q(sql))[0].n === 0);
   } catch (e) { console.log("  VIGA  koristus: " + e.message); vigu++; }
 

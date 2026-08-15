@@ -33,6 +33,12 @@ const isoks = d => d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.get
   let vigu = 0;
   const kontrolli = (n, t, l) => { console.log((t ? "  OK   " : "  VIGA ") + n + (l ? "  " + l : "")); if (!t) vigu++; };
   const { q } = require("../db");
+
+  /* Müüjata müük ei ole viga: lahkunud liikme müük jääb kassasse alles
+     ja müüja väli läheb tühjaks. Küsime seepärast, kas SEE test tekitas
+     neid juurde, mitte kas neid üldse on. */
+  const orbeEnne = (await q(
+    "SELECT count(*)::int AS n FROM myygid WHERE myyja_id IS NULL"))[0].n;
   const täna = isoks(new Date());
   let yId = null;
 
@@ -139,7 +145,8 @@ const isoks = d => d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.get
     kontrolli("tema müügid jäid kassasse alles", parast[0].n === enne[0].n,
       enne[0].n + " → " + parast[0].n);
     const [orb] = await q("SELECT count(*)::int AS n FROM myygid WHERE myyja_id IS NULL");
-    kontrolli("müüja väli läks tühjaks", orb.n === 1, "ridu " + orb.n);
+    kontrolli("müüja väli läks tühjaks", orb.n === orbeEnne + 1,
+      "ridu " + orb.n + " (enne oli " + orbeEnne + ")");
     await q("DELETE FROM myygid WHERE myyja_id IS NULL");
 
     /* Maja ei saa jääda administraatorita: iseennast välja ei võta ja
@@ -168,7 +175,8 @@ const isoks = d => d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.get
     console.log("  OK   koristatud (" + n.length + " liiget)");
     for (const [nimi, sql] of [
       ["testi kontosid", "SELECT count(*)::int AS n FROM liikmed WHERE epost LIKE '%proov.invalid'"],
-      ["müüjata müüke", "SELECT count(*)::int AS n FROM myygid WHERE myyja_id IS NULL"],
+      ["müüjata müüke juurde",
+       "SELECT count(*)::int - " + orbeEnne + " AS n FROM myygid WHERE myyja_id IS NULL"],
       ["proovipidusid", "SELECT count(*)::int AS n FROM yritused WHERE pealkiri LIKE 'Proovipidu%'"]
     ]) kontrolli("andmebaasi ei jäänud " + nimi, (await q(sql))[0].n === 0);
     const [a] = await q("SELECT count(*)::int AS n FROM liikmed WHERE amet='administraator'");

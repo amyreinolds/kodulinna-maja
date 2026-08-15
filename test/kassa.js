@@ -33,6 +33,12 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
   const kontrolli = (n, t, l) => { console.log((t ? "  OK   " : "  VIGA ") + n + (l ? "  " + l : "")); if (!t) vigu++; };
   const { q } = require("../db");
 
+  /* Müüjata müüke võib majas juba olla: lahkunud liikme müük jääb
+     kassasse alles ja müüja väli läheb tühjaks. Nii et me ei küsi, kas
+     neid on, vaid kas see test tekitas neid juurde. */
+  const orbeEnne = (await q(
+    "SELECT count(*)::int AS n FROM myygid WHERE myyja_id IS NULL"))[0].n;
+
   const sisse = async epost => {
     const k = await paring("/api/logi-sisse", { meetod: "POST", keha: { epost } });
     const v = await paring("/sisene?mark="
@@ -151,8 +157,13 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
     console.log("  OK   koristatud (" + n.length + " liiget, " + m.length + " müüki)");
     const j = await q("SELECT count(*)::int AS n FROM liikmed WHERE epost LIKE '%proov.invalid'");
     kontrolli("andmebaasi ei jäänud testi kontosid", j[0].n === 0);
+    /* Müüjata müük ON õige asi: kui liige majast lahkub, jääb tema müük
+       kassasse alles ja müüja väli läheb tühjaks. Seepärast ei saa siin
+       küsida, et neid üldse ei oleks — küsime ainult selle kohta, mille
+       see test ise tegi. */
     const o = await q("SELECT count(*)::int AS n FROM myygid WHERE myyja_id IS NULL");
-    kontrolli("andmebaasi ei jäänud müüjata müüke", o[0].n === 0, "ridu " + o[0].n);
+    kontrolli("see test ei jätnud müüjata müüke juurde", o[0].n === orbeEnne,
+      o[0].n + " (enne oli " + orbeEnne + ")");
   } catch (e) { console.log("  VIGA  koristus: " + e.message); vigu++; }
 
   console.log(vigu ? "\n" + vigu + " viga." : "\nKõik korras.");

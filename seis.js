@@ -360,9 +360,13 @@ async function salvestaSeis(mina, s) {
   /* ── müük ────────────────────────────────────────────────────
      Toode luuakse vajadusel: ekraanil on ainult osa ja nimetus. */
   if (Array.isArray(s.myyk && s.myyk.read) && muutus("read", s.myyk.read)) {
+    /* Nägemine ja muutmine on kaks eri asja. Raamatupidaja näeb kogu
+       kassat (koik), aga puutuda saab ta ainult oma ridu — muidu saaks
+       ta teise inimese müügi ära kustutada ja enda nime all uuesti
+       sisse panna, ja müüja nime reeglist poleks kasu. */
     const olemas = await q(
-      `SELECT id, myyja_id FROM myygid` + (koik ? "" : " WHERE myyja_id = $1"),
-      koik ? [] : [mina.id]);
+      `SELECT id, myyja_id FROM myygid` + (teised ? "" : " WHERE myyja_id = $1"),
+      teised ? [] : [mina.id]);
     const alles = new Set();
     for (const r of s.myyk.read) {
       /* Kelle nime alla müük läheb, otsustab ülemus või administraator.
@@ -392,8 +396,9 @@ async function salvestaSeis(mina, s) {
         [toode.id, kogus, hind, kes, r.at || null]);
       alles.add(uus.id);
     }
-    for (const x of olemas) if (!alles.has(x.id))
-      await q("DELETE FROM myygid WHERE id=$1", [x.id]);
+    for (const x of olemas)
+      if (!alles.has(x.id) && (teised || x.myyja_id === mina.id))
+        await q("DELETE FROM myygid WHERE id=$1", [x.id]);
   }
 
   /* ── üritused ────────────────────────────────────────────────── */

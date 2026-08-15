@@ -107,11 +107,18 @@ const oota = ms => new Promise(r => setTimeout(r, ms));
              WHERE epost='muudetav@proov.invalid'`);
     const k3 = await paring("/api/logi-sisse", { meetod: "POST", keha: { epost: "muudetav@proov.invalid" } });
     await paring("/sisene?mark=" + new URL(k3.json.arenduseLink).searchParams.get("mark"));
+    /* Oma nime saab igaüks muuta. Varem sai see test läbi ka teise
+       inimese nime muutes — see oli auk, mitte omadus. */
     const lubatud = await paring("/api/liikmed", { meetod: "PATCH",
-      keha: { id: mina.id, nimi: "Muutja" } });
-    kontrolli("tavaline liige saab nime muuta", lubatud.kood === 200, "kood " + lubatud.kood);
+      keha: { id: muudetav.id, nimi: "Muudetav" } });
+    kontrolli("tavaline liige saab OMA nime muuta", lubatud.kood === 200,
+      "kood " + lubatud.kood);
+    const voor = await paring("/api/liikmed", { meetod: "PATCH",
+      keha: { id: mina.id, nimi: "Kaaperdatud" } });
+    kontrolli("tavaline liige ei saa TEISE nime muuta", voor.kood === 403,
+      "kood " + voor.kood);
     const keeld = await paring("/api/liikmed", { meetod: "PATCH",
-      keha: { id: mina.id, nimi: "Muutja", amet: "liige" } });
+      keha: { id: muudetav.id, nimi: "Muudetav", amet: "ulemus" } });
     kontrolli("tavaline liige ei saa ametit muuta", keeld.kood === 403, "kood " + keeld.kood);
     kupsis = admKupsis;
 

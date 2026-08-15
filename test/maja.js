@@ -35,6 +35,12 @@ const isoks = d => d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.get
   const kontrolli = (n, t, l) => { console.log((t ? "  OK   " : "  VIGA ") + n + (l ? "  " + l : "")); if (!t) vigu++; };
   const { q } = require("../db");
 
+  /* Müüjata müük ei ole viga: lahkunud liikme müük jääb kassasse alles
+     ja müüja väli läheb tühjaks. Küsime seepärast, kas SEE test tekitas
+     neid juurde, mitte kas neid üldse on. */
+  const orbeEnne = (await q(
+    "SELECT count(*)::int AS n FROM myygid WHERE myyja_id IS NULL"))[0].n;
+
   const sisse = async epost => {
     const k = await paring("/api/logi-sisse", { meetod: "POST", keha: { epost } });
     const v = await paring("/sisene?mark="
@@ -231,7 +237,8 @@ const isoks = d => d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.get
 
     for (const [nimi, sql] of [
       ["testi kontosid", "SELECT count(*)::int AS n FROM liikmed WHERE epost LIKE '%proov.invalid'"],
-      ["müüjata müüke", "SELECT count(*)::int AS n FROM myygid WHERE myyja_id IS NULL"],
+      ["müüjata müüke juurde",
+       "SELECT count(*)::int - " + orbeEnne + " AS n FROM myygid WHERE myyja_id IS NULL"],
       ["proovitöid", "SELECT count(*)::int AS n FROM tood WHERE nimi = 'Lillede kastmine'"],
       ["proovitooteid", "SELECT count(*)::int AS n FROM tooted WHERE nimetus = 'Proovipilet'"]
     ]) kontrolli("andmebaasi ei jäänud " + nimi, (await q(sql))[0].n === 0);

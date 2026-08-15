@@ -1095,8 +1095,12 @@ function vPeople(w){
       +'<hr class="hr" style="margin:14px 0 10px"><div class="tools">'
       +(m.id===meId()?"":'<button class="linkbtn" data-act="kirjuta" data-id="'+m.id+'">Kirjuta talle</button>')
       /* Sisselogimislink: teed selle ise ja annad inimesele kätte.
-         Postiteenust ei ole vaja — väikeses majas on telefon kiirem. */
-      +'<button class="linkbtn" data-act="kutse" data-id="'+m.id+'">Sisselogimise link</button>'
+         Postiteenust ei ole vaja — väikeses majas on telefon kiirem.
+         Teisele inimesele saavad lingi teha ülemus ja administraator:
+         link annab tema konto kätte. */
+      +(tohinTeise(m.id)
+        ? '<button class="linkbtn" data-act="kutse" data-id="'+m.id+'">Sisselogimise link</button>'
+        : "")
       +'<span class="sp"></span>'
       /* Teise inimese andmeid muudavad ülemus ja administraator. */
       +(tohinTeise(m.id)

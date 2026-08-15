@@ -8,7 +8,8 @@ const fs = require("fs");
 const path = require("path");
 const { q, yks } = require("./db");
 const auth = require("./auth");
-const { AMETID, kehtiv, naebKassat, annabOigusi, haldabLiikmeid } = require("./ametid");
+const { AMETID, kehtiv, naebKassat, annabOigusi, haldabLiikmeid,
+        haldabTeisi } = require("./ametid");
 const seis = require("./seis");
 
 /* Ametid, mis ameteid jagavad. Võtame nimekirja ametid.js-ist, et
@@ -883,6 +884,15 @@ const server = http.createServer(async (req, res) => {
          jagab — muidu annaks igaüks endale kassaõiguse. */
       const olemas = await yks("SELECT amet FROM liikmed WHERE id = $1", [b.id]);
       if (!olemas) return json(res, 404, { viga: "Sellist liiget ei ole." });
+
+      /* Sama reegel, mis kehtib ekraani kaudu (seis.js): oma nime,
+         telefoni ja pilti muudab igaüks ise, teiste oma ülemus ja
+         administraator. Enne sai seda reeglit sellest otspunktist mööda
+         minna — ekraan kontrollis, server mitte. */
+      if (b.id !== mina.id && !haldabTeisi(mina))
+        return json(res, 403, {
+          viga: "Teise inimese andmeid muudavad ülemus ja administraator."
+        });
       if (b.amet !== undefined && b.amet !== olemas.amet && !annabOigusi(mina))
         return json(res, 403, {
           viga: "Ameteid muudab ainult administraator — see otsustab, kes kassat näeb."
@@ -933,8 +943,20 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true, myyke: m.n });
     }
 
+    /* Sisselogimislink annab selle inimese konto kätte. Seepärast tohib
+       teisele inimesele linki teha ainult ülemus ja administraator —
+       muidu teeks iga liige lingi administraatorile, siseneks tema nime
+       all ja annaks endale ükskõik millise ameti. Terve õiguste mudel
+       seisaks siis ainult sellel, et keegi ei tule selle peale.
+
+       Iseendale saab link teha alati: see on sama konto, kuhu sa juba
+       sees oled, ja teisest brauserist sisenemine on tavaline vajadus. */
     if (tee === "/api/kutse" && req.method === "POST") {
       const b = await keha(req);
+      if (b.liige_id !== mina.id && !haldabTeisi(mina))
+        return json(res, 403, {
+          viga: "Teisele inimesele teevad sisselogimislingi ülemus ja administraator."
+        });
       const k = await auth.teeKutse(b.liige_id, alus);
       if (!k) return json(res, 404, { viga: "Sellist liiget ei ole." });
       return json(res, 200, k);

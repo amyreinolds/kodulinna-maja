@@ -84,8 +84,16 @@ ja sisselogimislinke. **Ühiskassa on erand.**
 |---|---|---|---|---|
 | Kogu maja kassa ja aruanne | ei (ainult oma müük) | jah | jah | jah |
 | Müügi lisamine teise nime alla | ei | ei | jah | jah |
+| Teise müügi kustutamine | ei | ei | jah | jah |
+| Teise nime, telefoni, pildi muutmine | ei | ei | jah | jah |
+| Sisselogimislingi tegemine teisele | ei | ei | jah | jah |
 | Kõik muu | jah | jah | jah | jah |
 | Ameti muutmine | ei | ei | ei | **jah** |
+
+**Sisselogimislink annab konto kätte.** Seepärast teevad teisele inimesele
+lingi ainult ülemus ja administraator. Iseendale saab igaüks — see on sama
+konto, kuhu ta juba sees on. Kui iga liige saaks teha lingi
+administraatorile, ei loeks ükski ülejäänud rida selles tabelis midagi.
 
 Müügi kirjapanek käib alati enda nime alla — teistel ei ole aknas müüja
 valikut. Ka raamatupidaja ei kirjuta teise nime alla, kuigi ta kogu kassat
