@@ -247,7 +247,14 @@ hr.hr{border:none;border-top:1px solid var(--line-2);margin:0}
 
 /* Kui kirjasuurus on suur, ei mahu nimekiri ära — siis peab saama kerida. */
 .nav{padding:10px 10px 4px;display:flex;flex-direction:column;gap:2px;
-     flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+     flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+     /* Suure kirja ja madala ekraani korral ei mahu kõik vaated korraga
+        ära. Kerimisriba peab siis NÄHA olema — muidu paistab, et „Töö
+        graafik“ ja „Kontaktid“ on rakendusest lihtsalt kadunud. */
+     scrollbar-width:thin;scrollbar-gutter:stable}
+.nav::-webkit-scrollbar{width:10px}
+.nav::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px}
+.nav::-webkit-scrollbar-thumb:hover{background:var(--ink-3)}
 .nav button{
   position:relative;overflow:hidden;
   display:flex;align-items:center;gap:12px;width:100%;min-height:50px;
@@ -299,6 +306,13 @@ hr.hr{border:none;border-top:1px solid var(--line-2);margin:0}
   animation:hingab 2.4s ease-in-out infinite;
 }
 @keyframes hingab{0%,100%{opacity:1}50%{opacity:.45}}
+/* Salvestamine käib: kollane. Ebaõnnestus: punane ja loetavas suuruses,
+   sest see on ainus koht, kus rakendus ütleb, et töö ei ole hoiul. */
+.olek.kaib i{background:var(--amber,#B7791F);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--amber,#B7791F) 22%,transparent)}
+.olek.viga{color:var(--red,#B42318);font-size:14px;font-weight:650}
+.olek.viga i{background:var(--red,#B42318);animation:none;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--red,#B42318) 26%,transparent)}
 .side-foot button{display:flex;align-items:center;gap:10px;width:100%;min-height:46px;padding:0 12px;border-radius:10px;font-size:16px;color:var(--ink-2)}
 .side-foot button:hover{background:var(--soft)}
 .side-foot .me b{font-weight:650;color:var(--ink)}
@@ -571,6 +585,10 @@ hr.hr{border:none;border-top:1px solid var(--line-2);margin:0}
   padding:10px;display:flex;gap:6px;align-items:center}
 .otsikast input{flex:1;min-width:0;border:1.5px solid var(--line);border-radius:10px;
   background:var(--card);padding:9px 12px;font-size:16px;font-family:inherit;outline:none}
+/* `outline:none` võttis otsikastilt ka fookusraami — see oli ainus
+   element terves rakenduses, mille juures klaviatuuriga liikuja ei
+   näinud, kus ta on. Raam tuleb tagasi, ilma servajoont topeltamata. */
+.otsikast input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .otsikast input:focus{border-color:var(--accent-ink)}
 /* Brauseri oma tühjendusristike jääks minu oma kõrvale teiseks samaks
    nupuks. Kaks risti kõrvuti ei ütle, kumb kumba teeb. */
@@ -641,7 +659,17 @@ hr.hr{border:none;border-top:1px solid var(--line-2);margin:0}
 .emorida{display:flex;flex-wrap:wrap;gap:4px;margin-top:10px;max-height:104px;overflow-y:auto}
 .emorida button{font-size:24px;line-height:1;padding:7px 9px;border-radius:10px}
 .emorida button:hover{background:var(--soft)}
-.cbox{display:flex;gap:12px;align-items:flex-end}
+/* Suure kirja korral ei mahtunud kirjutamiskast, emotsiooninupp ja
+   „Saada“ enam ühte ritta: kast kuivas 42 piksli peale ja „Saada“ läks
+   ekraanist välja. Just see seade on mõeldud sellele, kes halvasti näeb
+   — tema jaoks ei tohi ükski nupp kaduda. Kitsas kohas läheb rida
+   kaheks ja „Saada“ tuleb terve laiusega alla. */
+.cbox{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.cbox textarea{min-width:180px}
+@media (max-width:1100px){
+  .cbox{gap:8px}
+  .cbox .btn{flex:1 0 100%;order:3}
+}
 .cbox textarea{flex:1;border:1.5px solid var(--line);border-radius:12px;background:var(--card);resize:none;outline:none;font-size:17px;line-height:1.5;padding:12px 15px;max-height:150px;font-family:inherit}
 .cbox textarea:focus{border-color:var(--accent-ink)}
 .cbox .btn{flex:none}
@@ -1096,7 +1124,12 @@ button.trida.kat.orb .nim{color:var(--red)}
   display:flex;flex-direction:column;
   transition:opacity .24s,transform .34s cubic-bezier(.2,.7,.2,1);
 }
-.dlg.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.dlg.open{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1);visibility:visible}
+/* Suletud aken oli läbipaistev, aga endiselt olemas: Tab viis fookuse
+   nähtamatutele nuppudele akna sees. `visibility:hidden` võtab ta
+   klaviatuuri jaoks ka ära, aga jätab sujuva sulgumise alles. */
+.dlg{visibility:hidden;transition:opacity .2s, transform .2s, visibility 0s linear .2s}
+.dlg.open{transition:opacity .2s, transform .2s, visibility 0s}
 .dlg-hd{flex:none;padding:22px 24px 4px}
 .dlg-hd h3{font-family:var(--display);font-size:23px;font-weight:800;margin:0;letter-spacing:-.028em}
 .dlg-bd{flex:1;overflow-y:auto;padding:18px 24px 6px;display:flex;flex-direction:column;gap:18px}

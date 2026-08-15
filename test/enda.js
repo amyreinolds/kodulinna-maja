@@ -155,15 +155,45 @@ const dkey = d => d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getD
        RETURNING id`, [täna]);
     await q("INSERT INTO too_paevad (too_id, paev) VALUES ($1,0),($1,1),($1,2),($1,3),($1,4),($1,5),($1,6)",
       [too.id]);
+    /* Teise nime tehtud-märkesse panna ei saa. Varem kirjutas server
+       võõra nime vaikselt vajutaja omaks ümber — märge tekkis, aga
+       vale inimese kohta. Nüüd ei teki üldse. */
     const s7 = (await seis(kA)).json;
     const t7 = s7.too.tood.find(t => t.id === too.id);
-    t7.tehtud[täna] = peeter.id;          /* panen teise nime tehtud-märkesse */
+    t7.tehtud[täna] = { kes: peeter.id, at: new Date().toISOString() };
     await salvesta(kA, s7);
     const [teht] = await q(
       "SELECT kes_id FROM too_tehtud WHERE too_id=$1 AND kuup=$2", [too.id, täna]);
-    kontrolli("tehtud-märge läheb vajutaja nimele",
-      teht && teht.kes_id === anna.id,
-      teht ? (teht.kes_id === peeter.id ? "läks Peetri nimele" : "läks Anna nimele") : "puudub");
+    kontrolli("teise nimel ei saa tööd tehtuks märkida", !teht,
+      teht ? "tekkis märge: " + (teht.kes_id === peeter.id ? "Peeter" : "Anna") : "ei tekkinud");
+
+    /* Oma märge läheb kirja ja tuleb tagasi koos kellaajaga. */
+    const s8 = (await seis(kA)).json;
+    const t8 = s8.too.tood.find(t => t.id === too.id);
+    t8.tehtud[täna] = { kes: anna.id, at: new Date().toISOString() };
+    await salvesta(kA, s8);
+    const [oma8] = await q(
+      "SELECT kes_id, aeg FROM too_tehtud WHERE too_id=$1 AND kuup=$2", [too.id, täna]);
+    kontrolli("oma märge läheb kirja", oma8 && oma8.kes_id === anna.id,
+      oma8 ? "on" : "puudub");
+    const s9 = (await seis(kA)).json;
+    const t9 = s9.too.tood.find(t => t.id === too.id);
+    kontrolli("märge tuleb tagasi kujul {kes, at}",
+      t9.tehtud[täna] && t9.tehtud[täna].kes === anna.id && !!t9.tehtud[täna].at,
+      JSON.stringify(t9.tehtud[täna]));
+
+    /* Peetri märge teisel päeval ei tohi Anna salvestusega kaduda. */
+    const eile = dkey(new Date(Date.now() - 86400000));
+    await q(`INSERT INTO too_tehtud (too_id, kuup, kes_id) VALUES ($1,$2,$3)`,
+      [too.id, eile, peeter.id]);
+    const s10 = (await seis(kA)).json;
+    const t10 = s10.too.tood.find(t => t.id === too.id);
+    delete t10.tehtud[eile];              /* Anna ekraan ei saatnud seda tagasi */
+    await salvesta(kA, s10);
+    const [pTeht] = await q(
+      "SELECT kes_id FROM too_tehtud WHERE too_id=$1 AND kuup=$2", [too.id, eile]);
+    kontrolli("teise märge jääb alles ka siis, kui ekraan seda ei saatnud",
+      pTeht && pTeht.kes_id === peeter.id, pTeht ? "alles" : "kadus ära");
 
   } catch (e) { console.log("  VIGA  " + e.message); vigu++; }
 

@@ -19,7 +19,7 @@
     </div>
     <nav class="nav" id="nav" aria-label="Sektsioonid"></nav>
     <div class="side-foot">
-      <div class="olek"><i></i><span>Kõik salvestatud</span></div>
+      <div class="olek" id="olek"><i></i><span>Kõik salvestatud</span></div>
       <button class="varuriba" id="varu" data-act="valja">Logi välja</button>
     </div>
   </aside>
@@ -347,9 +347,29 @@ function leiaOotav(){
   ootavAvamine=null;
 }
 
+/* Roheline tuli külgriba all ütles alati „Kõik salvestatud“ — ka siis,
+   kui salvestamine oli just ebaõnnestunud. See oli staatiline tekst,
+   mida ükski rida koodi ei muutnud. Kõige ohtlikum sort viga: ekraan
+   kinnitas rahulikult, et töö on hoiul, ja järgmine lehe avamine näitas,
+   et ei olnud. Veateade kadus nelja sekundiga, tuli jäi rohelisena.
+
+   Nüüd näitab tuli päris olekut ja viga jääb ekraanile püsima, kuni
+   salvestamine õnnestub. */
+function olek(seis){
+  const el=$("#olek");if(!el)return;
+  const t={
+    ok:   ["Kõik salvestatud",""],
+    kaib: ["Salvestan…","kaib"],
+    viga: ["SALVESTAMATA — kontrolli ühendust","viga"]
+  }[seis]||["Kõik salvestatud",""];
+  el.className="olek"+(t[1]?" "+t[1]:"");
+  el.querySelector("span").textContent=t[0];
+}
+
 async function save(){
   if(salvestusKaib){salvestusOotel=true;return;}
   salvestusKaib=true;
+  olek("kaib");
   try{
     const r=await fetch("/api/seis",{method:"PUT",
       headers:{"Content-Type":"application/json"},body:JSON.stringify(S)});
@@ -362,9 +382,14 @@ async function save(){
        salvestus viib ta ära. */
     if(uus&&Array.isArray(uus.members)){
       if(!salvestusOotel){S=uus;leiaOotav();render();}
+      olek("ok");
     }
-    else if(uus&&uus.viga)toast(uus.viga);
-  }catch(e){toast("Ei saanud salvestada. Kontrolli ühendust.");}
+    else if(uus&&uus.viga){toast(uus.viga);olek("viga");}
+    else olek("viga");
+  }catch(e){
+    toast("Ei saanud salvestada. Kontrolli ühendust.");
+    olek("viga");
+  }
   finally{
     salvestusKaib=false;
     if(salvestusOotel){salvestusOotel=false;save();}
@@ -388,7 +413,17 @@ function split(e){
   return {y,n,s};
 }
 /* Eestlane kirjutab hinna komaga: „12,50“. Punkt peab ka toimima. */
-const arv=v=>{const x=parseFloat(String(v).replace(",","."));return isFinite(x)&&x>=0?x:0;};
+/* „12,50“ ja „12.50“ on mõlemad õiged. Vigane või negatiivne annab 0 —
+   aga siis peab küsija seda TEADMA, mitte avastama kuu pärast, et rida
+   läks kassasse hinnaga 0,00 €. Selleks on eraldi kontroll allpool. */
+const arv=v=>{const x=parseFloat(String(v).replace(",","."));
+  return isFinite(x)&&x>=0?Math.round(x*100)/100:0;};
+/* Kas see väli on üldse arv? Tühi väli tähendab tasuta (0), mis on
+   lubatud; „abc“ ja „-5“ ei ole. */
+const onArv=v=>{const s=String(v||"").trim();
+  if(!s)return true;
+  const x=parseFloat(s.replace(",","."));
+  return isFinite(x)&&x>=0;};
 const raha=v=>v.toFixed(2).replace(".",",")+" €";
 const osaNimi=oid=>{const o=(S.myyk.osad||[]).find(x=>x.id===oid);return o?o.nimi:"—";};
 const myygiRead=()=>S.myyk&&Array.isArray(S.myyk.read)?S.myyk.read:[];
@@ -1553,6 +1588,9 @@ function dlgMyyk(r){
       if(!nim){toast("Nimetus on täitmata.");return false;}
       const kogus=r?0:Math.round(arv(fv("f_kogus")));
       if(!r&&kogus<1){toast("Kogus peab olema vähemalt 1.");return false;}
+      if(!onArv(fv("f_hind"))){
+        toast("Hind peab olema arv, näiteks 12,50. Tasuta toote jaoks jäta tühjaks.");
+        return false;}
       const hind=arv(fv("f_hind"));
       const osa=document.getElementById("f_osa").value;
       const kes=document.getElementById("f_kes").value;
@@ -1929,6 +1967,11 @@ function dlgToo(t){
     +  '<div class="field"><label for="f_tkes">Kes teeb</label><select id="f_tkes">'
     +  '<option value="">see, kes sel päeval tööl on</option>'
     +  S.members.map(m=>'<option value="'+m.id+'"'+((t&&t.kes===m.id)?" selected":"")+'>'+esc(m.name)+'</option>').join("")
+    /* Siit puudus </select>. Brauser sulges valiku ise ära seal, kus
+       algas järgmine silt — nii kadus selgitus ekraanilt ja järgmise
+       välja („Märkus“) silt läks valiku sisse, nii et väli seisis ilma
+       nimeta. */
+    +  '</select>'
     +  '<span class="hint">Jäta esimeseks, kui töö teeb graafikujärgne inimene. '
     +  'Ürituste kalendris on siis töö nimi ja pärast kinnitamist tegija nimi.</span></div>'
     +fld("f_tmark","Märkus",t?t.markus:"","text","Ei ole kohustuslik")
