@@ -785,13 +785,18 @@ function vCal(w){
     +'<button class="btn ghost small" data-act="cal" data-v="1">Järgmine kuu</button>'
     +'<span class="sp"></span>'
     +'<button class="btn ghost small" data-act="too-uus">+ Lisa töö</button></div>'
-    +'<div class="cal"><div class="dow">'+DOW_S.map(d=>'<span>'+d+'</span>').join("")+'</div><div class="g">'+cells+'</div></div>'
     /* Üritused olid enne eraldi kategoorias, aga see oli sama asi kaks
        korda: kalender näitas neid ruudustikus ja nimekiri loeteluna.
-       Nüüd on nad ühe katuse all — kalender üleval, üritused all.
+       Nüüd on nad ühe katuse all. Kalender ja nimekiri seisavad kõrvuti:
+       enne oli nimekiri kalendri all, ekraanist väljas, ja tulevast
+       üritust ei näinud ilma kerimata.
        Päevaplokki siin ei ole: ruudus on kirjas juba see, mis sel päeval
        toimub, ja iga kirje avaneb klõpsuga. */
-    +yritusteLoend();
+    +'<div class="korvuti korval-paremal"><div class="veerg">'
+    +'<div class="cal"><div class="dow">'+DOW_S.map(d=>'<span>'+d+'</span>').join("")+'</div><div class="g">'+cells+'</div></div>'
+    +'</div><div class="veerg">'
+    + yritusteLoend()
+    +'</div></div>';
 }
 
 /* Ühe päeva plokk kalendri all: mis sel päeval toimub ja kes on majas.
@@ -1241,7 +1246,10 @@ function vMinuMyyk(w){
     .sort((a,b)=>new Date(b.at)-new Date(a.at));
   const tk=read.reduce((a,b)=>a+b.kogus,0), eur=read.reduce((a,b)=>a+b.eur,0);
 
-  let h='<div class="card"><p class="h3">MINU MÜÜK KOKKU</p>'
+  /* Kokkuvõte kõrvale, päevad põhiveergu. Enne olid nad üksteise all ja
+     ekraani alumine pool seisis tühjana. */
+  let h='<div class="korvuti korval-vasakul"><div class="veerg">'
+    +'<div class="card"><p class="h3">MINU MÜÜK KOKKU</p>'
     +'<div class="statriba">'
     +  '<span><b>'+read.length+'</b> '+(read.length===1?"müügikord":"müügikorda")+'</span>'
     +  '<span><b>'+tk+'</b> '+(tk===1?"tükk":"tükki")+'</span>'
@@ -1259,7 +1267,8 @@ function vMinuMyyk(w){
   read.forEach(x=>{const k=dkey(new Date(x.at));(paevad[k]=paevad[k]||[]).push(x);});
   const jrk=Object.keys(paevad).sort().reverse();
 
-  h+='<div class="card"><p class="h3">PÄEVADE KAUPA</p>'
+  h+='</div><div class="veerg">'
+    +'<div class="card"><p class="h3">PÄEVADE KAUPA</p>'
     + jrk.map(k=>{
         const r=paevad[k];
         const ptk=r.reduce((a,b)=>a+b.kogus,0), peur=r.reduce((a,b)=>a+b.eur,0);
@@ -1274,7 +1283,7 @@ function vMinuMyyk(w){
       }).join("")
     +'</div>';
 
-  w.innerHTML=h;
+  w.innerHTML=h+'</div></div>';
 }
 
 function vMyyk(w){
@@ -1883,7 +1892,13 @@ function vToo(w){
   /* Kõige üleval on see päev, mida parasjagu vaadatakse: kes on majas,
      kes on ära, mis sel päeval toimub. Sama plokk on ka Kalendris ja
      mõlemad näitavad sama valitud päeva. */
-  let h=paevaPlokk(valitudPaevOn());
+  /* Ekraan on lai ja nädalatabel vajab laiust; päevaplokk mitte. Enne
+     olid nad üksteise all ja tabeli viimane rida jäi ekraanist välja.
+     Kitsas aknas või suure kirja korral lähevad nad ise jälle ülestikku
+     — vt .kaks stiililehes. */
+  let h='<div class="korvuti korval-vasakul"><div class="veerg">'
+    + paevaPlokk(valitudPaevOn())
+    + '</div><div class="veerg">';
 
   /* Üks tabel korraga, maja valik peal — sama muster mis Kalendris. */
   const g2=graafik(graKoht);
@@ -1995,7 +2010,7 @@ function vToo(w){
      kust ta maha võtta saab. Päise all seisab, mitu puudumist tulemas
      on, nii et miski ei jää märkamata. */
 
-  w.innerHTML=h;
+  w.innerHTML=h+'</div></div>';
 }
 
 /* Kalendrist avatuna on tähtis tegevus „tegin ära“, mitte muutmine. */
