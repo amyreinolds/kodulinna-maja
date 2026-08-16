@@ -769,10 +769,15 @@ hr.hr{border:none;border-top:1px solid var(--line-2);margin:0}
 
 
 /* Lukus rida: sama välimus, aga ei ole nupp. Teise inimese tööaega
-   muudavad ülemus ja administraator. */
+   muudavad ülemus ja administraator.
+
+   Siin oli varem `opacity:.72`, mis rääkis ülemisele lausele vastu ja
+   viis „Puhkus" lahtri kontrasti mõlemas teemas alla WCAG piiri (axe:
+   color-contrast, 7 elementi). Halvasti nägeva kasutaja jaoks on tuhm
+   tekst loetamatu tekst. Lukustatust näitavad juba kursor ja see, et
+   hiire all ei juhtu midagi — kahvatuks tegemist ei ole selleks vaja. */
 .lukus{cursor:default}
 .lukus:hover{background:inherit}
-.grida .gnimi.lukus,.grida .lahter.lukus{opacity:.72}
 
 /* Nädalatabeli kuupäevapäis on nupp: klõps toob selle päeva info üles. */
 .paevpais{
@@ -1400,8 +1405,14 @@ button.nim.toode{color:var(--ink)}
 :root[data-teema="tume"] .mcell.valitud{background:var(--accent);color:var(--accent-tekst)}
 :root[data-teema="tume"] .mcell.today .d,
 :root[data-teema="tume"] .gpais .tana,
-:root[data-teema="tume"] .gpais .tana i,
 :root[data-teema="tume"] .paevad i.tana{color:var(--accent)}
+
+/* Kuupäev tänase veeru all jääb tumedas tavalist värvi. Aktsent annab
+   11,5 px kirjal ainult 4,12:1, vaja on 4,5 — ja heledamaks teda tõmmata
+   ei saa, ilma et ta mustal pinnal helendama hakkaks. Heledas teemas on
+   sama koht korras ja jääb aktsentvärvi. Tänast veergu näitavad niigi
+   aktsentvärvi nädalapäev ja tõstetud kast. */
+:root[data-teema="tume"] .gpais .tana i{color:var(--ink-3)}
 :root[data-teema="tume"] .paevad i.tana{background:var(--accent);color:var(--accent-tekst)}
 /* Valitud nupud: aktsent, mitte sektsioonivärv. */
 :root[data-teema="tume"] .osad button[aria-pressed="true"],
