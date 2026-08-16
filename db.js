@@ -33,12 +33,45 @@ const pool = new Pool({
   max: 5
 });
 
+/* Tehing: kas kõik või mitte midagi.
+
+   Seisu salvestamine puudutab kaht tosinat tabelit. Ilma tehinguta
+   tähendas keskel katkenud salvestus, et osa muudatustest jäi sisse ja
+   osa mitte. Kõige ohtlikum koht oli graafik: seal kustutatakse vanad
+   read enne uute kirjutamist, nii et katkestus nende vahel jättis terve
+   maja nädalagraafiku tühjaks — ilma ühegi teateta ja ilma tagasiteeta.
+
+   Iga päring `q()` sees leiab AsyncLocalStorage kaudu ise üles, kas ta
+   on mõne tehingu sees. Nii ei pea sadat kutsumiskohta ümber kirjutama
+   ega ühendust käest kätte andma. */
+const { AsyncLocalStorage } = require("async_hooks");
+const tehingus = new AsyncLocalStorage();
+
 /* Kõik päringud käivad siit läbi, et parameetrid oleksid alati eraldi —
    nii ei saa keegi SQL-i sisse kirjutada. */
 async function q(sql, params) {
-  const r = await pool.query(sql, params || []);
+  const klient = tehingus.getStore();
+  const r = await (klient || pool).query(sql, params || []);
   return r.rows;
 }
 const yks = async (sql, params) => (await q(sql, params))[0] || null;
 
-module.exports = { q, yks };
+async function tehing(fn) {
+  /* Pesastatud tehingut ei ava: kui oleme juba ühe sees, jookseb töö
+     samas tehingus edasi. */
+  if (tehingus.getStore()) return fn();
+  const klient = await pool.connect();
+  try {
+    await klient.query("BEGIN");
+    const tulem = await tehingus.run(klient, fn);
+    await klient.query("COMMIT");
+    return tulem;
+  } catch (e) {
+    try { await klient.query("ROLLBACK"); } catch { }
+    throw e;
+  } finally {
+    klient.release();
+  }
+}
+
+module.exports = { q, yks, tehing };

@@ -26,6 +26,12 @@ services:
     startCommand: node server.js
     healthCheckPath: /tervis
     envVars:
+      # Node'i versioon on siin kirjas meelega. Ilma selleta võtab Render
+      # oma tolleaegse vaikeversiooni — täna töötab, aga esimene väike
+      # parandus aasta pärast võib teenuse maha võtta hetkel, mil keegi
+      # seda ei oota.
+      - key: NODE_VERSION
+        value: "22"
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL

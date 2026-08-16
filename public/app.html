@@ -1388,16 +1388,65 @@ function pickFiles(){
   const i=document.createElement("input");i.type="file";i.multiple=true;
   i.addEventListener("change",()=>addFiles(i.files));i.click();
 }
+/* Fail läheb andmebaasi tekstina (base64), mis on umbes kolmandiku võrra
+   suurem kui fail ise. Serveri piir on 5 MB teksti, seega päris fail
+   mahub kuni umbes 3,6 MB.
+
+   Varem oli siin vaikne piir 400 kB: suurem fail LISATI nimekirja, aga
+   ilma sisuta — rida oli olemas, õige suurusega, ja seda ei saanud
+   kunagi alla laadida. Nüüd öeldakse kohe välja ja tühja rida ei teki. */
+const FAILI_PIIR=3.6*1024*1024;
+
 function addFiles(list){
   const fs=Array.from(list||{});if(!fs.length)return;
-  let left=fs.length;
-  fs.forEach(f=>{
-    const rec={id:uid(),name:f.name,size:f.size,by:meId(),at:new Date().toISOString(),note:"",data:null};
-    S.files.push(rec);
-    if(f.size<=400*1024){const r=new FileReader();r.onload=()=>{rec.data=r.result;done();};r.onerror=done;r.readAsDataURL(f);}
-    else done();
-    function done(){if(--left===0){save();render();toast(fs.length+" fail"+(fs.length>1?"i":"")+" lisatud.");}}
+  const suured=fs.filter(f=>f.size>FAILI_PIIR);
+  const sobivad=fs.filter(f=>f.size<=FAILI_PIIR);
+  if(suured.length)
+    toast(suured.length===1
+      ? "„"+suured[0].name+"“ on liiga suur ("+mb(suured[0].size)
+        +"). Kõige suurem, mis mahub, on 3,6 MB."
+      : suured.length+" faili on liiga suured (üle 3,6 MB) ja jäid lisamata.");
+  if(!sobivad.length)return;
+
+  let left=sobivad.length, katki=0;
+  sobivad.forEach(f=>{
+    const rec={id:uid(),name:f.name,size:f.size,by:meId(),
+               at:new Date().toISOString(),note:"",data:null};
+    const r=new FileReader();
+    r.onload=()=>{rec.data=r.result;S.files.push(rec);done();};
+    r.onerror=()=>{katki++;done();};
+    r.readAsDataURL(f);
+    function done(){
+      if(--left)return;
+      save();render();
+      const n=sobivad.length-katki;
+      if(n)toast(mitu(n,"fail","faili")+" lisatud.");
+      if(katki)toast(mitu(katki,"faili","faili")+" ei õnnestunud lugeda.");
+    }
   });
+}
+const mb=b=>(b/1048576).toFixed(1).replace(".",",")+" MB";
+
+/* Faili allalaadimine: sisu tuleb serverilt, mitte seisust. */
+async function lae(f){
+  try{
+    const sisu=f.data||await (async()=>{
+      const r=await fetch("/api/fail?id="+encodeURIComponent(f.id));
+      const j=await r.json();
+      if(!r.ok||!j.viit)throw new Error(j.viga||"puudub");
+      return j.viit;
+    })();
+    const b=await (await fetch(sisu)).blob();
+    const url=URL.createObjectURL(b);
+    const a=document.createElement("a");
+    a.href=url;a.download=f.name;
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+    toast("Fail salvestatud kausta „Allalaaditud failid“.");
+  }catch(e){
+    toast("Seda faili ei õnnestunud kätte saada. Võib-olla lisati ta enne, "
+      +"kui failide osa korda sai — proovi ta uuesti lisada.");
+  }
 }
 
 /* ═══ dialoog ═══ */
@@ -3340,16 +3389,12 @@ document.addEventListener("click",ev=>{
     }
     case "pick": pickFiles();break;
     case "dl":{
-      const f=S.files.find(x=>x.id===id);if(!f||!f.data)break;
-      if(window.claude&&window.claude.downloads){
-        fetch(f.data).then(r=>r.blob()).then(b=>window.claude.downloads.save({filename:f.name,data:b}))
-          .then(()=>toast("Fail salvestatud."))
-          .catch(err=>{
-            const c=err&&err.code;
-            if(c==="declined")toast("Salvestamine jäi katki.");
-            else if(c==="rejected_extension"||c==="extension_not_enabled")toast("Seda failitüüpi ei saa siit salvestada.");
-            else toast("Faili ei saanud salvestada.");});
-      }else toast("Failide salvestamine ei ole siin võimalik.");
+      /* Faili sisu ei tule seisuga kaasa — see teeks iga lehe avamise
+         mitu megabaiti raskemaks. Varem tähendas see, et alla laadida
+         sai ainult sama lehe avamise ajal lisatud faili; kõik ülejäänud
+         nupud lihtsalt ei teinud midagi. Nüüd küsime sisu serverilt. */
+      const f=S.files.find(x=>x.id===id);if(!f)break;
+      lae(f);
       break;
     }
     case "close": closeDlg();break;

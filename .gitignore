@@ -1,3 +1,11 @@
 node_modules/
 .env
 *.log
+
+# Varukoopiad sisaldavad päris nimesid, telefone, kirjavahetust ja kassat.
+# See hoidla on AVALIK — koopia siia sattumine tähendaks, et kogu maja
+# andmed on internetis. Hoia neid mujal: mälupulgal, pilves, e-kirjas
+# iseendale.
+varukoopiad/
+*.json.bak
+kodulinna-maja-*.json

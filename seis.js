@@ -10,7 +10,7 @@
    amet. Seda otsustatakse siin, mitte ekraanil. */
 "use strict";
 const crypto = require("crypto");
-const { q, yks } = require("./db");
+const { q, yks, tehing } = require("./db");
 
 /* Iga osa saab lugemisel sõrmejälje. Salvestamisel vaatame, millised
    sõrmejäljed on muutunud, ja kirjutame ainult need osad. Ilma selleta
@@ -287,7 +287,14 @@ const epostiks = v => {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) ? e : null;
 };
 
+/* Terve salvestus käib ühe tehinguna: kui keskel läheb midagi katki,
+   pööratakse kõik tagasi. Pool salvestatud seis on halvem kui salvestamata
+   seis — inimene näeb ekraanil ühte ja andmebaasis on teine. */
 async function salvestaSeis(mina, s) {
+  return tehing(() => salvestaSeisTehingus(mina, s));
+}
+
+async function salvestaSeisTehingus(mina, s) {
   if (!s || typeof s !== "object") return { viga: "Seis on tühi." };
   const koik = naebKassat(mina);
   /* Puutumata osa jääb puutumata. Kui ekraan ei saatnud sõrmejälgi

@@ -19,7 +19,7 @@ majutus ja mis enne jagamist korda peab olema.
 ```
 npm install
 npm start        # http://localhost:3000
-npm test         # 49 kontrolli
+npm test         # 28 komplekti
 ```
 
 Salajased seaded on failis `.env`, mida siin hoidlas ei ole ja kunagi ei tohi olla.

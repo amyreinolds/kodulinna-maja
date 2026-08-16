@@ -1,0 +1,71 @@
+# Öine varukoopia andmebaasist.
+#
+# Miks: käsitsi tehtud koopia ununeb. Esimesel kuul teed, teisel teed,
+# kolmandal on kiire ja neljandal ei tee enam keegi — ja mis hullem, sa
+# arvad, et koopia on olemas. See töö käib ise, ilma et keegi peaks
+# midagi meeles pidama.
+#
+# ─────────────────────────────────────────────────────────────────────
+#  ENNE SISSELÜLITAMIST: HOIDLA PEAB OLEMA PRIVAATNE
+# ─────────────────────────────────────────────────────────────────────
+#  Varukoopia sisaldab päris nimesid, telefone, kirjavahetust ja kassat.
+#  Avalikus hoidlas saab iga möödakäija koopia alla laadida. Seepärast
+#  see töö KEELDUB avalikus hoidlas jooksmast — vt esimest sammu.
+#
+#  Hoidla privaatseks: GitHub → Settings → General → kõige all
+#  „Danger Zone“ → „Change repository visibility“ → Private.
+#
+#  Seejärel lisa saladus:
+#  GitHub → Settings → Secrets and variables → Actions → New secret
+#    nimi:    DATABASE_URL
+#    väärtus: sama, mis .env failis
+#
+#  Koopiad tulevad: Actions → Varukoopia → jooksu juurest „Artifacts“.
+#  Neid hoitakse 90 päeva. Tõmba paar korda aastas üks alla ja hoia
+#  mujal — GitHub on ka lihtsalt üks firma.
+
+name: Varukoopia
+
+on:
+  schedule:
+    # Iga öö kell 02:15 Eesti aja järgi (23:15 UTC eelmisel päeval).
+    - cron: "15 23 * * *"
+  workflow_dispatch:      # käsitsi käivitamiseks Actions lehelt
+
+jobs:
+  koopia:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kontrolli, et hoidla on privaatne
+        if: ${{ github.event.repository.private == false }}
+        run: |
+          echo "::error::Hoidla on AVALIK. Varukoopia sisaldab päris nimesid," \
+               "telefone ja kassat — avalikus hoidlas saaks igaüks selle alla" \
+               "laadida. Tee hoidla privaatseks ja käivita uuesti."
+          exit 1
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - run: npm ci --omit=dev
+
+      - name: Tee varukoopia
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::DATABASE_URL saladus puudub. Vt selle faili päist."
+            exit 1
+          fi
+          node tools/varukoopia.js varukoopiad
+
+      - name: Pane koopia hoiule
+        uses: actions/upload-artifact@v4
+        with:
+          name: kodulinna-maja-varukoopia
+          path: varukoopiad/*.json
+          retention-days: 90
+          if-no-files-found: error

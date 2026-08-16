@@ -18,7 +18,7 @@ Parooli ei ole. Sisenetakse ühekordse lingiga ja pärast seda püsib inimene
 sees 60 päeva.
 
 **Esimene sisselogija saab administraatori konto.** Nii ei pea kuskil käsitsi
-esimest kasutajat tekitama.
+esimest kasutajat tekitama. Majutuses on see väljas — vt allpool.
 
 ### Kuidas teised inimesed sisse saavad
 
@@ -51,7 +51,8 @@ Kui võtit ei ole, ilmub link ekraanile — muidu ei saaks keegi sisse.
 | `ametid.js` | ametid ja õigused ühes kohas |
 | `public/app.html` | rakendus — kõik vaated |
 | `andmebaas/*.sql` | andmebaasi muudatused, nummerdatud |
-| `test/` | `npm test` — 10 komplekti, üle 130 kontrolli |
+| `test/` | `npm test` — 28 komplekti |
+| `tools/` | varukoopia, andmebaas, sisselogimislingid, kes-olen |
 
 ## Mis rakenduses on
 
@@ -225,6 +226,40 @@ tegema, lisa ajutiselt `ESIMENE_SISSELOGIJA=lubatud` ja võta pärast ära.
 4. **Liikmed sisse.** Rakenduses kaardil „Liikmed ja sisselogimine" lisa
    inimesed ja tee neile lingid.
 
+## Varukoopia
+
+**Andmed on ühes kohas ja see ei ole piisav.** Ühine andmebaas kaitseb selle
+vastu, et üks arvuti läheb katki. Ta ei kaitse kogemata kustutamise, konto
+sulgemise ega teenuse tingimuste muutumise vastu.
+
+**Topeltklõps `Varukoopia.cmd`** — kogu andmebaas läheb ühte faili kausta
+`varukoopiad\`. Fail on tavaline tekst, teda saab avada ja lugeda.
+
+```
+node tools/varukoopia.js                       koopia kausta varukoopiad/
+node tools/varukoopia.js D:\malupulk           koopia mujale
+node tools/varukoopia.js --taasta fail.json    paneb andmed tagasi
+```
+
+**Hoia koopiat ka mujal kui selles arvutis** — mälupulgal, pilves või
+e-kirjas iseendale. Arvutis olev koopia kaob koos arvutiga.
+
+**Taastamine kirjutab praeguse sisu üle.** Ta küsib enne kinnitust (pead
+kirjutama sõna `TAASTA`) ja teeb igaks juhuks praegusest seisust omaette
+koopia — kui taastasid vale faili, ei ole eelmine seis kadunud. Kui midagi
+läheb keskel katki, pööratakse kõik tagasi: andmebaas jääb endisesse seisu.
+
+Koopia ja taastamine on läbi proovitud päris tühja andmebaasi peal: andmed
+kustutati ära ja tulid täies mahus tagasi, koos seostega (müük jäi õige
+inimese nimele).
+
+### Öine automaatne koopia
+
+`.github/workflows/varukoopia.yml` teeb seda igal ööl ise. **Enne
+sisselülitamist peab hoidla olema privaatne** — koopias on päris nimed,
+telefonid ja kassa, ja avalikus hoidlas saaks igaüks need alla laadida.
+Töö keeldub avalikus hoidlas jooksmast. Juhend on faili päises.
+
 ## Andmebaas
 
 Neon, projekt `kodulinna-maja` (`frosty-cell-73142129`), haru `main`. 26 tabelit.
@@ -259,13 +294,37 @@ kord, võltsitud küpsis ei kõlba ja müük tuleb andmebaasist õigete summadeg
 
 ## Mis on tehtud ja mis mitte
 
-Tehtud: sisselogimine, õigused serveris, müügivaade päris andmetest.
+**Tehtud:** kõik vaated, mis on ülal tabelis — vestlus (teemad, grupid,
+kirjad, emotsioonid, otsing), üritused, üldinfo, failid, müük, töö graafik,
+kontaktid, aruanne koos CSV-väljavõttega. Sisselogimine, õigused serveris,
+majutus Renderis, andmebaasi taastamine nullist, varukoopia.
 
-Tegemata: ülejäänud vaated (vestlus, üritused, kalender, üldinfo, failid,
-graafik, kontaktid), müügi lisamine, aruanne, postiteenus, majutus.
+**Tegemata, teadlikult:**
+
+* **Postiteenus** ei ole ühendatud. `post.js` oskab Resendi kaudu saata,
+  aga võtit ei ole. Ilma selleta teeb sisselogimislingi ülemus või
+  administraator rakenduse seest. See on tegelik lünk, mitte mugavus:
+  umbes 60 päeva pärast kasutuselevõttu aeguvad kõigi küpsised samal
+  nädalal ja siis peab keegi olema, kes lingid teha saab.
+* **Fail üle 400 kB** salvestub praegu tühjana ja alla laadida saab
+  ainult sama lehe avamise ajal lisatud faili. Failide osa vajab veel tööd.
+* **Kaks korraga töötavat inimest** võivad teineteise ridu kaotada: kes
+  hiljem salvestab, selle pilt jääb peale. Kaheksa inimese majas juhtub
+  seda harva, aga juhtub.
+* **Muudatuste ajalugu** ei ole. Kes mida muutis, ei jää kuhugi kirja.
+  Varukoopiad annavad sama kaitse ilma uue mõisteta.
 
 ## Enne majutusse panekut
 
-1. `.env` failis vaheta `SESSIOONI_SALADUS` millegi juhusliku vastu.
-2. Ühenda postiteenus ja võta arenduse otsetee (`arenduseLink`) ära.
-3. `.env` ei tohi kunagi avalikku kohta sattuda — `.gitignore` hoiab teda eemal.
+1. `.env` failis peab `SESSIOONI_SALADUS` olema pikk ja juhuslik. On tehtud.
+2. `.env` ei tohi kunagi avalikku kohta sattuda — `.gitignore` hoiab teda
+   eemal. **Kontrollitud: `.env` ei ole kunagi hoidlas olnud.**
+3. **Hoidla on praegu avalik.** Kood ise on avalikult loetav — see ei ole
+   ohtlik, sest turvalisus ei toetu saladuses hoidmisele. Aga varukoopia ei
+   tohi sinna kunagi sattuda ja öine automaatne koopia nõuab privaatset
+   hoidlat.
+4. Arenduse otsetee (`arenduseLink`) jääb sisse — ta ei kehti majutuses
+   kunagi ja testid vajavad teda. Seda EI OLE vaja ära võtta.
+5. Kui panid Renderis `KOHE_SISSE` ja `AVALIK_PROOVIREZIIM` sisse, võta
+   nad enne päris andmeid ära ja kontrolli inkognito-aknas, et leht küsib
+   sisselogimist.
