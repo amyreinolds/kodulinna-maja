@@ -355,6 +355,10 @@ function leiaOotav(){
 
    Nüüd näitab tuli päris olekut ja viga jääb ekraanile püsima, kuni
    salvestamine õnnestub. */
+/* Kas midagi on salvestamata? Kolm asja sõltuvad sellest: tuli külgribal,
+   hoiatus lehelt lahkumisel ja ise uuesti proovimine. */
+let salvestamata=false, uuestiOotel=null;
+
 function olek(seis){
   const el=$("#olek");if(!el)return;
   const t={
@@ -366,7 +370,23 @@ function olek(seis){
   el.querySelector("span").textContent=t[0];
 }
 
+/* Osa muudatusi ei ole kiireloomulised — vaate vahetus muudab ainult
+   märget „selle vaate oled sa nüüd näinud". Kohene salvestus tähendaks,
+   et iga klõps külgribal jääb ~2,8 sekundiks serveri taha ootama ja riba
+   all näitab „Salvestan…". Vanem inimene jõuab selle ajaga uuesti
+   vajutada ja arvata, et midagi läks katki.
+
+   Kuna save() saadab alati kogu seisu, jõuavad kogutud märked niikuinii
+   järgmise päris salvestusega ära — eraldi tühjendamist pole vaja. */
+let hiljemKell=null;
+function saveHiljem(ms){
+  clearTimeout(hiljemKell);
+  hiljemKell=setTimeout(()=>{hiljemKell=null;save();},ms||4000);
+}
+
 async function save(){
+  /* Päris salvestus viib ootel märked endaga kaasa. */
+  clearTimeout(hiljemKell);hiljemKell=null;
   if(salvestusKaib){salvestusOotel=true;return;}
   salvestusKaib=true;
   olek("kaib");
@@ -382,23 +402,46 @@ async function save(){
        salvestus viib ta ära. */
     if(uus&&Array.isArray(uus.members)){
       if(!salvestusOotel){S=uus;leiaOotav();render();}
-      olek("ok");
+      olek("ok");salvestamata=false;
+      if(uus.hoiatus)toast(uus.hoiatus);
     }
-    else if(uus&&uus.viga){toast(uus.viga);olek("viga");}
-    else olek("viga");
+    else if(uus&&uus.viga){toast(uus.viga);ebaonnestus();}
+    else ebaonnestus();
   }catch(e){
     toast("Ei saanud salvestada. Kontrolli ühendust.");
-    olek("viga");
+    ebaonnestus();
   }
   finally{
     salvestusKaib=false;
     if(salvestusOotel){salvestusOotel=false;save();}
   }
 }
+
+/* Ebaõnnestunud salvestus ei jää ootama, et keegi juhtumisi midagi teeks.
+   Varem jäi punane tuli põlema ja töö seisis seni, kuni kasutaja ise
+   uuesti midagi klõpsas — kui ta vahepeal lehelt lahkus, oli töö läinud. */
+function ebaonnestus(){
+  olek("viga");
+  salvestamata=true;
+  if(uuestiOotel)return;
+  uuestiOotel=setTimeout(()=>{uuestiOotel=null;if(salvestamata)save();},5000);
+}
+
+/* Brauser küsib lahkudes üle, kui midagi on salvestamata. Teksti valib
+   brauser ise — meie ütleme ainult, et küsida on mille pärast. */
+window.addEventListener("beforeunload",e=>{
+  if(!salvestamata)return;
+  e.preventDefault();
+  e.returnValue="";
+});
 function saveSeaded(){try{localStorage.setItem(SET,JSON.stringify(seaded));}catch(e){}}
 function applySeaded(){
   document.documentElement.setAttribute("data-teema",seaded.teema);
   document.documentElement.style.setProperty("--z",ZOOM[seaded.suurus]||1);
+  /* Kirjasuurus ka atribuudina: suure kirja korral ei mahu külgriba
+     nimekiri 768 piksli kõrgusele ekraanile ära ja hakkab kerima —
+     nii et suurel kirjal võtame vahed väiksemaks. Vt stiil.css. */
+  document.documentElement.setAttribute("data-suurus",seaded.suurus||"tavaline");
 }
 
 const meId=()=>S.me;
@@ -420,10 +463,15 @@ const arv=v=>{const x=parseFloat(String(v).replace(",","."));
   return isFinite(x)&&x>=0?Math.round(x*100)/100:0;};
 /* Kas see väli on üldse arv? Tühi väli tähendab tasuta (0), mis on
    lubatud; „abc“ ja „-5“ ei ole. */
+/* Ülemine piir tuleb andmebaasist: hind mahub numeric(10,2) sisse.
+   Suurem arv ei ole „suur summa“, vaid kogemata sisestatud number —
+   ja varem lukustas ta salvestamise jäädavalt, sest ekraan saatis sama
+   vigase rea iga kord uuesti kaasa. */
+const HIND_MAX=9999999.99;
 const onArv=v=>{const s=String(v||"").trim();
   if(!s)return true;
   const x=parseFloat(s.replace(",","."));
-  return isFinite(x)&&x>=0;};
+  return isFinite(x)&&x>=0&&x<=HIND_MAX;};
 const raha=v=>v.toFixed(2).replace(".",",")+" €";
 const osaNimi=oid=>{const o=(S.myyk.osad||[]).find(x=>x.id===oid);return o?o.nimi:"—";};
 const myygiRead=()=>S.myyk&&Array.isArray(S.myyk.read)?S.myyk.read:[];
@@ -1379,7 +1427,11 @@ function vFiles(w){
     '<div class="file"><span class="kind">'+esc(ext(f.name).slice(0,4))+'</span>'
     +'<span class="n"><b>'+(uusFail(f)?'<span class="uus">UUS</span>':"")+esc(f.name)+'</b><span>'+(f.note?esc(f.note)+" · ":"")+esc(fmtSize(f.size))
     +' · lisas '+esc(first(nameOf(f.by)))+' '+esc(fmtStamp(f.at))+'</span></span>'
-    +(f.data?'<button class="btn ghost small" data-act="dl" data-id="'+f.id+'">Laadi alla</button>':"")
+    /* Nupp on alati. Varem seisis siin tingimus „kui sisu on ekraani
+       mälus“ — ja sisu on seal ainult samas seansis, kus fail valiti.
+       Kõigi teiste jaoks oli real ainult „Kustuta“: faili sai maha
+       võtta, aga mitte kätte saada. Sisu küsitakse serverilt. */
+    +'<button class="btn ghost small" data-act="dl" data-id="'+f.id+'">Laadi alla</button>'
     +'<button class="linkbtn mut" data-act="del" data-kind="files" data-id="'+f.id+'">Kustuta</button></div>').join("");
   h+='</div><button class="btn ghost" data-act="pick" style="align-self:flex-start">Vali failid arvutist</button>';
   w.innerHTML=h;
@@ -1459,10 +1511,19 @@ function dlg(title,body,ok,fn,hideCancel){
   $("#dlg-ok").textContent=ok||"Salvesta";
   $(".dlg-ft [data-act=close]").style.display=hideCancel?"none":"";
   onOk=fn;
+  dlgAvaja=document.activeElement&&document.activeElement!==document.body
+    ? document.activeElement : null;
   $("#scrim").classList.add("open");$("#dlg").classList.add("open");
   setTimeout(()=>{const f=$("#dlg-bd").querySelector("input,textarea");if(f)f.focus();},120);
 }
-function closeDlg(){$("#scrim").classList.remove("open");$("#dlg").classList.remove("open");onOk=null;}
+/* Fookus läheb tagasi sinna, kust aken avati. Ilma selleta algab
+   klaviatuuriga töötaja pärast iga akna sulgemist lehe otsast peale. */
+let dlgAvaja=null;
+function closeDlg(){
+  $("#scrim").classList.remove("open");$("#dlg").classList.remove("open");onOk=null;
+  if(dlgAvaja&&document.contains(dlgAvaja)){try{dlgAvaja.focus();}catch(e){}}
+  dlgAvaja=null;
+}
 const fv=n=>{const e=document.getElementById(n);return e?e.value.trim():"";};
 const fc=n=>{const e=document.getElementById(n);return e?e.checked:false;};
 function fld(id,l,v,t,h){return '<div class="field"><label for="'+id+'">'+esc(l)+'</label><input type="'+(t||"text")+'" id="'+id+'" value="'+esc(v||"")+'">'+(h?'<span class="hint">'+esc(h)+'</span>':"")+'</div>';}
@@ -1638,7 +1699,9 @@ function dlgMyyk(r){
       const kogus=r?0:Math.round(arv(fv("f_kogus")));
       if(!r&&kogus<1){toast("Kogus peab olema vähemalt 1.");return false;}
       if(!onArv(fv("f_hind"))){
-        toast("Hind peab olema arv, näiteks 12,50. Tasuta toote jaoks jäta tühjaks.");
+        toast(parseFloat(String(fv("f_hind")).replace(",","."))>HIND_MAX
+          ? "See hind on liiga suur. Kõige rohkem mahub 9 999 999,99 €."
+          : "Hind peab olema arv, näiteks 12,50. Tasuta toote jaoks jäta tühjaks.");
         return false;}
       const hind=arv(fv("f_hind"));
       const osa=document.getElementById("f_osa").value;
@@ -2097,8 +2160,14 @@ function dlgGraafikPaev(mid,koht,i,kuup){
             .map(x=>'<option value="'+x.id+'"'+(x.id===mid?" selected":"")+'>'
               +esc(x.name)+'</option>').join("")
         +'</select></div>'
-        +'<div class="field"><label for="f_kuup2">Päev</label>'
-        +'<input type="date" id="f_kuup2" value="'+esc(kuup)+'"></div></div>'
+        +'<div class="field"><label for="f_kuup2">Mis päeval</label>'
+        +'<input type="date" id="f_kuup2" value="'+esc(kuup)+'">'
+        /* Tööaeg salvestub nädalapäevana, mitte kuupäevana: valid ühe
+           päeva ja sama vahetus kordub igal nädalal. Varem seisis siin
+           ainult „Päev“ ja kuupäevavalija — miski ei öelnud, et kirje
+           kordub, ja vahetus ilmus ka möödunud nädalatesse. */
+        +'<span class="hint">Tööaeg kordub igal sellel nädalapäeval. '
+        +'Puhkuse ja vaba päeva puhul kehtib valitud kuupäev.</span></div></div>'
         +(S.haldabTeisi?"":'<span class="hint">Teiste kohta saavad kirja panna '
           +'ülemus ja administraator.</span>')
       : '<div class="paevpais">'+esc(fmtPaev(kuup+"T12:00:00"))+'</div>')
@@ -2992,7 +3061,26 @@ function del(kind,id){
   }
   arr.splice(i,1);save();render();
   toast('„'+(item.title||item.name||"Kirje")+'“ on kustutatud.',
-    ()=>{arr.splice(i,0,item);save();render();toast("Tagasi toodud.");});
+    ()=>tagasi(kind,item,i));
+}
+
+/* Tagasitoomine peab võtma NÜÜDSE nimekirja.
+
+   Varem hoiti siin kinni sellest massiivist, mis oli olemas kustutamise
+   hetkel. Salvestus võtab serverilt värske seisu ja paneb tema asemele
+   uue — vana massiiv jääb küll alles, aga ta ei ole enam kellegi oma.
+   Rida pandi tagasi sinna ja kadus koos sellega. Ekraanil ilmus „Tagasi
+   toodud“ ja rida oli näha; järgmine laadimine näitas, et teda ei ole.
+
+   Kõige valusam oli see müügi juures: kustutatud raha ei tulnud tagasi,
+   aga rakendus ütles, et tuli. */
+function tagasi(kind,item,i){
+  const arr=kind==="myyk"?(S.myyk&&S.myyk.read):S[kind];
+  if(!Array.isArray(arr)){toast("Tagasi ei õnnestunud tuua.");return;}
+  if(arr.some(x=>x.id===item.id)){toast("See on juba tagasi.");return;}
+  /* Uus id: server kustutas vana rea päriselt ära ja teeb nüüd uue. */
+  arr.splice(Math.min(i,arr.length),0,Object.assign({},item,{id:uid()}));
+  save();render();toast("Tagasi toodud.");
 }
 
 
@@ -3002,7 +3090,7 @@ document.addEventListener("click",ev=>{
   if(!el)return;
   const a=el.dataset.act,id=el.dataset.id;
   switch(a){
-    case "view": mineVaade(el.dataset.view);save();render();break;
+    case "view": mineVaade(el.dataset.view);saveHiljem();render();break;
     case "uut": dlgUut();break;
     case "koik-loetud":
       margiKoikLoetuks();save();render();dlgUut();
@@ -3384,7 +3472,7 @@ document.addEventListener("click",ev=>{
         +item.kogus+' tk · '+raha(item.kogus*item.hind)
         +' kaob kassast ja aruandest ära. Seda ei saa hiljem üles leida.'))break;
       arr.splice(i,1);save();render();
-      toast('„'+item.nimetus+'“ on kustutatud.',()=>{arr.splice(i,0,item);save();render();toast("Tagasi toodud.");});
+      toast('„'+item.nimetus+'“ on kustutatud.',()=>tagasi("myyk",item,i));
       break;
     }
     case "pick": pickFiles();break;

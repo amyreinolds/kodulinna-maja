@@ -255,6 +255,28 @@ hr.hr{border:none;border-top:1px solid var(--line-2);margin:0}
 .nav::-webkit-scrollbar{width:10px}
 .nav::-webkit-scrollbar-thumb{background:var(--line);border-radius:5px}
 .nav::-webkit-scrollbar-thumb:hover{background:var(--ink-3)}
+/* Kui brauser kerib valitud nupu nahtavale, jaagu tema umber ruumi.
+   Ilma selleta joondus nupp tapselt serva vastu ja ulemine rida jai
+   poolenisti loigatuks — suure kirja ja madala ekraani korral nagi see
+   valja nagu katkine leht, mitte nagu keritav nimekiri. */
+.nav button{scroll-margin-block:14px}
+
+/* Suur ja vaga suur kiri madalal ekraanil: kogu menuu peab korraga
+   nahtav olema. Vanem inimene ei otsi kerimisriba — tema jaoks on
+   poolik nimekiri lihtsalt kadunud vaated. Vahed lahevad vaiksemaks,
+   kiri jaab suureks. */
+:root[data-suurus="suur"] .nav button,
+:root[data-suurus="suurem"] .nav button{min-height:44px;padding:0 12px}
+:root[data-suurus="suur"] .brand,
+:root[data-suurus="suurem"] .brand{padding:14px 16px 12px}
+:root[data-suurus="suur"] .nav,
+:root[data-suurus="suurem"] .nav{padding:4px 8px 0;gap:1px}
+:root[data-suurus="suur"] .side-foot,
+:root[data-suurus="suurem"] .side-foot{padding-top:4px}
+:root[data-suurus="suur"] .olek,
+:root[data-suurus="suurem"] .olek{padding:5px 12px}
+:root[data-suurus="suur"] .side-foot button,
+:root[data-suurus="suurem"] .side-foot button{min-height:40px}
 .nav button{
   position:relative;overflow:hidden;
   display:flex;align-items:center;gap:12px;width:100%;min-height:50px;
@@ -1117,6 +1139,14 @@ button.trida.kat.orb .nim{color:var(--red)}
 .file .n{flex:1;min-width:150px}
 .file .n b{display:block;font-size:17px;font-weight:600;overflow-wrap:anywhere}
 .file .n>span{font-size:15px;color:var(--ink-3)}   /* > : ei ulatu UUS-sildini */
+
+/* Pikk katkematu sona — veebiaadress voi liitsona — ajas kaardi laiaks
+   ja tekitas kogu lehele horisontaalse kerimise.
+
+   `break-word`, mitte `anywhere`: esimene murrab ainult siis, kui sona
+   pariselt ei mahu. `anywhere` moodab ka veeru laiuse arvutust ja hakkas
+   suure kirja juures murdma tavalisi sonu — graafikus seisis „Puhku s“. */
+h1,h2,h3,.info .body,.tx,.msg .tx,.file .n,.q .tx{overflow-wrap:break-word}
 
 .empty{padding:34px 20px;text-align:center;color:var(--ink-3);font-size:17px;line-height:1.55}
 .empty b{display:block;color:var(--ink-2);font-size:19px;font-weight:650;margin-bottom:6px}

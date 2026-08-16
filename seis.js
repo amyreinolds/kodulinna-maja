@@ -306,6 +306,9 @@ async function salvestaSeisTehingus(mina, s) {
      administraator. Kõik muu on iga liikme enda kohta. */
   const teised = haldabTeisi(mina);
   const oma = id => teised || id === mina.id;
+  /* Read, mis jäid vahele, ja miks. Ekraan ütleb need kasutajale välja —
+     vaikselt vahelejätmine on halvem kui viga. */
+  const hoiatused = [];
 
   /* ── grupp ──────────────────────────────────────────────────── */
   if (s.group && muutus("group", s.group)) {
@@ -435,6 +438,17 @@ async function salvestaSeisTehingus(mina, s) {
         ? r.myygid.reduce((a, x) => a + (Number(x.kogus) || 0), 0) : r.kogus);
       if (!nimetus || !Number.isInteger(kogus) || kogus < 1) continue;
       const hind = Number(r.hind) >= 0 ? Number(r.hind) : 0;
+
+      /* Andmebaasi veerud on numeric(10,2) hinna ja numeric(12,2) summa
+         jaoks. Suurem arv ei mahu ja andmebaas ütleb ära — aga see viga
+         katkestas kogu salvestuse ja jäi kordama, sest ekraan saatis
+         sama vigase rea iga kord uuesti kaasa. Üks kogemata sisestatud
+         number lukustas salvestamise jäädavalt ja kogu edasine töö
+         kadus. Jätame vigase rea vahele, et ülejäänu saaks salvestuda. */
+      if (!(hind <= 9999999.99) || !(kogus * hind <= 9999999999.99)) {
+        hoiatused.push("„" + nimetus + "“ jäi salvestamata: summa on liiga suur.");
+        continue;
+      }
 
       /* Olemasolev rida: kogus ja hind võivad olla muutunud.
 
@@ -805,7 +819,7 @@ async function salvestaSeisTehingus(mina, s) {
     }
   }
 
-  return { ok: true };
+  return hoiatused.length ? { ok: true, hoiatus: hoiatused.join(" ") } : { ok: true };
 }
 
 /* Ürituse lapsed: vastused, kinnitused, küsimused, ülesanded. */
