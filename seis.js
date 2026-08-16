@@ -19,6 +19,7 @@ const { q, yks, tehing } = require("./db");
 const sorm = x => crypto.createHash("sha1")
   .update(JSON.stringify(x === undefined ? null : x)).digest("hex").slice(0, 16);
 const { naebKassat, annabOigusi, haldabTeisi } = require("./ametid");
+const { pildiks } = require("./pilt");
 
 const iso = d => d ? new Date(d).toISOString() : null;
 const kell = t => t ? String(t).slice(0, 5) : "";
@@ -334,13 +335,13 @@ async function salvestaSeisTehingus(mina, s) {
         if (oma(m.id)) await q(
           `UPDATE liikmed SET nimi=$2, roll=$3, telefon=$4, pilt=$5,
                   epost = coalesce($6, epost) WHERE id=$1`,
-          [m.id, nimi, tyhjaks(m.role), tyhjaks(m.phone), tyhjaks(m.pilt),
+          [m.id, nimi, tyhjaks(m.role), tyhjaks(m.phone), pildiks(m.pilt),
            epostiks(m.email)]);
       } else {
         const r = await yks(
           `INSERT INTO liikmed (nimi, roll, telefon, pilt, epost, amet)
            VALUES ($1,$2,$3,$4,$5,'liige') RETURNING id`,
-          [nimi, tyhjaks(m.role), tyhjaks(m.phone), tyhjaks(m.pilt),
+          [nimi, tyhjaks(m.role), tyhjaks(m.phone), pildiks(m.pilt),
            epostiks(m.email)]);
         alles.add(r.id);
       }

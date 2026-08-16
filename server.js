@@ -11,6 +11,7 @@ const auth = require("./auth");
 const { AMETID, kehtiv, naebKassat, annabOigusi, haldabLiikmeid,
         haldabTeisi } = require("./ametid");
 const seis = require("./seis");
+const { pildiks } = require("./pilt");
 
 /* Ametid, mis ameteid jagavad. Võtame nimekirja ametid.js-ist, et
    SQL ja õigused ei läheks kunagi lahku. */
@@ -946,7 +947,7 @@ const server = http.createServer(async (req, res) => {
          WHERE id = $1 RETURNING id, nimi, amet, telefon, pilt`,
         [b.id, nimi, String(b.roll || "").trim() || null, uusAmet, ANDJAD,
          b.telefon !== undefined, String(b.telefon || "").trim() || null,
-         b.pilt !== undefined, String(b.pilt || "").trim() || null]);
+         b.pilt !== undefined, pildiks(b.pilt)]);
       if (!r) return json(res, 404, { viga: "Sellist liiget ei ole." });
       return json(res, 200, { ok: true, liige: r });
     }

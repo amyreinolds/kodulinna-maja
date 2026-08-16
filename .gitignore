@@ -9,3 +9,8 @@ node_modules/
 varukoopiad/
 *.json.bak
 kodulinna-maja-*.json
+
+# Ekraanipildid on tehtud päris andmebaasist: neil on liikmete nimed,
+# telefonid, kassa ja kirjavahetus — sama mure, mis varukoopiatel.
+# Vaata neid arvutis, aga siia nad ei tule.
+pildid/
