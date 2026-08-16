@@ -50,8 +50,10 @@ button:disabled{opacity:.6;cursor:default}
 
     <form id="vorm">
       <label for="epost">E-posti aadress</label>
+      <!-- spellcheck välja: punane laineline joon aadressi all paneb
+           inimese arvama, et ta kirjutas midagi valesti. -->
       <input id="epost" type="email" autocomplete="email" required
-             placeholder="nimi@näide.ee">
+             spellcheck="false" placeholder="nimi@näide.ee">
       <button id="nupp" type="submit">Saada mulle link</button>
     </form>
 
