@@ -10,7 +10,7 @@
     "skeem": "node tools/skeem.js",
     "ekraan": "node tools/ekraan.js",
     "axe": "node tools/axe.js",
-    "test": "node test/pilt.js && node test/proov.js && node test/kutse.js && node test/muuda.js && node test/ametid.js && node test/kassa.js && node test/maja.js && node test/inimesed.js && node test/ulesanne.js && node test/teated.js && node test/failid.js && node test/seis.js && node test/graafik.js && node test/enda.js && node test/infokysimus.js && node test/grupivestlus.js && node test/margid.js && node test/otsing.js && node test/myyja.js && node test/turva.js && node test/kassaraha.js && node test/tehing.js && node test/failisisu.js && node test/uksed.js && node test/proovirezim.js && node test/ava.js && node test/mujal.js && node test/privaatne.js && node test/majutus.js && node test/ssl.js"
+    "test": "node test/pilt.js && node test/proov.js && node test/kutse.js && node test/muuda.js && node test/ametid.js && node test/kassa.js && node test/maja.js && node test/inimesed.js && node test/ulesanne.js && node test/teated.js && node test/failid.js && node test/seis.js && node test/graafik.js && node test/enda.js && node test/infokysimus.js && node test/grupivestlus.js && node test/margid.js && node test/otsing.js && node test/myyja.js && node test/turva.js && node test/kassaraha.js && node test/tehing.js && node test/failisisu.js && node test/osalemine.js && node test/uksed.js && node test/proovirezim.js && node test/ava.js && node test/mujal.js && node test/privaatne.js && node test/majutus.js && node test/ssl.js"
   },
   "dependencies": {
     "pg": "^8.13.1"

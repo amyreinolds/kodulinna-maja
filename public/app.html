@@ -114,7 +114,10 @@ const P={
   tag:'<path d="M20.6 13.4L13.4 20.6a2 2 0 01-2.8 0l-7.2-7.2A2 2 0 013 12V4.8A1.8 1.8 0 014.8 3H12a2 2 0 011.4.6l7.2 7.2a2 2 0 010 2.6z"/><path d="M7.5 7.5h.01"/>',
   bell:'<path d="M18 9a6 6 0 10-12 0c0 5-2.2 6.6-2.2 6.6h16.4S18 14 18 9z"/><path d="M13.7 19.5a2 2 0 01-3.4 0"/>',
   kell:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5.3l3.4 2"/>',
-  kaamera:'<path d="M3 8.5A2 2 0 015 6.5h2.2l1.2-2h7.2l1.2 2H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><circle cx="12" cy="13" r="3.6"/>'
+  kaamera:'<path d="M3 8.5A2 2 0 015 6.5h2.2l1.2-2h7.2l1.2 2H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><circle cx="12" cy="13" r="3.6"/>',
+  /* Tööd ja Töö graafik on kaks eri asja ja ei tohi kanda sama ikooni:
+     kell on aeg, linnukesed on nimekiri, mille saab ära teha. */
+  loend:'<path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6.2l1.1 1.1L7.4 5"/><path d="M4 12.2l1.1 1.1L7.4 11"/><path d="M4 18.2l1.1 1.1L7.4 17"/>'
 };
 function ico(n){return '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+P[n]+'</svg>';}
 
@@ -122,7 +125,13 @@ const VIEWS=[
   {id:"vestlus",  label:"Vestlus",   icon:"chat",   add:"Uus teema",
    help:"Kolm asja: teemat näevad kõik liikmed, gruppi ainult need, kelle sa ise valid, ja kirja näete kahekesi."},
   {id:"kalender", label:"Üritused",  icon:"event",  add:"Uus üritus",
-   help:"Kõik üritused ja tööd kuu kaupa. Vajuta kuupäeval, et näha selle päeva oma. Üritused on kalendri all: vajuta „Osalen“ või „Ei osale“ ja küsi julgelt."},
+   help:"Üritused kuu kaupa. Vajuta kuupäeval, et näha selle päeva oma. Kalendri kõrval on tulemas olevad üritused: vajuta „Osalen“ või „Ei osale“ ja küsi julgelt. Majatööd on Tööde all — need on eri asi."},
+  /* Töö ei ole üritus. Üritusele tullakse kokku ja sinna vastatakse, kas
+     sa tuled; töö tuleb ära teha ja keegi märgib ta tehtuks. Need olid
+     ühe katuse all ja „Lisa töö“ nupp seisis Ürituste all, kus ta ei
+     olnud kellegi jaoks loogiline. */
+  {id:"tood",     label:"Tööd",      icon:"loend",  add:"Lisa töö",
+   help:"Majatööd, mis tuleb ära teha — korduvad ja ühekordsed. Vajuta „Tegin ära“, kui töö on tehtud. Kellaajaga töö käib sel kellaajal, ilma kellaajata päeva jooksul."},
   {id:"info",     label:"Üldinfo",   icon:"info",   add:"Uus infoplokk",
    help:"Tähtis info kõigile liikmetele. Kui plokk küsib kinnitust, loe läbi ja vajuta „Olen tutvunud“."},
   {id:"failid",   label:"Failid",    icon:"file",   add:"Lisa fail",
@@ -275,6 +284,12 @@ function uudised(){
     n:1,tekst:"Uus müügirida: "+r.nimetus,mine:()=>{myykOsa=r.osa;mineVaade("myyk");}}));
   S.events.filter(e=>e.req&&new Date(e.start)>=new Date()&&!(e.acks||{})[S.me])
     .forEach(e=>out.push({n:1,kinnitus:true,tekst:"Ootab sinu kinnitust: üritus „"+e.title+"“",mine:()=>mineVaade("kalender")}));
+  /* Vastamata jäänud „kas sa tuled“ on omaette rida: korraldaja ootab
+     seda numbrit ja tema ei saa selle eest vastata. */
+  S.events.filter(e=>e.osal&&new Date(e.start)>=new Date()&&!(e.rsvp||{})[S.me])
+    .forEach(e=>out.push({n:1,kinnitus:true,
+      tekst:"Ootab sinu vastust: kas sa tuled? — „"+e.title+"“",
+      mine:()=>mineVaade("kalender")}));
   S.info.filter(i=>i.req&&!(i.acks||{})[S.me])
     .forEach(i=>out.push({n:1,kinnitus:true,tekst:"Ootab sinu kinnitust: „"+i.title+"“",mine:()=>mineVaade("info")}));
   /* Tänased tööd, mis on kinnitamata — need ootavad kedagi, kes täna tööl on. */
@@ -529,7 +544,12 @@ function chrome(){
   $("#gname").textContent=NIMI;
   $("#mename").textContent=byId(meId())?nameOf(meId()):"vali";
 
-  const waitEv=S.events.filter(e=>e.req&&new Date(e.start)>=new Date()&&!(e.acks||{})[meId()]).length;
+  /* Külgriba märk loeb kaht eri ootust: kinnitust („olen tutvunud“) ja
+     vastust („kas sa tuled“). Mõlemad on asjad, mis SIND ootavad. */
+  const tulemas=e=>new Date(e.start)>=new Date();
+  const ootabVastust=e=>e.osal&&tulemas(e)&&!(e.rsvp||{})[meId()];
+  const waitEv=S.events.filter(e=>
+    (e.req&&tulemas(e)&&!(e.acks||{})[meId()])||ootabVastust(e)).length;
   const waitIn=S.info.filter(i=>i.req&&!(i.acks||{})[meId()]).length;
   /* Märk tähendab alati ühte asja: nii mitu asja siin sind ootab. */
   const badges={
@@ -584,6 +604,15 @@ function chrome(){
       :v2.kokku?o2.length+" osa · "+k2.length+" rida · "+raha(summa(k2))
       :v2.nimi+" · "+r2.length+" rida · "+raha(summa(r2));
   }
+  else if(view==="tood"){
+    const nd=new Date(), tk=dkey(nd);
+    const tan=tood().filter(x=>tooSelPaeval(x,nd));
+    const tegemata=tan.filter(x=>x.kinnita&&!tehtud(x,tk)).length;
+    sub=!tood().length?"töid ei ole"
+      :tegemata?mitu(tegemata,"töö","tööd")+" täna tegemata"
+      :tan.length?"tänased tööd on tehtud"
+      :mitu(tood().length,"töö","tööd")+" kirjas";
+  }
   else if(view==="info")sub=waitIn?waitIn+" ootab kinnitust":mitu(S.info.length,"plokk","plokki");
   else if(view==="tootajad"){
     const t=dkey(new Date());
@@ -606,7 +635,7 @@ function render(){
   cv.style.overflow=view==="vestlus"?"hidden":"";
   w.style.maxWidth=(view==="vestlus"||view==="kalender"||view==="kontakt"||view==="myyk"||view==="tootajad")?"none":"";
   w.style.height=view==="vestlus"?"100%":"";
-  ({vestlus:vChat,kalender:vCal,info:vInfo,kontakt:vPeople,failid:vFiles,myyk:vMyyk,tootajad:vToo})[view](w);
+  ({vestlus:vChat,kalender:vCal,tood:vTood,info:vInfo,kontakt:vPeople,failid:vFiles,myyk:vMyyk,tootajad:vToo})[view](w);
   cv.scrollTop=keep;
   lastView=view;
 }
@@ -660,6 +689,11 @@ function evCard(e){
   if(e.desc)h+='<p class="ev-desc">'+esc(e.desc)+'</p>';
 
   if(!past){
+    /* Kui üritus küsib osalemist ja sina ei ole vastanud, öeldakse see
+       välja. Muidu on kaks nuppu lihtsalt olemas ja keegi ei tea, kas
+       neile oodatakse vastust. */
+    if(e.osal&&!mine)
+      h+='<p class="palun">Palun vasta: kas sa tuled?</p>';
     h+='<div class="answer">'
       +'<button class="yes" data-act="rsvp" data-id="'+e.id+'" data-v="yes" aria-pressed="'+(mine==="yes")+'">'
       +'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">'+P.check+'</svg>Osalen</button>'
@@ -681,7 +715,8 @@ function evCard(e){
     +'<div class="who">'
     +wl("yes","Osaleb ("+sp.y.length+")",sp.y.length?names(sp.y):"veel ei ole kedagi")
     +(sp.n.length?wl("no","Ei osale ("+sp.n.length+")",names(sp.n)):"")
-    +(sp.s.length?wl("non","Pole vastanud ("+sp.s.length+")",names(sp.s)):"");
+    +(sp.s.length?wl(e.osal?"non":"",
+        (e.osal?"Ootab vastust (":"Pole vastanud (")+sp.s.length+")",names(sp.s)):"");
   if(e.req){
     const miss=noAckIds(e);
     h+=wl(miss.length?"non":"yes","Tutvunud ("+ackIds(e).length+"/"+S.members.length+")",
@@ -783,8 +818,7 @@ function vCal(w){
     +'<button class="btn ghost small" data-act="cal" data-v="-1">Eelmine kuu</button>'
     +'<button class="btn ghost small" data-act="cal" data-v="0">Täna</button>'
     +'<button class="btn ghost small" data-act="cal" data-v="1">Järgmine kuu</button>'
-    +'<span class="sp"></span>'
-    +'<button class="btn ghost small" data-act="too-uus">+ Lisa töö</button></div>'
+    +'</div>'
     /* Üritused olid enne eraldi kategoorias, aga see oli sama asi kaks
        korda: kalender näitas neid ruudustikus ja nimekiri loeteluna.
        Nüüd on nad ühe katuse all. Kalender ja nimekiri seisavad kõrvuti:
@@ -1106,6 +1140,82 @@ function sendMsg(){
 }
 
 /* ═══ Üldinfo ═══ */
+/* ═══ Tööd ═══
+   Majatööd, mis tuleb ära teha. Eraldi Üritustest: üritusele tullakse
+   kokku ja sinna vastatakse „kas sa tuled“, töö tuleb ära teha ja keegi
+   märgib ta tehtuks. Varem olid nad ühe katuse all ja „Lisa töö“ nupp
+   seisis Ürituste all, kus teda keegi ei otsinud. */
+function vTood(w){
+  const koik=tood();
+  if(!koik.length){
+    w.innerHTML='<div class="card"><div class="empty"><b>Töid ei ole kirja pandud.</b>'
+      +'Lillede kastmine, prügi väljaviimine, koristus. '
+      +'Vajuta üleval paremal „Lisa töö“.</div></div>';
+    return;
+  }
+  const nd=new Date(), tk=dkey(nd);
+
+  /* Kaks nimekirja: mis on täna teha ja kõik ülejäänud. Ülemine on see,
+     mille pärast siia tullakse. */
+  const tanased=koik.filter(t=>tooSelPaeval(t,nd));
+  const muud=koik.filter(t=>!tanased.includes(t));
+
+  const rida=(t,k)=>{
+    const teht=tehtud(t,k), aeg=tooAeg(t);
+    const kohane=k&&tooSelPaeval(t,new Date(k+"T12:00:00"));
+    return '<div class="toorida'+(teht?" tehtud":"")+'">'
+      +'<div class="tn"><b>'+esc(t.nimi)+'</b>'
+      +'<span>'+esc(kohaNimi(kohtOf(t)))
+      +  (aeg?' · '+esc(aeg):' · päeva jooksul')
+      +  ' · '+esc(millalTekst(t))
+      +  (t.kes?' · '+esc(nameOf(t.kes)):"")+'</span>'
+      +(t.markus?'<span class="mk">'+esc(t.markus)+'</span>':"")
+      +(teht?'<span class="tehtud2">Tehtud — '+esc(nameOf(teht.kes))
+        +(teht.at?' · '+esc(fmtStamp(teht.at)):"")+'</span>':"")
+      +'</div>'
+      +(t.kinnita&&kohane
+        ? '<button class="btn '+(teht?"ghost small":"small")+'" data-act="too-tehtud"'
+          +' data-id="'+t.id+'" data-k="'+k+'">'
+          +(teht?"Võta tagasi":"Tegin ära")+'</button>'
+        : "")
+      +'<button class="linkbtn mut" data-act="too-muuda" data-id="'+t.id+'">Muuda</button>'
+      +'<button class="linkbtn mut" data-act="too-kustuta" data-id="'+t.id+'">Kustuta</button>'
+      +'</div>';
+  };
+
+  /* Tänased tööd on see, mille pärast siia tullakse — nemad saavad laia
+     veeru. Kogu nimekiri seisab kõrval. */
+  let h='<div class="korvuti korval-paremal"><div class="veerg">'
+    +'<div class="card"><p class="h3">TÄNA TEHA</p>'
+    +(tanased.length
+      ? '<div class="toolist">'+tanased.map(t=>rida(t,tk)).join("")+'</div>'
+      : '<p class="tyhi">Täna ei ole ühtegi tööd.</p>')
+    +'</div></div><div class="veerg">'
+    +'<div class="card"><p class="h3">KÕIK TÖÖD</p>'
+    +'<div class="toolist">'+muud.map(t=>rida(t,null)).join("")
+    +(muud.length?"":'<p class="tyhi">Rohkem töid ei ole.</p>')+'</div>'
+    +'<p class="meta">Korduv töö kordub igal nädalal valitud päevadel. '
+    +'Kellaajaga töö käib sel kellaajal, ilma kellaajata päeva jooksul. '
+    +'„Tegin ära“ ilmub sel päeval, mil töö on teha.</p>'
+    +'</div></div></div>';
+  w.innerHTML=h;
+}
+
+/* „Kordub teisipäeviti ja reedeti“ või „14. august“.
+
+   Loetelu käib eesti keele moodi: komad vahel ja „ja“ ainult viimase
+   ette. Enne seisis seal „esmaspäeval ja teisipäeval ja kolmapäeval
+   ja…“, mis on masina kõne. */
+function millalTekst(t){
+  if(t.kuup)return fmtKuup(t.kuup+"T12:00:00");
+  const p=(t.paevad||[]).slice().sort();
+  if(!p.length)return "päev valimata";
+  if(p.length===7)return "kordub iga päev";
+  const n=p.map(i=>DOW_AL[i]);
+  return "kordub "+(n.length===1?n[0]
+    :n.slice(0,-1).join(", ")+" ja "+n[n.length-1]);
+}
+
 function vInfo(w){
   if(!S.info.length){
     w.innerHTML='<div class="card"><div class="empty"><b>Üldinfot ei ole kirja pandud.</b>Kodukord, ohutusjuhend, liikmemaks.</div></div>';return;
@@ -1558,6 +1668,15 @@ function dlgEvent(e){
     +kellSelect("f_t2",b.t||"","Lõpeb")+'</div></div></div>'
     +fld("f_place","Koht",e?e.place:"","text","Kus täpselt kokku saadakse")
     +tar("f_desc","Kirjeldus",e?e.desc:"","Mida on vaja teada enne kohale tulekut")
+    /* Kaks eri küsimust, mis lähevad kergesti segamini. „Kas sa tuled?“
+       on see, mida talgute puhul päriselt vaja teada on; „olen läbi
+       lugenud“ ütleb ainult seda, et info on kohale jõudnud. Inimene
+       võib lugeda ja mitte tulla. */
+    +'<label class="check"><input type="checkbox" id="f_osal"'
+    +((e?e.osal:true)?" checked":"")+'>'
+    +'<span><b>Küsi igalt liikmelt, kas ta osaleb</b>'
+    +'<span>Iga liige vastab „Osalen“ või „Ei osale“. Näed nimeliselt, '
+    +'kes tuleb, kes ei tule ja kellelt vastus veel puudub.</span></span></label>'
     +reqBox(e?e.req:false)
     +'<div class="field"><label>Ülesanded</label><div class="rowlist" id="rows">'+old.map(t=>rowHTML(t.t,t.id)).join("")+'</div>'
     +'<button type="button" class="linkbtn" data-act="row-add">+ Lisa rida</button>'
@@ -1572,8 +1691,9 @@ function dlgEvent(e){
         toast("Lõpp peab olema algusest hiljem.");return false;}
       const end=fv("f_t2")?isoOf(fv("f_date"),fv("f_t2")):null;
       const koht=fv("f_koht");
-      if(e)Object.assign(e,{title,start,end,koht,place:fv("f_place"),desc:fv("f_desc"),req:fc("f_req"),tasks,acks:e.acks||{},comments:e.comments||[]});
-      else S.events.push({id:uid(),title,start,end,koht,place:fv("f_place"),desc:fv("f_desc"),req:fc("f_req"),by:meId(),rsvp:{},acks:{},tasks,comments:[]});
+      const osal=fc("f_osal");
+      if(e)Object.assign(e,{title,start,end,koht,place:fv("f_place"),desc:fv("f_desc"),req:fc("f_req"),osal,tasks,acks:e.acks||{},comments:e.comments||[]});
+      else S.events.push({id:uid(),title,start,end,koht,place:fv("f_place"),desc:fv("f_desc"),req:fc("f_req"),osal,by:meId(),rsvp:{},acks:{},tasks,comments:[]});
       save();render();toast(e?"Üritus salvestatud.":"Üritus loodud.");return true;
     });
 }
@@ -3127,6 +3247,7 @@ document.addEventListener("click",ev=>{
       else if(view==="kontakt")dlgPerson(null);
       else if(view==="myyk")dlgMyyk(null);
       else if(view==="tootajad")dlgGraafikPaev(null,graKoht,null,valitudPaevOn());
+      else if(view==="tood")dlgToo(null);
       else pickFiles();
       break;
     case "kopeeri": {
@@ -3334,6 +3455,17 @@ document.addEventListener("click",ev=>{
       toast("See päev jäeti ära.",()=>{delete t.ara[k];save();render();toast("Tagasi toodud.");});
       break;}
     case "too-paev": dlgTooPaev(id,el.dataset.k);break;
+    /* Tööde vaates käib „Tegin ära“ otse nupust — akent vahele ei ole
+       vaja, sest nimi ja kellaaeg on juba real näha. */
+    case "too-tehtud":{
+      const x=tood().find(y=>y.id===id); if(!x)break;
+      const k=el.dataset.k;
+      x.tehtud=x.tehtud||{};
+      if(x.tehtud[k]){delete x.tehtud[k];toast("Kinnitus võetud tagasi.");}
+      else{x.tehtud[k]={kes:meId(),at:new Date().toISOString()};
+           toast("Tubli — märgitud tehtuks.");}
+      save();render();break;
+    }
     case "too-taasta": {
       const t=tood().find(x=>x.id===id); if(!t)break;
       const vana=t.ara||{}; t.ara={};
@@ -3343,7 +3475,12 @@ document.addEventListener("click",ev=>{
     case "too-muuda": dlgToo(tood().find(x=>x.id===id));break;
     case "too-kustuta": {
       const i=tood().findIndex(x=>x.id===id);
-      if(i>=0){const x=S.too.tood.splice(i,1)[0];save();render();closeDlg();
+      if(i>=0){
+        const nimi=tood()[i].nimi;
+        if(!confirm('Kustutan töö „'+nimi+'“.' + String.fromCharCode(10,10)
+          +'Ta kaob kõigi liikmete jaoks ja koos temaga kaovad märked, '
+          +'kes teda millal teinud on.'))break;
+        const x=S.too.tood.splice(i,1)[0];save();render();closeDlg();
         toast('„'+x.nimi+'“ on kustutatud.',()=>{S.too.tood.splice(i,0,x);save();render();toast("Tagasi toodud.");});}
       break;}
     case "pilt-vali": valiPilt();break;

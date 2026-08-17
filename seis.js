@@ -190,6 +190,9 @@ async function loeSeis(mina) {
       id: y.id, koht: y.koht_id || "mujal", title: y.pealkiri, at: iso(y.loodud),
       start: iso(y.algus), end: iso(y.lopp), place: y.asukoht || "",
       by: y.autor, req: y.kinnitus_vaja, desc: y.kirjeldus || "",
+      /* Kas igalt liikmelt küsitakse, kas ta tuleb. Eri asi kui `req`
+         („olen läbi lugenud“) — lugeda võib ka see, kes ei tule. */
+      osal: y.osalemine_vaja,
       rsvp: Object.fromEntries(osalemine.filter(o => o.yritus_id === y.id)
         .map(o => [o.liige_id, o.vastus === "jah" ? "yes" : "no"])),
       acks: Object.fromEntries(kinnitused
@@ -498,17 +501,18 @@ async function salvestaSeisTehingus(mina, s) {
       if (!pealkiri || !e.start) continue;
       const väärtused = [e.koht === "torn" ? "torn"
                         : e.koht === "mujal" ? null : "km", pealkiri, e.start,
-        e.end || null, tyhjaks(e.place), tyhjaks(e.desc), !!e.req];
+        e.end || null, tyhjaks(e.place), tyhjaks(e.desc), !!e.req, !!e.osal];
       let id = e.id;
       if (onUuid(id) && olemas.some(x => x.id === id)) {
         await q(`UPDATE yritused SET koht_id=$2, pealkiri=$3, algus=$4, lopp=$5,
-                   asukoht=$6, kirjeldus=$7, kinnitus_vaja=$8 WHERE id=$1`,
+                   asukoht=$6, kirjeldus=$7, kinnitus_vaja=$8,
+                   osalemine_vaja=$9 WHERE id=$1`,
           [id].concat(väärtused));
       } else {
         const r = await yks(
           `INSERT INTO yritused (koht_id, pealkiri, algus, lopp, asukoht, kirjeldus,
-                                 kinnitus_vaja, autor)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+                                 kinnitus_vaja, osalemine_vaja, autor)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
           väärtused.concat([autor(e.by, mina, oma)]));
         id = r.id;
       }

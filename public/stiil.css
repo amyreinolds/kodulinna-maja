@@ -860,6 +860,25 @@ hr.hr{border:none;border-top:1px solid var(--line-2);margin:0}
 @container plokk (min-width:420px){
   .tanariba{grid-template-columns:1fr 1fr;gap:18px}
 }
+/* „Palun vasta“ ei ole veateade, aga ta peab silma jaama — muidu jaavad
+   kaks nuppu markamata ja korraldaja ei saa kunagi teada, mitu inimest
+   tuleb. */
+.palun{margin:0 0 8px;font-size:16px;font-weight:700;color:var(--accent-ink)}
+
+/* Tood: uks rida = uks too. Tehtud too laheb vaiksemaks, aga ei kao —
+   nii on naha, mis on tehtud ja mis mitte. */
+.toolist{display:flex;flex-direction:column;gap:2px}
+.toorida{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:12px 4px;border-bottom:1px solid var(--line-2)}
+.toorida:last-child{border-bottom:none}
+.toorida .tn{flex:1;min-width:180px;display:flex;flex-direction:column;gap:2px}
+.toorida .tn b{font-size:17px;font-weight:650;letter-spacing:-.01em}
+.toorida .tn span{font-size:14px;color:var(--ink-3);line-height:1.4}
+.toorida .tn .mk{color:var(--ink-2)}
+.toorida .tehtud2{color:var(--green-ink,var(--ink-2));font-weight:600}
+.toorida.tehtud .tn b{color:var(--ink-3);text-decoration:line-through;
+  text-decoration-thickness:1.5px}
+
 .tanariba .sild{
   display:block;font-size:12.5px;font-weight:800;letter-spacing:.08em;
   text-transform:uppercase;color:var(--ink-3);margin-bottom:8px;
