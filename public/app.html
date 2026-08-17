@@ -298,11 +298,11 @@ function uudised(){
     tood().filter(t=>t.kinnita&&tooSelPaeval(t,nd)&&!tehtud(t,k)).forEach(t=>{
       /* Kellel see töö täna on: määratud tegija või graafikujärgsed.
          Kui graafikus pole kedagi, näevad seda kõik — muidu kaoks ta ära. */
-      const read=t.kes?[t.kes]:toolPaeval(kohtOf(t),nd).map(m=>m.id);
+      const read=kesTeeb(t,k);
       const minu=!read.length||read.indexOf(meId())>=0;
       out.push({n:1,kinnitus:true,
         tekst:(minu?"Sinu teha täna: ":"Täna tegemata: ")+"„"+t.nimi+"“ ("+kohaNimi(kohtOf(t))+")",
-        mine:()=>{kalKoht="koik";mineVaade("kalender");}});
+        mine:()=>{toodPaev=k;mineVaade("tood");}});
     });
   }
   return out;
@@ -607,9 +607,14 @@ function chrome(){
   else if(view==="tood"){
     const nd=new Date(), tk=dkey(nd);
     const tan=tood().filter(x=>tooSelPaeval(x,nd));
+    /* Alarida räägib SINUST: mitu tööd ootab täna sinu kinnitust. Maja
+       kogunumber ei ütle sulle, kas sa pead midagi tegema. */
+    const minuTegemata=tan.filter(x=>minuToo(x,tk)&&!tehtud(x,tk)).length;
     const tegemata=tan.filter(x=>x.kinnita&&!tehtud(x,tk)).length;
     sub=!tood().length?"töid ei ole"
-      :tegemata?mitu(tegemata,"töö","tööd")+" täna tegemata"
+      :minuTegemata?mitu(minuTegemata,"töö","tööd")+" ootab sinu kinnitust"
+      :tan.some(x=>minuToo(x,tk))?"sinu tänased tööd on tehtud"
+      :tegemata?mitu(tegemata,"töö","tööd")+" täna tegemata (mitte sinu)"
       :tan.length?"tänased tööd on tehtud"
       :mitu(tood().length,"töö","tööd")+" kirjas";
   }
@@ -1162,7 +1167,10 @@ function vTood(w){
       +' aria-label="Vaata selle päeva töid">'+d.getDate()+'</button>'
       + tl.map(t=>{
           const teht=tehtud(t,k), ootab=vajabKinnitust(t,k), aeg=tooAeg(t);
-          return '<button class="pill too2'+(teht?" tehtud":(ootab?" ootab":""))+'"'
+          /* Sinu töö on kalendris eraldi märgitud — nii näed ühe pilguga,
+             millistel päevadel sul midagi teha on. */
+          return '<button class="pill too2'+(teht?" tehtud":(ootab?" ootab":""))
+            +(minuToo(t,k)&&!teht?" minu":"")+'"'
             +' data-act="tood-paev" data-k="'+k+'"'
             +' title="'+esc(t.nimi)+' · '+esc(kohaNimi(kohtOf(t)))
             +  (teht?" · tehtud: "+esc(nameOf(teht.kes))
@@ -1220,13 +1228,30 @@ function vTood(w){
   const onTana=valitud===tk;
   /* Valitud päev on kõige ees — see on tegevus, mille pärast siia
      tullakse. Kalender on tema all: sealt näeb, mis veel tulemas on ja
-     mis on juba tehtud. Sama järjekord on Töö graafikus. */
-  let h='<div class="card"><p class="h3">'+(onTana?"TÄNA TEHA":"SEL PÄEVAL")+'</p>'
+     mis on juba tehtud. Sama järjekord on Töö graafikus.
+
+     Kaks nimekirja, mitte üks: kõigepealt see, mida SINA pead sel päeval
+     tegema, ja alles siis maja ülejäänud tööd. Ühes hunnikus pidi igaüks
+     ise ridade seast oma nime otsima. */
+  const minuPaevaTood=paevaTood.filter(t=>minuToo(t,valitud));
+  const teisteTood=paevaTood.filter(t=>!minuToo(t,valitud));
+  const tegemata=minuPaevaTood.filter(t=>!tehtud(t,valitud)).length;
+
+  let h='<div class="card minukaart"><p class="h3">'
+    +(onTana?"SINU TÖÖD TÄNA":"SINU TÖÖD SEL PÄEVAL")+'</p>'
     +(onTana?"":'<p class="paevpais2">'+esc(fmtPaev(valitud+"T12:00:00"))+'</p>')
-    +(paevaTood.length
-      ? '<div class="toolist">'+paevaTood.map(t=>rida(t,valitud)).join("")+'</div>'
-      : '<p class="tyhi">'+(onTana?"Täna":"Sel päeval")+' ei ole ühtegi tööd.</p>')
+    +(minuPaevaTood.length
+      ? (tegemata?'<p class="palun">'+mitu(tegemata,"töö ootab","tööd ootab")
+          +' sinu kinnitust.</p>':'<p class="valmis">Kõik sinu tööd on tehtud.</p>')
+        +'<div class="toolist">'+minuPaevaTood.map(t=>rida(t,valitud)).join("")+'</div>'
+      : '<p class="tyhi">'+(onTana?"Täna":"Sel päeval")
+        +' ei ole sulle ühtegi tööd. Tööd saab sulle suunata „Kes teeb“ '
+        +'valikuga või siis, kui oled sel päeval graafikus.</p>')
     +'</div>'
+    +(teisteTood.length
+      ? '<div class="card"><p class="h3">'+(onTana?"MUUD TÄNASED TÖÖD":"MUUD SEL PÄEVAL")+'</p>'
+        +'<div class="toolist">'+teisteTood.map(t=>rida(t,valitud)).join("")+'</div></div>'
+      : "")
     +'<div class="calbar"><h3>'+MON[m].charAt(0).toUpperCase()+MON[m].slice(1)+' '+y+'</h3>'
     +'<button class="btn ghost small" data-act="tood-kuu" data-v="-1">Eelmine kuu</button>'
     +'<button class="btn ghost small" data-act="tood-kuu" data-v="0">Täna</button>'

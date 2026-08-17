@@ -886,6 +886,9 @@ hr.hr{border:none;border-top:1px solid var(--line-2);margin:0}
 /* Kes selle too sel paeval ara teeb. Staatust naevad koik — see on
    nimekirja mote —, aga „Tegin ara“ nuppu naeb ainult tema. */
 .toorida .teeb{color:var(--ink-2);font-weight:600}
+/* „Sinu tood“ kaart eristub, et teda ei peaks otsima. */
+.minukaart{border:2px solid var(--accent-line,var(--accent-ink))}
+.valmis{margin:0 0 8px;font-size:16px;font-weight:650;color:var(--green,var(--ink-2))}
 .toorida.minu .teeb{color:var(--accent-ink)}
 .toorida.minu{background:var(--accent-soft);border-radius:10px;
   padding-left:10px;padding-right:10px;margin:0 -10px}
@@ -1016,6 +1019,10 @@ select.kell option{background:var(--card);color:var(--ink)}
 .pill.too2.tehtud{opacity:1;border-style:solid;background:var(--green-soft);
   color:var(--green);border-color:var(--green)}
 .pill.too2.ootab{border-width:2px}
+/* Sinu oma too paistab kalendris valja: taidetud taust ja jame joon.
+   Ilma selleta pidi igauks kuu ruudustikust oma nime otsima. */
+.pill.too2.minu{background:var(--accent-soft);color:var(--accent-ink);
+  border-style:solid;border-color:var(--accent-ink);border-width:2px}
 .teebriba{
   display:flex;flex-direction:column;gap:6px;padding:12px 15px;
   border-radius:13px;background:var(--s-tint2);
