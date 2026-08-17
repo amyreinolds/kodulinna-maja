@@ -785,33 +785,20 @@ function vCal(w){
     const d=new Date(start);d.setDate(start.getDate()+i);
     const k=dkey(d),out=d.getMonth()!==m;
     const list=(map[k]||[]).sort((a,b)=>new Date(a.start)-new Date(b.start));
-    const tl=out?[]:tooPaeval(d).filter(t=>sobibKoht(t,kalKoht));
+    /* Tööd on nüüd Tööde all, oma kalendriga. Siin nad ainult segasid:
+       „mis sel päeval toimub“ ja „mis on ära teha“ on kaks eri küsimust
+       ja kaks eri kategooriat. */
     cells+='<div class="cell'+(out?" out":"")+(k===tk?" today":"")
       +(k===valitudPaev?" valitud":"")+'">'
       +'<button class="n" data-act="kal-paev" data-k="'+k+'" '
       +'aria-label="Vaata seda päeva">'+d.getDate()+'</button>'
       +list.map(e=>'<button class="pill" data-act="goto-ev" data-id="'+e.id+'">'+fmtTime(e.start)+' '+esc(e.title)+'</button>').join("")
-      /* Mullis on see, mida päevaplaanist vaadatakse: kes ja mis kell.
-         Töö nimi on ühe klõpsu kaugusel ja jääb kohtspikrisse. */
-      +tl.map(t=>{
-          const teht=tehtud(t,k), ootab=vajabKinnitust(t,k);
-          const aeg=tooAeg(t);
-          return '<button class="pill too2'+(teht?" tehtud":(ootab?" ootab":""))+'"'
-            +' data-act="too-paev" data-id="'+t.id+'" data-k="'+k+'"'
-            +' title="'+esc(t.nimi)+(t.kes?" — "+esc(nameOf(t.kes)):"")
-            +  (teht?" · tehtud: "+esc(nameOf(teht.kes)):(ootab?" · ootab kinnitust":""))+'">'
-            /* Kinnitatava töö puhul on tähtis, MIS on tegemata või tehtud —
-               seega jääb mulli töö nimi. Tegija on kohtspikris ja aknas. */
-            +'<b>'+(t.kinnita?'<i class="mark">'+(teht?"✓":"○")+'</i>':"")
-            +  esc(t.kinnita?t.nimi:(t.kes?eesnimi(nameOf(t.kes)):t.nimi))+'</b>'
-            +(aeg?'<span>'+esc(aeg)+'</span>':"")+'</button>';
-        }).join("")
       +'</div>';
   }
   w.innerHTML='<div class="osad">'
     +KAL_KOHAD.map(k=>'<button data-act="kal-koht" data-v="'+k.id+'" aria-pressed="'+(kalKoht===k.id)+'">'
       +esc(k.nimi)+'<span class="n">'
-      +(S.events.filter(e=>sobibKoht(e,k.id)).length+tood().filter(t=>sobibKoht(t,k.id)).length)
+      +S.events.filter(e=>sobibKoht(e,k.id)).length
       +'</span></button>').join("")
     +'</div>'
     +'<div class="calbar"><h3>'+MON[m].charAt(0).toUpperCase()+MON[m].slice(1)+' '+y+'</h3>'
@@ -1145,6 +1132,10 @@ function sendMsg(){
    kokku ja sinna vastatakse „kas sa tuled“, töö tuleb ära teha ja keegi
    märgib ta tehtuks. Varem olid nad ühe katuse all ja „Lisa töö“ nupp
    seisis Ürituste all, kus teda keegi ei otsinud. */
+/* Tööde oma kuu. Ürituste kalendri kuu käib eraldi — need on kaks eri
+   asja ja üks ei tohi teist kaasa vedada. */
+let toodKuu=null, toodPaev=null;
+
 function vTood(w){
   const koik=tood();
   if(!koik.length){
@@ -1154,11 +1145,38 @@ function vTood(w){
     return;
   }
   const nd=new Date(), tk=dkey(nd);
+  const valitud=toodPaev||tk;
 
-  /* Kaks nimekirja: mis on täna teha ja kõik ülejäänud. Ülemine on see,
-     mille pärast siia tullakse. */
-  const tanased=koik.filter(t=>tooSelPaeval(t,nd));
-  const muud=koik.filter(t=>!tanased.includes(t));
+  /* ── kuu kalender: millal mis töö on ja kas ta on tehtud ─────── */
+  if(!toodKuu)toodKuu=new Date(nd.getFullYear(),nd.getMonth(),1);
+  const y=toodKuu.getFullYear(),m=toodKuu.getMonth();
+  const algus=new Date(y,m,1-dowIdx(new Date(y,m,1)));
+  let lahtrid="";
+  for(let i=0;i<42;i++){
+    const d=new Date(algus);d.setDate(algus.getDate()+i);
+    const k=dkey(d), valjas=d.getMonth()!==m;
+    const tl=valjas?[]:tooPaeval(d);
+    lahtrid+='<div class="cell'+(valjas?" out":"")+(k===tk?" today":"")
+      +(k===valitud?" valitud":"")+'">'
+      +'<button class="n" data-act="tood-paev" data-k="'+k+'"'
+      +' aria-label="Vaata selle päeva töid">'+d.getDate()+'</button>'
+      + tl.map(t=>{
+          const teht=tehtud(t,k), ootab=vajabKinnitust(t,k), aeg=tooAeg(t);
+          return '<button class="pill too2'+(teht?" tehtud":(ootab?" ootab":""))+'"'
+            +' data-act="tood-paev" data-k="'+k+'"'
+            +' title="'+esc(t.nimi)+' · '+esc(kohaNimi(kohtOf(t)))
+            +  (teht?" · tehtud: "+esc(nameOf(teht.kes))
+               :(ootab?" · veel tegemata":""))+'">'
+            +'<b>'+(t.kinnita?'<i class="mark">'+(teht?"✓":"○")+'</i>':"")
+            +  esc(t.nimi)+'</b>'
+            +(aeg?'<span>'+esc(aeg)+'</span>':"")+'</button>';
+        }).join("")
+      +'</div>';
+  }
+
+  /* Valitud päeva tööd — kalendri kõrval, koos „Tegin ära“ nupuga. */
+  const paevaTood=koik.filter(t=>tooSelPaeval(t,new Date(valitud+"T12:00:00")));
+  const muud=koik.filter(t=>!paevaTood.includes(t));
 
   const rida=(t,k)=>{
     const teht=tehtud(t,k), aeg=tooAeg(t);
@@ -1183,14 +1201,30 @@ function vTood(w){
       +'</div>';
   };
 
-  /* Tänased tööd on see, mille pärast siia tullakse — nemad saavad laia
-     veeru. Kogu nimekiri seisab kõrval. */
-  let h='<div class="korvuti korval-paremal"><div class="veerg">'
-    +'<div class="card"><p class="h3">TÄNA TEHA</p>'
-    +(tanased.length
-      ? '<div class="toolist">'+tanased.map(t=>rida(t,tk)).join("")+'</div>'
-      : '<p class="tyhi">Täna ei ole ühtegi tööd.</p>')
-    +'</div></div><div class="veerg">'
+  /* Kalender saab laia veeru — sealt on korraga näha, millal mis töö on
+     ja kas ta on tehtud. Valitud päev ja ülejäänud nimekiri seisavad
+     kõrval. */
+  /* Kalender saab kogu laiuse. Kitsas veerus murdusid toonimed keset
+     sona („Tk kastmi / ne“) — kuu ruudustik vajab seitset veergu ja
+     nimi peab reale mahtuma. Nimekirjad seisavad tema all korvuti. */
+  const onTana=valitud===tk;
+  let h='<div class="calbar"><h3>'+MON[m].charAt(0).toUpperCase()+MON[m].slice(1)+' '+y+'</h3>'
+    +'<button class="btn ghost small" data-act="tood-kuu" data-v="-1">Eelmine kuu</button>'
+    +'<button class="btn ghost small" data-act="tood-kuu" data-v="0">Täna</button>'
+    +'<button class="btn ghost small" data-act="tood-kuu" data-v="1">Järgmine kuu</button>'
+    +'</div>'
+    +'<div class="cal"><div class="dow">'+DOW_S.map(d=>'<span>'+d+'</span>').join("")
+    +'</div><div class="g">'+lahtrid+'</div></div>'
+    +'<p class="meta">Ring tähendab, et töö ootab veel tegemist, linnuke '
+    +'seda, et ta on tehtud. Vajuta päeval, et selle päeva tööd allpool '
+    +'näha.</p>'
+    +'<div class="korvuti korval-paremal"><div class="veerg">'
+    +'<div class="card"><p class="h3">'+(onTana?"TÄNA TEHA":"SEL PÄEVAL")+'</p>'
+    +(onTana?"":'<p class="paevpais2">'+esc(fmtPaev(valitud+"T12:00:00"))+'</p>')
+    +(paevaTood.length
+      ? '<div class="toolist">'+paevaTood.map(t=>rida(t,valitud)).join("")+'</div>'
+      : '<p class="tyhi">'+(onTana?"Täna":"Sel päeval")+' ei ole ühtegi tööd.</p>')
+    +'</div>'
     +'<div class="card"><p class="h3">KÕIK TÖÖD</p>'
     +'<div class="toolist">'+muud.map(t=>rida(t,null)).join("")
     +(muud.length?"":'<p class="tyhi">Rohkem töid ei ole.</p>')+'</div>'
@@ -3455,6 +3489,16 @@ document.addEventListener("click",ev=>{
       toast("See päev jäeti ära.",()=>{delete t.ara[k];save();render();toast("Tagasi toodud.");});
       break;}
     case "too-paev": dlgTooPaev(id,el.dataset.k);break;
+    /* Tööde kalender: kuu vahetus ja päeva valik. Ürituste kalendri kuu
+       käib eraldi — üks ei tohi teist kaasa vedada. */
+    case "tood-kuu":{
+      const v=Number(el.dataset.v), n=new Date();
+      toodKuu=v===0?new Date(n.getFullYear(),n.getMonth(),1)
+        :new Date(toodKuu.getFullYear(),toodKuu.getMonth()+v,1);
+      if(v===0)toodPaev=null;
+      render();break;
+    }
+    case "tood-paev": toodPaev=el.dataset.k;render();break;
     /* Tööde vaates käib „Tegin ära“ otse nupust — akent vahele ei ole
        vaja, sest nimi ja kellaaeg on juba real näha. */
     case "too-tehtud":{

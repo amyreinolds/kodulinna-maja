@@ -733,16 +733,20 @@ hr.hr{border:none;border-top:1px solid var(--line-2);margin:0}
   border:1px solid var(--line-2);border-radius:26px;overflow:hidden;
   box-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 18px 44px -28px rgba(20,24,28,.5);
 }
-.cal .dow{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:1px solid var(--line)}
+/* `1fr` ei kahane alla sisu laiuse: pikk toonimi ajas veeru laiaks ja
+   puhapaev jai kaardi servast valja. `minmax(0,1fr)` lubab veerul
+   kahaneda ja tekst murdub. */
+.cal .dow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-bottom:1px solid var(--line)}
 .cal .dow span{padding:11px 0;text-align:center;font-size:14px;font-weight:700;color:var(--ink-3)}
-.cal .g{display:grid;grid-template-columns:repeat(7,1fr)}
-.cell{min-height:100px;padding:8px;border-right:1px solid var(--line-2);border-bottom:1px solid var(--line-2);display:flex;flex-direction:column;gap:5px}
+.cal .g{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.cell{min-height:100px;padding:8px;min-width:0;border-right:1px solid var(--line-2);border-bottom:1px solid var(--line-2);display:flex;flex-direction:column;gap:5px}
 .cell:nth-child(7n){border-right:none}
 .cell.out{background:var(--soft)}
 .cell .n{font-size:16px;color:var(--ink-2);width:30px;height:30px;display:grid;place-items:center;border-radius:15px;flex:none}
 .cell.out .n{color:var(--ink-3)}
 .cell.today .n{background:var(--s);color:var(--card);font-weight:800}
-.cell .pill{padding:7px 10px;border-radius:10px;background:var(--s-tint);color:var(--s);font-size:14px;font-weight:700;line-height:1.3}
+.cell .pill{padding:7px 10px;border-radius:10px;background:var(--s-tint);color:var(--s);font-size:14px;font-weight:700;line-height:1.3;
+  min-width:0;overflow-wrap:break-word}
 .cell .pill:hover{filter:brightness(1.06)}
 
 /* ── info ─────────────────────────────────────────── */
@@ -867,6 +871,9 @@ hr.hr{border:none;border-top:1px solid var(--line-2);margin:0}
 
 /* Tood: uks rida = uks too. Tehtud too laheb vaiksemaks, aga ei kao —
    nii on naha, mis on tehtud ja mis mitte. */
+/* Valitud paeva pealkiri kalendri korval. */
+.paevpais2{margin:-4px 0 10px;font-size:15px;color:var(--ink-2);font-weight:600}
+
 .toolist{display:flex;flex-direction:column;gap:2px}
 .toorida{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
   padding:12px 4px;border-bottom:1px solid var(--line-2)}
@@ -988,9 +995,16 @@ select.kell option{background:var(--card);color:var(--ink)}
 /* Kalendris eristub korduv töö ürituse pillist. */
 .pill.too2{
   background:var(--s-tint);color:var(--s);border:1px dashed var(--s);
-  display:flex;flex-direction:column;align-items:flex-start;gap:1px;
+  display:flex;flex-direction:column;align-items:stretch;gap:1px;min-width:0;
 }
-.pill.too2 b{font-weight:800;display:inline-flex;align-items:center;gap:5px}
+/* `inline-flex` hoidis nime uhel real ja mull loppes lahtrist valja —
+   viimases veerus jai „Tk kastmine“ katki. Ring/linnuke jaab rea algusse,
+   nimi murdub vajadusel. */
+/* Mitte flex: flex-konteineris ei kahane nimeta tekstiosa alla oma
+   koige pikema sona ja mull loppes lahtrist valja — viimases veerus jai
+   „Tk kastmine“ katki. Tavaline rida murdub. */
+.pill.too2 b{font-weight:800;display:block;min-width:0;overflow-wrap:break-word}
+.pill.too2 b .mark{margin-right:5px}
 .pill.too2 .mark{font-style:normal;font-size:13px;line-height:1}
 /* Tehtud töö tõmbub tagasi, tegemata jääb silma. */
 .pill.too2.tehtud{opacity:1;border-style:solid;background:var(--green-soft);
