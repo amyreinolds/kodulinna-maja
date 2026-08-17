@@ -883,6 +883,12 @@ hr.hr{border:none;border-top:1px solid var(--line-2);margin:0}
 .toorida .tn span{font-size:14px;color:var(--ink-3);line-height:1.4}
 .toorida .tn .mk{color:var(--ink-2)}
 .toorida .tehtud2{color:var(--green-ink,var(--ink-2));font-weight:600}
+/* Kes selle too sel paeval ara teeb. Staatust naevad koik — see on
+   nimekirja mote —, aga „Tegin ara“ nuppu naeb ainult tema. */
+.toorida .teeb{color:var(--ink-2);font-weight:600}
+.toorida.minu .teeb{color:var(--accent-ink)}
+.toorida.minu{background:var(--accent-soft);border-radius:10px;
+  padding-left:10px;padding-right:10px;margin:0 -10px}
 .toorida.tehtud .tn b{color:var(--ink-3);text-decoration:line-through;
   text-decoration-thickness:1.5px}
 

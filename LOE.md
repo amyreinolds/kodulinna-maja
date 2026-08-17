@@ -51,7 +51,7 @@ Kui võtit ei ole, ilmub link ekraanile — muidu ei saaks keegi sisse.
 | `ametid.js` | ametid ja õigused ühes kohas |
 | `public/app.html` | rakendus — kõik vaated |
 | `andmebaas/*.sql` | andmebaasi muudatused, nummerdatud |
-| `test/` | `npm test` — 31 komplekti |
+| `test/` | `npm test` — 33 komplekti |
 | `tools/` | varukoopia, andmebaas, sisselogimislingid, kes-olen |
 
 ## Mis rakenduses on
@@ -64,7 +64,7 @@ brauseri sisse meelde.
 | **Müük** | vali kogus, klõpsa tootel. Oma müük on kohe all näha. Allpool toodete kaupa kokkuvõte ja — kassaõigusega — müüjate kaupa. Vajuta müüja nimel, tema alla tuleb kalender; vajuta kuupäeval ja näed, mida ta sel päeval müüs |
 | **Vestlus** | kolm asja: **teemat** näevad kõik liikmed; **gruppi** ainult need, kelle sa ise valid („Torni tiim“); **kirja** näete kahekesi. Grupp on püsiv — nime saab muuta, inimesi lisada ja välja jätta, ja igaüks saab ise välja astuda. Kirjutuskasti kõrval on **☺**, kust saab teksti sisse emotsiooni panna. Sõnumi peale minnes tulevad nähtavale **märgid** (👍 ❤️ 😊 😮 🙏 ✅) — nii saab „selge, aitäh“ ära öelda ilma uue sõnumita. Oma sõnumi saab **tagasi võtta**, teise oma mitte. Nimekirja kohal on **otsing** — käib nii vestluste nimede kui ka sõnumite teksti seest, leitud sõna on esile tõstetud. Päises on **Kustuta**: teema kaob kõigi jaoks, grupp kõigi liikmete jaoks, kirjast kaovad ainult sinu enda sõnumid |
 | **Üritused** | kalender ja tulemas olevad üritused kõrvuti. Ürituse tegemisel saab panna kaks eri linnukest: **„Küsi igalt liikmelt, kas ta osaleb“** (igaüks vastab „Osalen“ / „Ei osale“ ja näed, kellelt vastus puudub) ja **„Küsi kinnitust“** („Olen tutvunud“ — lugeda võib ka see, kes ei tule). Ülesanded („kes toob koogi“) ja küsimused iga ürituse all |
-| **Tööd** | majatööd, mis tuleb ära teha — korduvad ja ühekordsed. Üleval „täna teha“, kõrval kogu nimekiri. „Tegin ära“ ilmub sel päeval, mil töö on teha. **Töö ei ole üritus:** üritusele tullakse kokku ja sinna vastatakse, kas sa tuled; töö tuleb ära teha ja keegi märgib ta tehtuks |
+| **Tööd** | majatööd, mis tuleb ära teha — korduvad ja ühekordsed. Üleval valitud päeva tööd, all kuu kalender: iga päeva juures on kirjas, mis tööd sel päeval on ja kas nad on tehtud (**○** tegemata, **✓** tehtud). **Näevad ja lisavad kõik. Kinnitab see, kes on sel päeval graafikus** — tema real seisab „Selle teed sina“ ja ainult tema näeb „Tegin ära“ nuppu; teised näevad „Teeb Mari Tamm“. Ülemus ja administraator saavad kinnitada ka teise eest. **Töö ei ole üritus:** üritusele tullakse kokku ja sinna vastatakse, kas sa tuled; töö tuleb ära teha ja keegi märgib ta tehtuks |
 | **Üldinfo** | tähtis info kõigile. Kinnitust nõudva ploki all on „Olen tutvunud“ ja kes on juba tutvunud |
 | **Failid** | dokumendid, mida teistel vaja läheb. Üks fail kuni 5 MB, hoitakse andmebaasis — eraldi failihoidlat ei ole vaja |
 | **Töö graafik** | mõlema maja nädalagraafik üksteise all, ühel päeval võib olla mitu vahetust. Puhkused ja haiguslehed |
@@ -90,6 +90,7 @@ ja sisselogimislinke. **Ühiskassa on erand.**
 | Sisselogimislingi tegemine teisele | ei | ei | jah | jah |
 | Teise puhkus, haigusleht, tööaeg | ei | ei | jah | jah |
 | Teise „tehtud“ märgi mahavõtmine | ei | ei | jah | jah |
+| Töö tehtuks märkimine | ainult kui ta on sel päeval graafikus | sama | jah | jah |
 | Liikme majast välja võtmine | ei | ei | jah | jah |
 | Teise nime alla kirjutamine | ei | ei | jah | jah |
 | Kõik muu | jah | jah | jah | jah |

@@ -754,6 +754,15 @@ async function salvestaSeisTehingus(mina, s) {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(kuup)) continue;
         const kes = v && typeof v === "object" ? v.kes : v;
         if (!onUuid(kes) || !oma(kes)) continue;
+        /* Kinnitab see, kes on sel päeval tööl. Töö on maja kokkulepe:
+           „lilled on kastetud“ tähendab midagi ainult siis, kui selle
+           ütleb inimene, kes sel päeval majas oli. Ülemus ja
+           administraator saavad kinnitada ka teise eest. */
+        if (!teised && !(await tohibKinnitada(id, kuup, kes))) {
+          hoiatused.push("„" + nimi + "“ — kinnitada saab see, kes on "
+            + "sel päeval graafikus.");
+          continue;
+        }
         uued.set(kuup, { kes, at: (v && v.at) || null });
       }
       for (const [kuup, v] of uued)
@@ -895,6 +904,36 @@ async function syncKinnitused(tyyp, kirjeId, acks, oma) {
       `INSERT INTO kinnitused (tyyp, kirje_id, liige_id, aeg)
        VALUES ($1,$2,$3, coalesce($4::timestamptz, now()))`,
       [tyyp, kirjeId, liige, aeg]);
+}
+
+/* Kas see inimene tohib sel päeval selle töö tehtuks märkida?
+
+   Kaks võimalust, sama mis ekraanil: kui tööl on kindel tegija, siis
+   tema; muidu see, kes on sel päeval selles majas graafikus. Puhkusel
+   või haiguslehel olija ei ole tööl.
+
+   Miks serveris: ekraan juba peidab nupu, aga ekraanist möödaminek ei
+   tohi aidata. Töö tehtuks märkimine on maja arvestus — sama loogika
+   mis müügi ja graafiku juures. */
+async function tohibKinnitada(tooId, kuup, kes) {
+  const too = await yks(
+    "SELECT koht_id, kes_id FROM tood WHERE id=$1", [tooId]);
+  if (!too) return false;
+
+  /* Puhkusel olija ei ole tööl, ka siis kui ta on graafikus. */
+  const ara = await yks(
+    `SELECT 1 FROM puudumised WHERE liige_id=$1 AND algus<=$2 AND lopp>=$2`,
+    [kes, kuup]);
+  if (ara) return false;
+
+  if (too.kes_id) return too.kes_id === kes;
+
+  /* Nädalapäev: 0 = esmaspäev, nagu mujal. */
+  const paev = (new Date(kuup + "T12:00:00").getDay() + 6) % 7;
+  const rida = await yks(
+    `SELECT 1 FROM graafik WHERE liige_id=$1 AND koht_id=$2 AND paev=$3`,
+    [kes, too.koht_id, paev]);
+  return !!rida;
 }
 
 /* Küsimused ürituse või üldinfo all. Sama tabel, sama töö — vahe on

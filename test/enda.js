@@ -150,9 +150,12 @@ const dkey = d => d.getFullYear() + "-" + p2(d.getMonth() + 1) + "-" + p2(d.getD
     kontrolli("teise kinnitust ei saa kustutada", ki.n === 1, "ridu " + ki.n);
 
     /* ── töö tehtud-märge ──────────────────────────────────────── */
+    /* Töö kinnitab see, kes on sel päeval tööl. Selles testis on Anna
+       töö kindel tegija — nii ei sõltu tulemus sellest, kes juhtub
+       graafikus olema. */
     const [too] = await q(
-      `INSERT INTO tood (koht_id, nimi, algab, kinnita) VALUES ('km','Enda töö',$1,true)
-       RETURNING id`, [täna]);
+      `INSERT INTO tood (koht_id, nimi, algab, kinnita, kes_id)
+       VALUES ('km','Enda töö',$1,true,$2) RETURNING id`, [täna, anna.id]);
     await q("INSERT INTO too_paevad (too_id, paev) VALUES ($1,0),($1,1),($1,2),($1,3),($1,4),($1,5),($1,6)",
       [too.id]);
     /* Teise nime tehtud-märkesse panna ei saa. Varem kirjutas server

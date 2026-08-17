@@ -1166,7 +1166,8 @@ function vTood(w){
             +' data-act="tood-paev" data-k="'+k+'"'
             +' title="'+esc(t.nimi)+' · '+esc(kohaNimi(kohtOf(t)))
             +  (teht?" · tehtud: "+esc(nameOf(teht.kes))
-               :(ootab?" · veel tegemata":""))+'">'
+               :(ootab?" · teeb: "+esc(kesTeeb(t,k).length
+                    ?names(kesTeeb(t,k)):"graafikus ei ole kedagi"):""))+'">'
             +'<b>'+(t.kinnita?'<i class="mark">'+(teht?"✓":"○")+'</i>':"")
             +  esc(t.nimi)+'</b>'
             +(aeg?'<span>'+esc(aeg)+'</span>':"")+'</button>';
@@ -1181,17 +1182,26 @@ function vTood(w){
   const rida=(t,k)=>{
     const teht=tehtud(t,k), aeg=tooAeg(t);
     const kohane=k&&tooSelPaeval(t,new Date(k+"T12:00:00"));
-    return '<div class="toorida'+(teht?" tehtud":"")+'">'
+    /* Kes selle töö sel päeval ära teeb ja kas MINA olen see. Staatust
+       näevad kõik; kinnitada saab see, kes on sel päeval tööl. */
+    const teeb=kohane?kesTeeb(t,k):[];
+    const minu=kohane&&tohinKinnitada(t,k);
+    return '<div class="toorida'+(teht?" tehtud":"")+(minu&&!teht?" minu":"")+'">'
       +'<div class="tn"><b>'+esc(t.nimi)+'</b>'
       +'<span>'+esc(kohaNimi(kohtOf(t)))
       +  (aeg?' · '+esc(aeg):' · päeva jooksul')
-      +  ' · '+esc(millalTekst(t))
-      +  (t.kes?' · '+esc(nameOf(t.kes)):"")+'</span>'
+      +  ' · '+esc(millalTekst(t))+'</span>'
       +(t.markus?'<span class="mk">'+esc(t.markus)+'</span>':"")
+      +(kohane&&!teht
+        ? '<span class="teeb">'+(teeb.length
+            ? (minuToo(t,k)?"Selle teed sina":"Teeb "+esc(names(teeb)))
+            : "Sel päeval ei ole graafikus kedagi — kinnitada saavad "
+              +"ülemus ja administraator")+'</span>'
+        : "")
       +(teht?'<span class="tehtud2">Tehtud — '+esc(nameOf(teht.kes))
         +(teht.at?' · '+esc(fmtStamp(teht.at)):"")+'</span>':"")
       +'</div>'
-      +(t.kinnita&&kohane
+      +(t.kinnita&&kohane&&minu
         ? '<button class="btn '+(teht?"ghost small":"small")+'" data-act="too-tehtud"'
           +' data-id="'+t.id+'" data-k="'+k+'">'
           +(teht?"Võta tagasi":"Tegin ära")+'</button>'
@@ -1208,7 +1218,16 @@ function vTood(w){
      sona („Tk kastmi / ne“) — kuu ruudustik vajab seitset veergu ja
      nimi peab reale mahtuma. Nimekirjad seisavad tema all korvuti. */
   const onTana=valitud===tk;
-  let h='<div class="calbar"><h3>'+MON[m].charAt(0).toUpperCase()+MON[m].slice(1)+' '+y+'</h3>'
+  /* Valitud päev on kõige ees — see on tegevus, mille pärast siia
+     tullakse. Kalender on tema all: sealt näeb, mis veel tulemas on ja
+     mis on juba tehtud. Sama järjekord on Töö graafikus. */
+  let h='<div class="card"><p class="h3">'+(onTana?"TÄNA TEHA":"SEL PÄEVAL")+'</p>'
+    +(onTana?"":'<p class="paevpais2">'+esc(fmtPaev(valitud+"T12:00:00"))+'</p>')
+    +(paevaTood.length
+      ? '<div class="toolist">'+paevaTood.map(t=>rida(t,valitud)).join("")+'</div>'
+      : '<p class="tyhi">'+(onTana?"Täna":"Sel päeval")+' ei ole ühtegi tööd.</p>')
+    +'</div>'
+    +'<div class="calbar"><h3>'+MON[m].charAt(0).toUpperCase()+MON[m].slice(1)+' '+y+'</h3>'
     +'<button class="btn ghost small" data-act="tood-kuu" data-v="-1">Eelmine kuu</button>'
     +'<button class="btn ghost small" data-act="tood-kuu" data-v="0">Täna</button>'
     +'<button class="btn ghost small" data-act="tood-kuu" data-v="1">Järgmine kuu</button>'
@@ -1216,22 +1235,16 @@ function vTood(w){
     +'<div class="cal"><div class="dow">'+DOW_S.map(d=>'<span>'+d+'</span>').join("")
     +'</div><div class="g">'+lahtrid+'</div></div>'
     +'<p class="meta">Ring tähendab, et töö ootab veel tegemist, linnuke '
-    +'seda, et ta on tehtud. Vajuta päeval, et selle päeva tööd allpool '
+    +'seda, et ta on tehtud. Vajuta päeval, et selle päeva tööd üleval '
     +'näha.</p>'
-    +'<div class="korvuti korval-paremal"><div class="veerg">'
-    +'<div class="card"><p class="h3">'+(onTana?"TÄNA TEHA":"SEL PÄEVAL")+'</p>'
-    +(onTana?"":'<p class="paevpais2">'+esc(fmtPaev(valitud+"T12:00:00"))+'</p>')
-    +(paevaTood.length
-      ? '<div class="toolist">'+paevaTood.map(t=>rida(t,valitud)).join("")+'</div>'
-      : '<p class="tyhi">'+(onTana?"Täna":"Sel päeval")+' ei ole ühtegi tööd.</p>')
-    +'</div>'
     +'<div class="card"><p class="h3">KÕIK TÖÖD</p>'
     +'<div class="toolist">'+muud.map(t=>rida(t,null)).join("")
     +(muud.length?"":'<p class="tyhi">Rohkem töid ei ole.</p>')+'</div>'
     +'<p class="meta">Korduv töö kordub igal nädalal valitud päevadel. '
     +'Kellaajaga töö käib sel kellaajal, ilma kellaajata päeva jooksul. '
-    +'„Tegin ära“ ilmub sel päeval, mil töö on teha.</p>'
-    +'</div></div></div>';
+    +'„Tegin ära“ ilmub sel päeval, mil töö on teha, ja seda näeb see, '
+    +'kes on sel päeval graafikus.</p>'
+    +'</div>';
   w.innerHTML=h;
 }
 
@@ -1977,6 +1990,24 @@ const liigiNimi=x=>(LIIGID.find(l=>l.id===x)||{nimi:"Ära"}).nimi;
 
 /* Kas see inimene on sel kuupäeval ära? */
 const araPaeval=(kes,k)=>puhkused().find(p=>p.kes===kes&&p.algus<=k&&p.lopp>=k);
+
+/* Kes selle töö sel päeval ära teeb.
+
+   Kaks võimalust. Kui tööl on kindel tegija („Kes teeb“ aknas), siis
+   tema. Kui ei ole, siis see, kes on sel päeval selles majas graafikus —
+   puhkusel või haiguslehel olijaid arvestamata. Nii ei jää töö kellegi
+   umbmäärase ootuse taha: real seisab nimi. */
+function kesTeeb(t,k){
+  const d=new Date(k+"T12:00:00");
+  if(t.kes)return araPaeval(t.kes,k)?[]:[t.kes];
+  const i=dowIdx(d), koht=kohtOf(t);
+  return S.members.filter(m=>paevalTööl(m.id,i,koht)&&!araPaeval(m.id,k))
+    .map(m=>m.id);
+}
+/* Kas MINA pean selle töö täna kinnitama? Ülemus ja administraator
+   saavad kinnitada ka teise eest — sama reegel mis mujal. */
+const minuToo=(t,k)=>kesTeeb(t,k).includes(meId());
+const tohinKinnitada=(t,k)=>minuToo(t,k)||S.haldabTeisi===true;
 /* Selle nädalapäeva korduvad tööd. */
 /* Töö on kas korduv (nädalapäevade loend) või ühekordne (üks kuupäev).
    Korduvat ei pea kunagi uuendama, ühekordne kaob ise minevikku. */
